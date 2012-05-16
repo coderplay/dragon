@@ -14,6 +14,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
+<properties>
+</properties>
   <modules>
     <module>hadoop-dragon-client</module>
     <module>hadoop-dragon-examples</module>
