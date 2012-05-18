@@ -1,3 +1,21 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.realtime.server;
 
 import java.io.IOException;
@@ -123,550 +141,526 @@ import org.apache.hadoop.yarn.api.records.ContainerState;
 @InterfaceStability.Unstable
 public class DragonApplicationMaster {
 
-	private static final Log LOG = LogFactory.getLog(DragonApplicationMaster.class);
+  private static final Log LOG = LogFactory
+      .getLog(DragonApplicationMaster.class);
 
-	// Para used to connect ResourceManager
-	private Configuration conf;
-	private YarnRPC rpc;
-	private AMRMProtocol resourceManager;
+  // Para used to connect ResourceManager
+  private Configuration conf;
+  private YarnRPC rpc;
+  private AMRMProtocol resourceManager;
 
-	// Para used to regist ResourceManager
-	private ApplicationAttemptId appAttemptID;
-	private String appMasterHostname = "";
-	private int appMasterRpcPort = 1;
-	private String appMasterTrackingUrl = "";
+  // Para used to regist ResourceManager
+  private ApplicationAttemptId appAttemptID;
+  private String appMasterHostname = "";
+  private int appMasterRpcPort = 1;
+  private String appMasterTrackingUrl = "";
 
-	// Unchanged Para About Containers
-	private int containerMemory = 1024;
-	private int numTotalContainers = 5;
-	private int requestPriority = 1;
+  // Unchanged Para About Containers
+  private int containerMemory = 1024;
+  private int numTotalContainers = 5;
+  private int requestPriority = 1;
 
-	// Dynamic changed Para About Containers
-	private boolean appDone = false;
-	private AtomicInteger rmRequestNum = new AtomicInteger();
-	private AtomicInteger numCompletedContainers = new AtomicInteger();
-	private AtomicInteger numAllocatedContainers = new AtomicInteger();
-	private AtomicInteger numFailedContainers = new AtomicInteger();
-	private CopyOnWriteArrayList<ContainerId> releasedContainers = new CopyOnWriteArrayList<ContainerId>();
+  // Dynamic changed Para About Containers
+  private boolean appDone = false;
+  private AtomicInteger rmRequestNum = new AtomicInteger();
+  private AtomicInteger numCompletedContainers = new AtomicInteger();
+  private AtomicInteger numAllocatedContainers = new AtomicInteger();
+  private AtomicInteger numFailedContainers = new AtomicInteger();
+  private CopyOnWriteArrayList<ContainerId> releasedContainers =
+      new CopyOnWriteArrayList<ContainerId>();
 
-	// Para about child JVM progress
-	private String childClass;
-	private String childArgs;
-	private String childJarPath;
-	private Long childJarPathTimestamp;
-	private Long childJarPathLen;
-	private final Map<String, String> childEnv = new HashMap<String, String>();
+  // Para about child JVM progress
+  private String childClass;
+  private String childArgs;
+  private String childJarPath;
+  private Long childJarPathTimestamp;
+  private Long childJarPathLen;
+  private final Map<String, String> childEnv = new HashMap<String, String>();
 
-	private final List<Thread> launchThreads = new ArrayList<Thread>();
+  private final List<Thread> launchThreads = new ArrayList<Thread>();
 
-	/**
-	 * Start AMStream
-	 * 
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		boolean result = false;
-		try {
-			DragonApplicationMaster appMaster = new DragonApplicationMaster();
-			LOG.info("Initializing ApplicationMaster");
-			boolean doRun = appMaster.init(args);
-			if (!doRun) {
-				System.exit(0);
-			}
-			result = appMaster.run();
-		} catch (Throwable t) {
-			LOG.fatal("Error running ApplicationMaster", t);
-			System.exit(1);
-		}
-		if (result) {
-			LOG.info("Application Master completed successfully. exiting");
-			System.exit(0);
-		} else {
-			LOG.info("Application Master failed. exiting");
-			System.exit(2);
-		}
-	}
+  /**
+   * Start AMStream
+   * 
+   * @param args
+   */
+  public static void main(String[] args) {
+    boolean result = false;
+    try {
+      DragonApplicationMaster appMaster = new DragonApplicationMaster();
+      LOG.info("Initializing ApplicationMaster");
+      boolean doRun = appMaster.init(args);
+      if (!doRun) {
+        System.exit(0);
+      }
+      result = appMaster.run();
+    } catch (Throwable t) {
+      LOG.fatal("Error running ApplicationMaster", t);
+      System.exit(1);
+    }
+    if (result) {
+      LOG.info("Application Master completed successfully. exiting");
+      System.exit(0);
+    } else {
+      LOG.info("Application Master failed. exiting");
+      System.exit(2);
+    }
+  }
 
-	/**
-	 * Parse command line options
-	 * 
-	 * @param args
-	 *            Command line args
-	 * @return Whether init successful and run should be invoked
-	 * @throws ParseException
-	 * @throws IOException
-	 */
-	public boolean init(String[] args) throws ParseException {
-		Options opts = new Options();
-		opts.addOption("child_class", true,
-				"Java child class to be executed by the Container");
-		opts.addOption("child_args", true,
-				"Command line args for the child class");
-		opts.addOption("child_env", true,
-				"Environment for child class. Specified as env_key=env_val pairs");
-		opts.addOption("priority", true,
-				"Priority for the child class containers");
-		opts.addOption("container_memory", true,
-				"Amount of memory in MB to be requested to run the shell command");
-		opts.addOption("num_containers", true,
-				"No. of containers on which the shell command needs to be executed");
-		opts.addOption("help", false, "Print usage");
-		CommandLine cliParser = new GnuParser().parse(opts, args);
+  /**
+   * Parse command line options
+   * 
+   * @param args Command line args
+   * @return Whether init successful and run should be invoked
+   * @throws ParseException
+   * @throws IOException
+   */
+  public boolean init(String[] args) throws ParseException {
+    Options opts = new Options();
+    opts.addOption("child_class", true,
+        "Java child class to be executed by the Container");
+    opts.addOption("child_args", true, "Command line args for the child class");
+    opts.addOption("child_env", true,
+        "Environment for child class. Specified as env_key=env_val pairs");
+    opts.addOption("priority", true, "Priority for the child class containers");
+    opts.addOption("container_memory", true,
+        "Amount of memory in MB to be requested to run the shell command");
+    opts.addOption("num_containers", true,
+        "No. of containers on which the shell command needs to be executed");
+    opts.addOption("help", false, "Print usage");
+    CommandLine cliParser = new GnuParser().parse(opts, args);
 
-		if (args.length == 0) {
-			printUsage(opts);
-			throw new IllegalArgumentException(
-					"No args specified for application master to initialize");
-		}
+    if (args.length == 0) {
+      printUsage(opts);
+      throw new IllegalArgumentException(
+          "No args specified for application master to initialize");
+    }
 
-		Map<String, String> envs = System.getenv();
-		appAttemptID = Records.newRecord(ApplicationAttemptId.class);
-		if (!envs.containsKey(ApplicationConstants.AM_CONTAINER_ID_ENV)) {
-			if (cliParser.hasOption("app_attempt_id")) {
-				String appIdStr = cliParser
-						.getOptionValue("app_attempt_id", "");
-				appAttemptID = ConverterUtils.toApplicationAttemptId(appIdStr);
-			} else {
-				throw new IllegalArgumentException(
-						"Application Attempt Id not set in the environment");
-			}
-		} else {
-			ContainerId containerId = ConverterUtils.toContainerId(envs
-					.get(ApplicationConstants.AM_CONTAINER_ID_ENV));
-			appAttemptID = containerId.getApplicationAttemptId();
-		}
-		LOG.info("Application master for app" + ", appId="
-				+ appAttemptID.getApplicationId().getId()
-				+ ", clustertimestamp="
-				+ appAttemptID.getApplicationId().getClusterTimestamp()
-				+ ", attemptId=" + appAttemptID.getAttemptId());
+    Map<String, String> envs = System.getenv();
+    appAttemptID = Records.newRecord(ApplicationAttemptId.class);
+    if (!envs.containsKey(ApplicationConstants.AM_CONTAINER_ID_ENV)) {
+      if (cliParser.hasOption("app_attempt_id")) {
+        String appIdStr = cliParser.getOptionValue("app_attempt_id", "");
+        appAttemptID = ConverterUtils.toApplicationAttemptId(appIdStr);
+      } else {
+        throw new IllegalArgumentException(
+            "Application Attempt Id not set in the environment");
+      }
+    } else {
+      ContainerId containerId =
+          ConverterUtils.toContainerId(envs
+              .get(ApplicationConstants.AM_CONTAINER_ID_ENV));
+      appAttemptID = containerId.getApplicationAttemptId();
+    }
+    LOG.info("Application master for app" + ", appId="
+        + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
+        + appAttemptID.getApplicationId().getClusterTimestamp()
+        + ", attemptId=" + appAttemptID.getAttemptId());
 
-		if (!cliParser.hasOption("child_class")) {
-			System.err
-					.println("No child_class specified to be executed by container");
-			return false;
-		}
-		childClass = cliParser.getOptionValue("child_class");
-		if (cliParser.hasOption("child_args")) {
-			childArgs = cliParser.getOptionValue("child_args");
-		}
-		if (cliParser.hasOption("child_env")) {
-			String childEnvs[] = cliParser.getOptionValues("child_env");
-			for (String env : childEnvs) {
-				env = env.trim();
-				int index = env.indexOf('=');
-				if (index == -1) {
-					childEnv.put(env, "");
-					continue;
-				}
-				String key = env.substring(0, index);
-				String val = "";
-				if (index < (env.length() - 1)) {
-					val = env.substring(index + 1);
-				}
-				childEnv.put(key, val);
-			}
-		}
-		if (envs.containsKey(DSConstants.DISTRIBUTED_CHILDCLASS_LOCATION)) {
-			childJarPath = envs
-					.get(DSConstants.DISTRIBUTED_CHILDCLASS_LOCATION);
-		}
-		if (envs.containsKey(DSConstants.DISTRIBUTED_CHILDCLASS_TIMESTAMP)) {
-			childJarPathTimestamp = Long.valueOf(envs
-					.get(DSConstants.DISTRIBUTED_CHILDCLASS_TIMESTAMP));
-		}
-		if (envs.containsKey(DSConstants.DISTRIBUTED_CHILDCLASS_LEN)) {
-			childJarPathLen = Long.valueOf(envs
-					.get(DSConstants.DISTRIBUTED_CHILDCLASS_LEN));
-		}
-		containerMemory = Integer.parseInt(cliParser.getOptionValue(
-				"container_memory", "10"));
-		numTotalContainers = Integer.parseInt(cliParser.getOptionValue(
-				"num_containers", "1"));
-		requestPriority = Integer.parseInt(cliParser.getOptionValue("priority",
-				"0"));
+    if (!cliParser.hasOption("child_class")) {
+      System.err
+          .println("No child_class specified to be executed by container");
+      return false;
+    }
+    childClass = cliParser.getOptionValue("child_class");
+    if (cliParser.hasOption("child_args")) {
+      childArgs = cliParser.getOptionValue("child_args");
+    }
+    if (cliParser.hasOption("child_env")) {
+      String childEnvs[] = cliParser.getOptionValues("child_env");
+      for (String env : childEnvs) {
+        env = env.trim();
+        int index = env.indexOf('=');
+        if (index == -1) {
+          childEnv.put(env, "");
+          continue;
+        }
+        String key = env.substring(0, index);
+        String val = "";
+        if (index < (env.length() - 1)) {
+          val = env.substring(index + 1);
+        }
+        childEnv.put(key, val);
+      }
+    }
+    if (envs.containsKey(DSConstants.DISTRIBUTED_CHILDCLASS_LOCATION)) {
+      childJarPath = envs.get(DSConstants.DISTRIBUTED_CHILDCLASS_LOCATION);
+    }
+    if (envs.containsKey(DSConstants.DISTRIBUTED_CHILDCLASS_TIMESTAMP)) {
+      childJarPathTimestamp =
+          Long.valueOf(envs.get(DSConstants.DISTRIBUTED_CHILDCLASS_TIMESTAMP));
+    }
+    if (envs.containsKey(DSConstants.DISTRIBUTED_CHILDCLASS_LEN)) {
+      childJarPathLen =
+          Long.valueOf(envs.get(DSConstants.DISTRIBUTED_CHILDCLASS_LEN));
+    }
+    containerMemory =
+        Integer.parseInt(cliParser.getOptionValue("container_memory", "10"));
+    numTotalContainers =
+        Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
+    requestPriority =
+        Integer.parseInt(cliParser.getOptionValue("priority", "0"));
 
-		return true;
-	}
+    return true;
+  }
 
-	/**
-	 * Helper function to print usage
-	 * 
-	 * @param opts
-	 *            Parsed command line options
-	 */
-	private void printUsage(Options opts) {
-		new HelpFormatter().printHelp("AMStream", opts);
-	}
+  /**
+   * Helper function to print usage
+   * 
+   * @param opts Parsed command line options
+   */
+  private void printUsage(Options opts) {
+    new HelpFormatter().printHelp("AMStream", opts);
+  }
 
-	public DragonApplicationMaster() throws Exception {
-		conf = new Configuration();
-		rpc = YarnRPC.create(conf);
-	}
+  public DragonApplicationMaster() throws Exception {
+    conf = new Configuration();
+    rpc = YarnRPC.create(conf);
+  }
 
-	public boolean run() throws Exception {
-		LOG.info("Starting ApplicationMaster");
-		resourceManager = connectToRM();
-		RegisterApplicationMasterResponse response = registerToRM();
+  public boolean run() throws Exception {
+    LOG.info("Starting ApplicationMaster");
+    resourceManager = connectToRM();
+    RegisterApplicationMasterResponse response = registerToRM();
 
-		initMemory(response);
+    initMemory(response);
 
-		/**
-		 * 当Application未完成时，不断循玄1�7
-		 */
-		while (numCompletedContainers.get() < numTotalContainers && !appDone) {
+    // loop until the Application finished
+    while (numCompletedContainers.get() < numTotalContainers && !appDone) {
 
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				LOG.info("Sleep interrupted " + e.getMessage());
-			}
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        LOG.info("Sleep interrupted " + e.getMessage());
+      }
 
-			/**
-			 * 向ResourceManager发�1�7�申请Container
-			 */
-			int askCount = numTotalContainers - numAllocatedContainers.get();
-			List<ResourceRequest> resourceReq = new ArrayList<ResourceRequest>();
-			if (askCount > 0) {
-				ResourceRequest containerAsk = setupContainerAskForRM(askCount);
-				resourceReq.add(containerAsk);
+      // request containers from ResourceManager
+      int askCount = numTotalContainers - numAllocatedContainers.get();
+      List<ResourceRequest> resourceReq = new ArrayList<ResourceRequest>();
+      if (askCount > 0) {
+        ResourceRequest containerAsk = setupContainerAskForRM(askCount);
+        resourceReq.add(containerAsk);
 
-				AMResponse amResp = sendContainerAskToRM(resourceReq);
+        AMResponse amResp = sendContainerAskToRM(resourceReq);
 
-				/**
-				 * 给获取到的Container分配任务
-				 */
-				// Retrieve list of allocated containers from the response
-				List<Container> allocatedContainers = amResp
-						.getAllocatedContainers();
-				LOG.info("Got response from RM for container ask, allocatedCnt="
-						+ allocatedContainers.size());
-				numAllocatedContainers.addAndGet(allocatedContainers.size());
-				for (Container allocatedContainer : allocatedContainers) {
-					Task runnableLaunchContainer = new Task(allocatedContainer);
-					Thread launchThread = new Thread(runnableLaunchContainer);
-					LOG.info("Launching JAVA_CHILD on a new container."
-							+ ", containerId=" + allocatedContainer.getId()
-							+ ", containerNode="
-							+ allocatedContainer.getNodeId().getHost() + ":"
-							+ allocatedContainer.getNodeId().getPort()
-							+ ", containerNodeURI="
-							+ allocatedContainer.getNodeHttpAddress()
-							+ ", containerState"
-							+ allocatedContainer.getState()
-							+ ", containerResourceMemory"
-							+ allocatedContainer.getResource().getMemory());
-					launchThreads.add(launchThread);
-					launchThread.start();
-				}
+        // Retrieve list of allocated containers from the response
+        // Assign tasks to containers.
+        List<Container> allocatedContainers = amResp.getAllocatedContainers();
+        LOG.info("Got response from RM for container ask, allocatedCnt="
+            + allocatedContainers.size());
+        numAllocatedContainers.addAndGet(allocatedContainers.size());
+        for (Container allocatedContainer : allocatedContainers) {
+          Task runnableLaunchContainer = new Task(allocatedContainer);
+          Thread launchThread = new Thread(runnableLaunchContainer);
+          LOG.info("Launching JAVA_CHILD on a new container."
+              + ", containerId=" + allocatedContainer.getId()
+              + ", containerNode=" + allocatedContainer.getNodeId().getHost()
+              + ":" + allocatedContainer.getNodeId().getPort()
+              + ", containerNodeURI=" + allocatedContainer.getNodeHttpAddress()
+              + ", containerState" + allocatedContainer.getState()
+              + ", containerResourceMemory"
+              + allocatedContainer.getResource().getMemory());
+          launchThreads.add(launchThread);
+          launchThread.start();
+        }
 
-			}
-			/**
-			 * 获取Container的完成状态并更新
-			 */
-			List<ContainerStatus> completedContainers = sendContainerAskToRM(
-					resourceReq).getCompletedContainersStatuses();
-			for (ContainerStatus containerStatus : completedContainers) {
-				// increment counters for completed/failed containers
-				int exitStatus = containerStatus.getExitStatus();
-				if (0 != exitStatus) {
-					numAllocatedContainers.decrementAndGet();
-					numFailedContainers.incrementAndGet();
-					LOG.error("run child progress failed");
-				} else {
-					numCompletedContainers.incrementAndGet();
-					LOG.info("Container completed successfully."
-							+ ", containerId="
-							+ containerStatus.getContainerId());
-				}
+      }
+      // 获取Container的完成状态并更新
+      List<ContainerStatus> completedContainers =
+          sendContainerAskToRM(resourceReq).getCompletedContainersStatuses();
+      for (ContainerStatus containerStatus : completedContainers) {
+        // increment counters for completed/failed containers
+        int exitStatus = containerStatus.getExitStatus();
+        if (0 != exitStatus) {
+          numAllocatedContainers.decrementAndGet();
+          numFailedContainers.incrementAndGet();
+          LOG.error("run child progress failed");
+        } else {
+          numCompletedContainers.incrementAndGet();
+          LOG.info("Container completed successfully." + ", containerId="
+              + containerStatus.getContainerId());
+        }
 
-			}
-			if (numCompletedContainers.get() == numTotalContainers) {
-				appDone = true;
-			}
-		}
-		for (Thread launchThread : launchThreads) {
-			try {
-				launchThread.join(10000);
-			} catch (InterruptedException e) {
-				LOG.info("Exception thrown in thread join: " + e.getMessage());
-				e.printStackTrace();
-			}
-		}
-		FinishApplicationMasterRequest finishReq = Records
-				.newRecord(FinishApplicationMasterRequest.class);
-		finishReq.setAppAttemptId(appAttemptID);
-		boolean isSuccess = true;
-		if (numFailedContainers.get() == 0) {
-			finishReq
-					.setFinishApplicationStatus(FinalApplicationStatus.SUCCEEDED);
-		} else {
-			finishReq.setFinishApplicationStatus(FinalApplicationStatus.FAILED);
-			String diagnostics = "Diagnostics." + ", total="
-					+ numTotalContainers + ", completed="
-					+ numCompletedContainers.get() + ", allocated="
-					+ numAllocatedContainers.get() + ", failed="
-					+ numFailedContainers.get();
-			finishReq.setDiagnostics(diagnostics);
-			LOG.error(diagnostics);
-			isSuccess = false;
-		}
-		resourceManager.finishApplicationMaster(finishReq);
-		return isSuccess;
+      }
+      if (numCompletedContainers.get() == numTotalContainers) {
+        appDone = true;
+      }
+    }
+    for (Thread launchThread : launchThreads) {
+      try {
+        launchThread.join(10000);
+      } catch (InterruptedException e) {
+        LOG.info("Exception thrown in thread join: " + e.getMessage());
+        e.printStackTrace();
+      }
+    }
+    FinishApplicationMasterRequest finishReq =
+        Records.newRecord(FinishApplicationMasterRequest.class);
+    finishReq.setAppAttemptId(appAttemptID);
+    boolean isSuccess = true;
+    if (numFailedContainers.get() == 0) {
+      finishReq.setFinishApplicationStatus(FinalApplicationStatus.SUCCEEDED);
+    } else {
+      finishReq.setFinishApplicationStatus(FinalApplicationStatus.FAILED);
+      String diagnostics =
+          "Diagnostics." + ", total=" + numTotalContainers + ", completed="
+              + numCompletedContainers.get() + ", allocated="
+              + numAllocatedContainers.get() + ", failed="
+              + numFailedContainers.get();
+      finishReq.setDiagnostics(diagnostics);
+      LOG.error(diagnostics);
+      isSuccess = false;
+    }
+    resourceManager.finishApplicationMaster(finishReq);
+    return isSuccess;
 
-	}
+  }
 
-	/**
-	 * 初始化用于向ResourceManager发�1�7�申请的request，包含Container的个数和该request的优先级
-	 * 
-	 * @param numContainers
-	 * @return
-	 */
-	private ResourceRequest setupContainerAskForRM(int numContainers) {
-		ResourceRequest request = Records.newRecord(ResourceRequest.class);
+  /**
+   * 初始化用于向ResourceManager发送申请的request，包含Container的个数和该request的优先级
+   * 
+   * @param numContainers
+   * @return
+   */
+  private ResourceRequest setupContainerAskForRM(int numContainers) {
+    ResourceRequest request = Records.newRecord(ResourceRequest.class);
 
-		request.setHostName("*");
-		request.setNumContainers(numContainers);
+    request.setHostName("*");
+    request.setNumContainers(numContainers);
 
-		Priority pri = Records.newRecord(Priority.class);
-		pri.setPriority(requestPriority);
-		request.setPriority(pri);
+    Priority pri = Records.newRecord(Priority.class);
+    pri.setPriority(requestPriority);
+    request.setPriority(pri);
 
-		Resource capability = Records.newRecord(Resource.class);
-		capability.setMemory(containerMemory);
-		request.setCapability(capability);
+    Resource capability = Records.newRecord(Resource.class);
+    capability.setMemory(containerMemory);
+    request.setCapability(capability);
 
-		return request;
-	}
+    return request;
+  }
 
-	/**
-	 * 向ResourceManager发�1�7�申请，返回申请的结构1�7
-	 * 申请中包含：这是第几次申请�1�7�Application的名称�1�7�申请Container的request、需要释放的Container
-	 * 以及container分配的进庄1�7
-	 * 
-	 * @param requestedContainers
-	 * @return
-	 * @throws YarnRemoteException
-	 */
-	private AMResponse sendContainerAskToRM(
-			List<ResourceRequest> requestedContainers)
-			throws YarnRemoteException {
-		AllocateRequest req = Records.newRecord(AllocateRequest.class);
-		req.setResponseId(rmRequestNum.incrementAndGet());
-		req.setApplicationAttemptId(appAttemptID);
-		req.addAllAsks(requestedContainers);
-		req.addAllReleases(releasedContainers);
-		req.setProgress((float) numCompletedContainers.get()
-				/ numTotalContainers);
+  /**
+   * Ask RM to allocate given no. of containers to this Application Master
+   * @param requestedContainers Containers to ask for from RM
+   * @return Response from RM to AM with allocated containers 
+   * @throws YarnRemoteException
+   */
+  private AMResponse sendContainerAskToRM(
+      List<ResourceRequest> requestedContainers) throws YarnRemoteException {
+    AllocateRequest req = Records.newRecord(AllocateRequest.class);
+    req.setResponseId(rmRequestNum.incrementAndGet());
+    req.setApplicationAttemptId(appAttemptID);
+    req.addAllAsks(requestedContainers);
+    req.addAllReleases(releasedContainers);
+    req.setProgress((float) numCompletedContainers.get() / numTotalContainers);
 
-		LOG.info("Sending request to RM for containers" + ", requestedSet="
-				+ requestedContainers.size() + ", releasedSet="
-				+ releasedContainers.size() + ", progress=" + req.getProgress());
+    LOG.info("Sending request to RM for containers" + ", requestedSet="
+        + requestedContainers.size() + ", releasedSet="
+        + releasedContainers.size() + ", progress=" + req.getProgress());
 
-		for (ResourceRequest rsrcReq : requestedContainers) {
-			LOG.info("Requested container ask: " + rsrcReq.toString());
-		}
-		for (ContainerId id : releasedContainers) {
-			LOG.info("Released container, id=" + id.getId());
-		}
+    for (ResourceRequest rsrcReq : requestedContainers) {
+      LOG.info("Requested container ask: " + rsrcReq.toString());
+    }
+    for (ContainerId id : releasedContainers) {
+      LOG.info("Released container, id=" + id.getId());
+    }
 
-		AllocateResponse resp = resourceManager.allocate(req);
-		return resp.getAMResponse();
-	}
+    AllocateResponse resp = resourceManager.allocate(req);
+    return resp.getAMResponse();
+  }
 
-	private AMRMProtocol connectToRM() {
-		YarnConfiguration yarnConf = new YarnConfiguration(conf);
-		InetSocketAddress rmAddress = NetUtils.createSocketAddr(yarnConf.get(
-				YarnConfiguration.RM_SCHEDULER_ADDRESS,
-				YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS));
-		LOG.info("Connecting to ResourceManager at " + rmAddress);
-		return ((AMRMProtocol) rpc
-				.getProxy(AMRMProtocol.class, rmAddress, conf));
-	}
+  private AMRMProtocol connectToRM() {
+    YarnConfiguration yarnConf = new YarnConfiguration(conf);
+    InetSocketAddress rmAddress =
+        NetUtils.createSocketAddr(yarnConf.get(
+            YarnConfiguration.RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS));
+    LOG.info("Connecting to ResourceManager at " + rmAddress);
+    return ((AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rmAddress, conf));
+  }
 
-	private RegisterApplicationMasterResponse registerToRM()
-			throws YarnRemoteException, UnknownHostException {
-		InetAddress host = InetAddress.getLocalHost();
-		
-		RegisterApplicationMasterRequest appMasterRequest = Records
-				.newRecord(RegisterApplicationMasterRequest.class);
+  private RegisterApplicationMasterResponse registerToRM()
+      throws YarnRemoteException, UnknownHostException {
+    InetAddress host = InetAddress.getLocalHost();
 
-		appMasterRequest.setApplicationAttemptId(appAttemptID);
-		appMasterRequest.setHost(host.getCanonicalHostName());
-		appMasterRequest.setRpcPort(9999);
-		appMasterRequest.setTrackingUrl(host.getCanonicalHostName() + ":" + 9999);
+    RegisterApplicationMasterRequest appMasterRequest =
+        Records.newRecord(RegisterApplicationMasterRequest.class);
 
-		return resourceManager.registerApplicationMaster(appMasterRequest);
-	}
+    appMasterRequest.setApplicationAttemptId(appAttemptID);
+    appMasterRequest.setHost(host.getCanonicalHostName());
+    appMasterRequest.setRpcPort(9999);
+    appMasterRequest.setTrackingUrl(host.getCanonicalHostName() + ":" + 9999);
 
-	private class Task implements Runnable {
+    return resourceManager.registerApplicationMaster(appMasterRequest);
+  }
 
-		private final Container container;
-		private ContainerManager cm;
+  private class Task implements Runnable {
 
-		public Task(Container container) {
-			this.container = container;
-		}
+    private final Container container;
+    private ContainerManager cm;
 
-		/**
-		 * Helper function to connect to CM
-		 */
-		private void connectToCM() {
-			String cmIpPortStr = container.getNodeId().getHost() + ":"
-					+ container.getNodeId().getPort();
-			InetSocketAddress cmAddress = NetUtils
-					.createSocketAddr(cmIpPortStr);
-			this.cm = ((ContainerManager) rpc.getProxy(ContainerManager.class,
-					cmAddress, conf));
-		}
+    public Task(Container container) {
+      this.container = container;
+    }
 
-		@Override
-		/**
-		 * Connects to CM, sets up container launch context 
-		 * for shell command and eventually dispatches the container 
-		 * start request to the CM. 
-		 */
-		public void run() {
-			connectToCM();
-			LOG.info("Setting up container launch container for containerid="
-					+ container.getId());
-			ContainerLaunchContext ctx = Records
-					.newRecord(ContainerLaunchContext.class);
+    /**
+     * Helper function to connect to CM
+     */
+    private void connectToCM() {
+      String cmIpPortStr =
+          container.getNodeId().getHost() + ":"
+              + container.getNodeId().getPort();
+      InetSocketAddress cmAddress = NetUtils.createSocketAddr(cmIpPortStr);
+      this.cm =
+          ((ContainerManager) rpc.getProxy(ContainerManager.class, cmAddress,
+              conf));
+    }
 
-			ctx.setContainerId(container.getId());
-			ctx.setResource(container.getResource());
-			try {
-				ctx.setUser(UserGroupInformation.getCurrentUser()
-						.getShortUserName());
-			} catch (IOException e) {
-				LOG.info("Getting current user info failed when trying to launch the container"
-						+ e.getMessage());
-			}
-			ctx.setEnvironment(initClasspath());
-			ctx.setLocalResources(initLocalResource());
-			ctx.setCommands(initCommand());
+    @Override
+    /**
+     * Connects to CM, sets up container launch context 
+     * for shell command and eventually dispatches the container 
+     * start request to the CM. 
+     */
+    public void run() {
+      connectToCM();
+      LOG.info("Setting up container launch container for containerid="
+          + container.getId());
+      ContainerLaunchContext ctx =
+          Records.newRecord(ContainerLaunchContext.class);
 
-			StartContainerRequest startReq = Records
-					.newRecord(StartContainerRequest.class);
-			startReq.setContainerLaunchContext(ctx);
-			try {
-				cm.startContainer(startReq);
-			} catch (YarnRemoteException e) {
-				LOG.error("Start container failed for :" + ", containerId="
-						+ container.getId(), e);
-			}
-			monitorApplication(container.getId());
+      ctx.setContainerId(container.getId());
+      ctx.setResource(container.getResource());
+      try {
+        ctx.setUser(UserGroupInformation.getCurrentUser().getShortUserName());
+      } catch (IOException e) {
+        LOG.info("Getting current user info failed when trying to launch the container"
+            + e.getMessage());
+      }
+      ctx.setEnvironment(initClasspath());
+      ctx.setLocalResources(initLocalResource());
+      ctx.setCommands(initCommand());
 
-		}
+      StartContainerRequest startReq =
+          Records.newRecord(StartContainerRequest.class);
+      startReq.setContainerLaunchContext(ctx);
+      try {
+        cm.startContainer(startReq);
+      } catch (YarnRemoteException e) {
+        LOG.error(
+            "Start container failed for :" + ", containerId="
+                + container.getId(), e);
+      }
+      monitorApplication(container.getId());
 
-		private boolean monitorApplication(ContainerId containerId) {
-			GetContainerStatusRequest statusReq = Records
-					.newRecord(GetContainerStatusRequest.class);
-			statusReq.setContainerId(containerId);
-			GetContainerStatusResponse statusResp = null;
-			ContainerState state;
-			try {
-				while (true) {
-					Thread.sleep(1000);
-					statusResp = cm.getContainerStatus(statusReq);
-					state = statusResp.getStatus().getState();
-					if (ContainerState.COMPLETE == state) {
-						LOG.info("Container did finished successfully."
-								+ ", id=" + container.getId()
-								+ " ContainerState=" + state.toString()
-								+ ". Breaking monitoring loop");
-						return true;
-					} else if (ContainerState.RUNNING == state) {
-						LOG.info("Container Status" + ", id="
-								+ container.getId() + ", state="
-								+ state.toString());
-					}
-				}
+    }
 
-			} catch (YarnRemoteExceptionPBImpl e) {
-				LOG.info("Container did finished successfully." + ", id="
-						+ container.getId() + " ContainerState= COMPLETE");
-				return true;
-			} catch (InterruptedException e) {
-				LOG.debug("Thread sleep in monitoring loop interrupted");
-			} catch (YarnRemoteException e) {
-				LOG.error(e.getClass() + e.getMessage());
-			}
-			return false;
-		}
+    private boolean monitorApplication(ContainerId containerId) {
+      GetContainerStatusRequest statusReq =
+          Records.newRecord(GetContainerStatusRequest.class);
+      statusReq.setContainerId(containerId);
+      GetContainerStatusResponse statusResp = null;
+      ContainerState state;
+      try {
+        while (true) {
+          Thread.sleep(1000);
+          statusResp = cm.getContainerStatus(statusReq);
+          state = statusResp.getStatus().getState();
+          if (ContainerState.COMPLETE == state) {
+            LOG.info("Container did finished successfully." + ", id="
+                + container.getId() + " ContainerState=" + state.toString()
+                + ". Breaking monitoring loop");
+            return true;
+          } else if (ContainerState.RUNNING == state) {
+            LOG.info("Container Status" + ", id=" + container.getId()
+                + ", state=" + state.toString());
+          }
+        }
 
-		private Map<String, String> initClasspath() {
-			Map<String, String> env = new HashMap<String, String>();
-			StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
-			for (String c : conf.get(
-					YarnConfiguration.YARN_APPLICATION_CLASSPATH).split(",")) {
-				classPathEnv.append(':');
-				classPathEnv.append(c.trim());
-			}
-			classPathEnv.append(":./log4j.properties");
-			env.put("CLASSPATH", classPathEnv.toString());
-			return env;
-		}
+      } catch (YarnRemoteExceptionPBImpl e) {
+        LOG.info("Container did finished successfully." + ", id="
+            + container.getId() + " ContainerState= COMPLETE");
+        return true;
+      } catch (InterruptedException e) {
+        LOG.debug("Thread sleep in monitoring loop interrupted");
+      } catch (YarnRemoteException e) {
+        LOG.error(e.getClass() + e.getMessage());
+      }
+      return false;
+    }
 
-		private Map<String, LocalResource> initLocalResource() {
-			Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
-			LocalResource clientJarRsrc = Records
-					.newRecord(LocalResource.class);
-			clientJarRsrc.setType(LocalResourceType.FILE);
-			clientJarRsrc.setVisibility(LocalResourceVisibility.APPLICATION);
-			try {
-				clientJarRsrc.setResource(ConverterUtils
-						.getYarnUrlFromURI(new URI(childJarPath)));
-			} catch (URISyntaxException e) {
-				LOG.error("Error when trying to use shell script path specified in env"
-						+ ", path=" + childJarPath);
-				numAllocatedContainers.decrementAndGet();
-				numFailedContainers.incrementAndGet();
-			}
-			clientJarRsrc.setTimestamp(childJarPathTimestamp);
-			clientJarRsrc.setSize(childJarPathLen);
-			localResources.put("Child.jar", clientJarRsrc);
-			return localResources;
-		}
+    private Map<String, String> initClasspath() {
+      Map<String, String> env = new HashMap<String, String>();
+      StringBuilder classPathEnv = new StringBuilder("${CLASSPATH}:./*");
+      for (String c : conf.get(YarnConfiguration.YARN_APPLICATION_CLASSPATH)
+          .split(",")) {
+        classPathEnv.append(':');
+        classPathEnv.append(c.trim());
+      }
+      classPathEnv.append(":./log4j.properties");
+      env.put("CLASSPATH", classPathEnv.toString());
+      return env;
+    }
 
-		private List<String> initCommand() {
-			StringBuilder command = new StringBuilder();
-			Vector<CharSequence> vargs = new Vector<CharSequence>(30);
-			vargs.add("${JAVA_HOME}" + "/bin/java");
-			try {
-				Class.forName(childClass);
-			} catch (ClassNotFoundException e1) {
-				LOG.error("Init StreamChild fail." + childClass);
-			}
-			vargs.add(childClass); // main of Child
-			vargs.add(childArgs);
-			vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-					+ "/Container.stdout");
-			vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-					+ "/Container.stderr");
-			for (CharSequence str : vargs) {
-				command.append(str).append(" ");
-			}
-			List<String> commands = new ArrayList<String>();
-			commands.add(command.toString());
-			return commands;
-		}
-	}
+    private Map<String, LocalResource> initLocalResource() {
+      Map<String, LocalResource> localResources =
+          new HashMap<String, LocalResource>();
+      LocalResource clientJarRsrc = Records.newRecord(LocalResource.class);
+      clientJarRsrc.setType(LocalResourceType.FILE);
+      clientJarRsrc.setVisibility(LocalResourceVisibility.APPLICATION);
+      try {
+        clientJarRsrc.setResource(ConverterUtils.getYarnUrlFromURI(new URI(
+            childJarPath)));
+      } catch (URISyntaxException e) {
+        LOG.error("Error when trying to use shell script path specified in env"
+            + ", path=" + childJarPath);
+        numAllocatedContainers.decrementAndGet();
+        numFailedContainers.incrementAndGet();
+      }
+      clientJarRsrc.setTimestamp(childJarPathTimestamp);
+      clientJarRsrc.setSize(childJarPathLen);
+      localResources.put("Child.jar", clientJarRsrc);
+      return localResources;
+    }
 
-	/**
-	 * Set the memory of container
-	 * 
-	 * @param response
-	 */
-	private void initMemory(RegisterApplicationMasterResponse response) {
-		int minMem = response.getMinimumResourceCapability().getMemory();
-		int maxMem = response.getMaximumResourceCapability().getMemory();
-		LOG.info("Min mem capabililty of resources in this cluster " + minMem);
-		LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
-		if (containerMemory < minMem)
-			containerMemory = minMem;
-		else if (containerMemory > maxMem)
-			containerMemory = maxMem;
-	}
+    private List<String> initCommand() {
+      StringBuilder command = new StringBuilder();
+      Vector<CharSequence> vargs = new Vector<CharSequence>(30);
+      vargs.add("${JAVA_HOME}" + "/bin/java");
+      try {
+        Class.forName(childClass);
+      } catch (ClassNotFoundException e1) {
+        LOG.error("Init StreamChild fail." + childClass);
+      }
+      vargs.add(childClass); // main of Child
+      vargs.add(childArgs);
+      vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+          + "/Container.stdout");
+      vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+          + "/Container.stderr");
+      for (CharSequence str : vargs) {
+        command.append(str).append(" ");
+      }
+      List<String> commands = new ArrayList<String>();
+      commands.add(command.toString());
+      return commands;
+    }
+  }
+
+  /**
+   * Set the memory of container
+   * 
+   * @param response
+   */
+  private void initMemory(RegisterApplicationMasterResponse response) {
+    int minMem = response.getMinimumResourceCapability().getMemory();
+    int maxMem = response.getMaximumResourceCapability().getMemory();
+    LOG.info("Min mem capabililty of resources in this cluster " + minMem);
+    LOG.info("Max mem capabililty of resources in this cluster " + maxMem);
+    if (containerMemory < minMem)
+      containerMemory = minMem;
+    else if (containerMemory > maxMem)
+      containerMemory = maxMem;
+  }
 
 }
