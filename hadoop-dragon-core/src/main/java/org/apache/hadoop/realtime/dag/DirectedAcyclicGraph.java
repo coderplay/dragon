@@ -52,6 +52,9 @@ public final class DirectedAcyclicGraph<V, E> {
   private Map<E, InternalEdge<V>> edgeMap =
       new LinkedHashMap<E, InternalEdge<V>>();
 
+  private transient Set<E> unmodifiableEdgeSet = null;
+  private transient Set<V> unmodifiableVertexSet = null;
+
   private EdgeFactory<V, E> edgeFactory;
   
   private TopoComparator<V> topoComparator;
@@ -384,6 +387,22 @@ public final class DirectedAcyclicGraph<V, E> {
     return getInternalVertex(vertex).getUnmodifiableOutgoingEdges();
   }
 
+  
+  public Set<V> vertexSet() {
+    if (unmodifiableVertexSet == null) {
+      unmodifiableVertexSet = Collections.unmodifiableSet(vertexMap.keySet());
+    }
+
+    return unmodifiableVertexSet;
+  }
+
+  public Set<E> edgeSet() {
+    if (unmodifiableEdgeSet == null) {
+      unmodifiableEdgeSet = Collections.unmodifiableSet(edgeMap.keySet());
+    }
+
+    return unmodifiableEdgeSet;
+  }
   
   
   /**

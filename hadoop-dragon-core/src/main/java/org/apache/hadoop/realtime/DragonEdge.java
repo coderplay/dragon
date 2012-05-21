@@ -15,27 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.dag;
+package org.apache.hadoop.realtime;
 
-import org.apache.hadoop.realtime.DragonVertex;
-import org.apache.hadoop.realtime.event.EventProcessor;
-import org.apache.hadoop.realtime.event.EventProducer;
-import org.junit.Before;
-import org.junit.Test;
+import java.io.Serializable;
 
-public class DragonVertexTest{
-
-  @Before
-  public void setUp() throws Exception {
-  }
-
-  @Test
-  public void test() throws Exception {
-    DragonVertex vertex = new DragonVertex.Builder("abc")
-                                          .producer(EventProducer.class)
-                                          .processor(EventProcessor.class)
-                                          .tasks(10)
-                                          .build();
-                                          
+/**
+ */
+public class DragonEdge implements Serializable {
+  
+  @Override
+  public int hashCode() {
+    return -1;
   }
 }

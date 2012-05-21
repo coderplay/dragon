@@ -10,8 +10,8 @@ import java.util.Set;
 class InternalVertex<E> {
   Set<E> incoming;
   Set<E> outgoing;
-  private Set<E> unmodifiableIncoming = null;
-  private Set<E> unmodifiableOutgoing = null;
+  private transient Set<E> unmodifiableIncoming = null;
+  private transient Set<E> unmodifiableOutgoing = null;
 
   InternalVertex() {
     incoming = new HashSet<E>();
