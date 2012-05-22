@@ -18,8 +18,6 @@
 package org.apache.hadoop.realtime.dag;
 
 import org.apache.hadoop.realtime.DragonVertex;
-import org.apache.hadoop.realtime.event.EventProcessor;
-import org.apache.hadoop.realtime.event.EventProducer;
 import org.junit.Before;
 import org.junit.Test;
 

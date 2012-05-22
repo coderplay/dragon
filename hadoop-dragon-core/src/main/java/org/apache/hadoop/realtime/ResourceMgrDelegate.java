@@ -136,7 +136,6 @@ public class ResourceMgrDelegate {
 
 	public String getSystemDir() throws IOException, InterruptedException {
 		Path sysDir = new Path(DragonJobConfig.JOB_SUBMIT_DIR);
-		// FileContext.getFileContext(conf).delete(sysDir, true);
 		return sysDir.toString();
 	}
 
@@ -175,11 +174,12 @@ public class ResourceMgrDelegate {
 	public ApplicationId getApplicationId() {
 		return applicationId;
 	}
-
+  private static final String STAGING_CONSTANT = ".staging";
 	public String getStagingAreaDir() throws IOException, InterruptedException {
-		// Path path = new Path(MRJobConstants.JOB_SUBMIT_DIR);
 		String user = UserGroupInformation.getCurrentUser().getShortUserName();
-		Path path = DragonApps.getStagingAreaDir(conf, user);
+    Path path= new Path(
+        conf.get(DragonJobConfig.DRAGON_AM_STAGING_DIR) + 
+        Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
 		LOG.debug("getStagingAreaDir: dir=" + path);
 		return path.toString();
 	}

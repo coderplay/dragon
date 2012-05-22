@@ -22,24 +22,21 @@ import org.apache.hadoop.classification.InterfaceAudience;
 /**
  * Place holder for cluster level configuration keys.
  * 
- * The keys should have "mapreduce.cluster." as the prefix. 
- *
+ * The keys should have "mapreduce.cluster." as the prefix.
+ * 
  */
 @InterfaceAudience.Private
 public interface DragonConfig {
-  // Cluster-level configuration parameters
-  public static final String TEMP_DIR = "dragon.cluster.temp.dir";
-  public static final String LOCAL_DIR = "dragon.cluster.local.dir";
-  
-  public static final String LOCAL_CACHE_SIZE = 
-      "dragon.cache.local.size";
-  public static final String LOCAL_CACHE_SUBDIRS_LIMIT =
-      "dragon.cache.local.numberdirectories";
-  /**
-   * Percentage of the local distributed cache that should be kept in between
-   * garbage collection.
-   */
-  public static final String LOCAL_CACHE_KEEP_AROUND_PCT =
-    "dragon.cache.local.keep.pct";
-  
+	// Cluster-level configuration parameters
+	public static final String TEMP_DIR = "dragon.cluster.temp.dir";
+	public static final String LOCAL_DIR = "dragon.cluster.local.dir";
+
+	public static final String LOCAL_CACHE_SIZE = "dragon.cache.local.size";
+	public static final String LOCAL_CACHE_SUBDIRS_LIMIT = "dragon.cache.local.numberdirectories";
+	/**
+	 * Percentage of the local distributed cache that should be kept in between
+	 * garbage collection.
+	 */
+	public static final String LOCAL_CACHE_KEEP_AROUND_PCT = "dragon.cache.local.keep.pct";
+
 }

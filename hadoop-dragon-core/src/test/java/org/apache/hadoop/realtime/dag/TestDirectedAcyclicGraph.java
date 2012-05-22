@@ -21,9 +21,6 @@ import java.util.Iterator;
 
 import junit.framework.TestCase;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 public class TestDirectedAcyclicGraph extends TestCase {
 
   public void testAddVertex() {
