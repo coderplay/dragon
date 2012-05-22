@@ -20,15 +20,14 @@ package org.apache.hadoop.realtime;
 
 import java.io.IOException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.conf.Configuration;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 /**
  * A utility to manage job submission files.<br/>
@@ -86,42 +85,42 @@ public class JobSubmissionFiles {
     return new Path(jobSubmitDir, "libjars");
   }
 
-//  /**
-//   * Initializes the staging directory and returns the path. It also
-//   * keeps track of all necessary ownership & permissions
-//   * @param client
-//   * @param conf
-//   */
-//  public static Path getStagingDir(DragonClientService client, Configuration conf) 
-//  throws IOException, InterruptedException {
-//    Path stagingArea = client.getStagingAreaDir();
-//    FileSystem fs = stagingArea.getFileSystem(conf);
-//    String realUser;
-//    String currentUser;
-//    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-//    realUser = ugi.getShortUserName();
-//    currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
-//    if (fs.exists(stagingArea)) {
-//      FileStatus fsStatus = fs.getFileStatus(stagingArea);
-//      String owner = fsStatus.getOwner();
-//      if (!(owner.equals(currentUser) || owner.equals(realUser))) {
-//         throw new IOException("The ownership on the staging directory " +
-//                      stagingArea + " is not as expected. " + 
-//                      "It is owned by " + owner + ". The directory must " +
-//                      "be owned by the submitter " + currentUser + " or " +
-//                      "by " + realUser);
-//      }
-//      if (!fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
-//        LOG.info("Permissions on staging directory " + stagingArea + " are " +
-//          "incorrect: " + fsStatus.getPermission() + ". Fixing permissions " +
-//          "to correct value " + JOB_DIR_PERMISSION);
-//        fs.setPermission(stagingArea, JOB_DIR_PERMISSION);
-//      }
-//    } else {
-//      fs.mkdirs(stagingArea, 
-//          new FsPermission(JOB_DIR_PERMISSION));
-//    }
-//    return stagingArea;
-//  }
+  /**
+   * Initializes the staging directory and returns the path. It also
+   * keeps track of all necessary ownership & permissions
+   * @param cluster
+   * @param conf
+   */
+  public static Path getStagingDir(Cluster cluster, Configuration conf) 
+  throws IOException, InterruptedException {
+    Path stagingArea = cluster.getStagingAreaDir();
+    FileSystem fs = stagingArea.getFileSystem(conf);
+    String realUser;
+    String currentUser;
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    realUser = ugi.getShortUserName();
+    currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
+    if (fs.exists(stagingArea)) {
+      FileStatus fsStatus = fs.getFileStatus(stagingArea);
+      String owner = fsStatus.getOwner();
+      if (!(owner.equals(currentUser) || owner.equals(realUser))) {
+         throw new IOException("The ownership on the staging directory " +
+                      stagingArea + " is not as expected. " + 
+                      "It is owned by " + owner + ". The directory must " +
+                      "be owned by the submitter " + currentUser + " or " +
+                      "by " + realUser);
+      }
+      if (!fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
+        LOG.info("Permissions on staging directory " + stagingArea + " are " +
+          "incorrect: " + fsStatus.getPermission() + ". Fixing permissions " +
+          "to correct value " + JOB_DIR_PERMISSION);
+        fs.setPermission(stagingArea, JOB_DIR_PERMISSION);
+      }
+    } else {
+      fs.mkdirs(stagingArea, 
+          new FsPermission(JOB_DIR_PERMISSION));
+    }
+    return stagingArea;
+  }
   
 }

@@ -32,7 +32,7 @@ public interface DragonJobService {
    * @return a unique job name for submitting jobs.
    * @throws IOException
    */
-  public JobId getNewJobID() throws IOException, InterruptedException;
+  public JobId getNewJobId() throws IOException, InterruptedException;
   
   /**
    * Submit a Job for execution.  Returns the latest profile for

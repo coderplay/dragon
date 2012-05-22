@@ -18,10 +18,21 @@
 package org.apache.hadoop.realtime;
 
 public class DragonJobConfig {
+  
+  public static final String ID = "dragon.job.id";
+
+  public static final String JOB_NAME = "dragon.job.name";
+  
+  // This should be the name of the localized job-jar file on the node running
+  // individual containers/tasks.
+  public static final String JOB_JAR = "graphjob.jar";
 
   // This should be the directory where splits file gets localized on the node
   // running ApplicationMaster.
   public static final String JOB_SUBMIT_DIR = "graphJobSubmitDir";
+
+  public static final String JOB_SUBMIT_FILE_REPLICATION = 
+      "dragon.client.submit.file.replication";
 
   public static final String CHILD_JAVA_OPTS =
       "dragon.child.java.opts";
@@ -32,11 +43,25 @@ public class DragonJobConfig {
 
   public static final String JOB_DESCRIPTION_FILE = "graphjob.desc";
 
-  // This should be the name of the localized job-jar file on the node running
-  // individual containers/tasks.
-  public static final String JOB_JAR = "graphjob.jar";
 
   /* Entry class for child processes on each node */
   public static final String CHILD_CLASS =
       "org.apache.hadoop.realtime.DragonChild";
+  
+  public static final String JOB_SUBMITHOST =
+      "dragon.job.submithostname";
+  public static final String JOB_SUBMITHOSTADDR =
+      "dragon.job.submithostaddress";
+
+  public static final String JOB_NAMENODES = "dragon.job.hdfs-servers";
+
+  /*
+   * config for tracking the local file where all the credentials for the job
+   * credentials.
+   */
+  public static final String DRAGON_JOB_CREDENTIALS_BINARY =
+      "dragon.job.credentials.binary";
+  
+  public static final String DRAGON_JOB_CREDENTIALS_JSON =
+      "dragon.job.credentials.json";
 }

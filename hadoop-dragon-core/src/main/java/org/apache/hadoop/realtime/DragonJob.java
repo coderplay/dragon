@@ -84,6 +84,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Evolving
 public class DragonJob implements Job {
 
+  public static final String USED_GENERIC_PARSER = 
+      "dragon.client.genericoptionsparser.used";
+  
   /**
    * The UserGroupInformation object that has a reference to the current user
    */
@@ -92,6 +95,8 @@ public class DragonJob implements Job {
   private Configuration conf;
   
   private Cluster cluster;
+  
+  private JobId jobId;
 
   DragonJob(final Configuration conf) throws IOException {
     this.conf = new Configuration(conf);
@@ -162,15 +167,17 @@ public class DragonJob implements Job {
     });
   }
 
+  void setJobId(JobId jobid) {
+    this.jobId = jobId;
+  }
+
   @Override
   public JobId getJobId() {
-    // TODO Auto-generated method stub
-    return null;
+    return jobId;
   }
 
   @Override
   public String getJobName() {
-    // TODO Auto-generated method stub
     return null;
   }
 
@@ -186,6 +193,11 @@ public class DragonJob implements Job {
 
   @Override
   public String getUser() {
+    return null;
+  }
+
+  @Override
+  public String getQueue() {
     return null;
   }
 }

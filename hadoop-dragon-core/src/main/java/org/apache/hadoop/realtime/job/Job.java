@@ -41,6 +41,14 @@ public interface Job {
   public String getJobName();
 
   /**
+   * Get the user-specified queue name. This is only used to identify the job to
+   * the user.
+   * 
+   * @return the job's name, defaulting to "".
+   */
+  public String getQueue();
+
+  /**
    * Get credentials for the job.
    * 
    * @return credentials for the job
@@ -60,4 +68,6 @@ public interface Job {
    * @return the username
    */
   public String getUser();
+  
+  
 }
