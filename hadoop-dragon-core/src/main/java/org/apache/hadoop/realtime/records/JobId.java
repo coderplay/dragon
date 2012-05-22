@@ -24,12 +24,12 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 public class JobId {
 
 	private ApplicationId applicationId;
-	
-	public JobId(ApplicationId applicationId){
-		this.applicationId=applicationId;
+
+	public JobId(ApplicationId applicationId) {
+		this.applicationId = applicationId;
 	}
-	
-	public ApplicationId getApplicationId(){
+
+	public ApplicationId getApplicationId() {
 		return applicationId;
 	}
 }
