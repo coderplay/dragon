@@ -19,9 +19,6 @@ package org.apache.hadoop.realtime;
 
 import java.io.Serializable;
 
-import org.apache.hadoop.realtime.event.EventProcessor;
-import org.apache.hadoop.realtime.event.EventProducer;
-
 /**
  * 
  */

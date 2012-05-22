@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Private
-package org.apache.hadoop.realtime.protocol.records;
+package org.apache.hadoop.realtime;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
+/**
+ * Place holder for cluster level configuration keys.
+ * 
+ * The keys should have "mapreduce.cluster." as the prefix.
+ * 
+ */
+@InterfaceAudience.Private
+public interface DragonConfig {
+	// Cluster-level configuration parameters
+	public static final String TEMP_DIR = "dragon.cluster.temp.dir";
+	public static final String LOCAL_DIR = "dragon.cluster.local.dir";
+
+	public static final String LOCAL_CACHE_SIZE = "dragon.cache.local.size";
+	public static final String LOCAL_CACHE_SUBDIRS_LIMIT = "dragon.cache.local.numberdirectories";
+	/**
+	 * Percentage of the local distributed cache that should be kept in between
+	 * garbage collection.
+	 */
+	public static final String LOCAL_CACHE_KEEP_AROUND_PCT = "dragon.cache.local.keep.pct";
+
+}
