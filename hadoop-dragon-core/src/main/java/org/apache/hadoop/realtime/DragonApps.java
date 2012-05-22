@@ -47,7 +47,7 @@ import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
 /**
- * Helper class for MR applications
+ * Helper class for Dragon applications
  */
 @Private
 @Unstable
@@ -136,7 +136,7 @@ public class DragonApps extends Apps {
     }
   }
   
-  private static void setMRFrameworkClasspath(
+  private static void setDragonFrameworkClasspath(
       Map<String, String> environment, Configuration conf) throws IOException {
     InputStream classpathFileStream = null;
     BufferedReader reader = null;
@@ -196,7 +196,7 @@ public class DragonApps extends Apps {
       conf.getBoolean(DragonJobConfig.DRAGON_JOB_USER_CLASSPATH_FIRST, false);
 
     if (!userClassesTakesPrecedence) {
-      DragonApps.setMRFrameworkClasspath(environment, conf);
+      DragonApps.setDragonFrameworkClasspath(environment, conf);
     }
     Apps.addToEnvironment(
         environment,
@@ -207,7 +207,7 @@ public class DragonApps extends Apps {
         Environment.CLASSPATH.name(),
         Environment.PWD.$() + Path.SEPARATOR + "*");
     if (userClassesTakesPrecedence) {
-      DragonApps.setMRFrameworkClasspath(environment, conf);
+      DragonApps.setDragonFrameworkClasspath(environment, conf);
     }
   }
   
