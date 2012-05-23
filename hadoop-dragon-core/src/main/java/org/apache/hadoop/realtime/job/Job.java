@@ -17,57 +17,74 @@
  */
 package org.apache.hadoop.realtime.job;
 
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.security.Credentials;
 
 /**
  */
 public interface Job {
 
-  /**
-   * Get the unique ID for the job.
-   * 
-   * @return the object with the job id
-   */
-  public JobId getJobId();
+	/**
+	 * Get the unique ID for the job.
+	 * 
+	 * @return the object with the job id
+	 */
+	public JobId getJobId();
 
-  /**
-   * Get the user-specified job name. This is only used to identify the job to
-   * the user.
-   * 
-   * @return the job's name, defaulting to "".
-   */
-  public String getJobName();
+	/**
+	 * Get the user-specified job name. This is only used to identify the job to
+	 * the user.
+	 * 
+	 * @return the job's name, defaulting to "".
+	 */
+	public String getJobName();
 
-  /**
-   * Get the user-specified queue name. This is only used to identify the job to
-   * the user.
-   * 
-   * @return the job's name, defaulting to "".
-   */
-  public String getQueue();
+	/**
+	 * Get the user-specified queue name. This is only used to identify the job to
+	 * the user.
+	 * 
+	 * @return the job's name, defaulting to "".
+	 */
+	public String getQueue();
 
-  /**
-   * Get credentials for the job.
-   * 
-   * @return credentials for the job
-   */
-  public Credentials getCredentials();
+	/**
+	 * Get credentials for the job.
+	 * 
+	 * @return credentials for the job
+	 */
+	public Credentials getCredentials();
 
-  /**
-   * Return the configuration for the job.
-   * 
-   * @return the shared configuration object
-   */
-  public Configuration getConfiguration();
+	/**
+	 * Return the configuration for the job.
+	 * 
+	 * @return the shared configuration object
+	 */
+	public Configuration getConfiguration();
 
-  /**
-   * Get the reported username for this job.
-   * 
-   * @return the username
-   */
-  public String getUser();
-  
-  
+	/**
+	 * Get the reported username for this job.
+	 * 
+	 * @return the username
+	 */
+	public String getUser();
+
+	/**
+	 * Get all tasks of this job
+	 * 
+	 * @return the list of task
+	 */
+	public List<Task> getTasks();
+
+	/**
+	 * Get task with given taskId
+	 * 
+	 * @param taskID
+	 * @return
+	 */
+	public Task getTask(TaskId taskId);
+
 }
