@@ -21,7 +21,7 @@ import java.util.List;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 
 public interface TaskAttempt {
-	TaskAttemptId getId();
+  TaskAttemptId getId();
 
-	List<String> getDiagnostics();
+  List<String> getDiagnostics();
 }
