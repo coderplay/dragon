@@ -36,6 +36,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -178,5 +179,11 @@ public class YarnRunner implements DragonJobService {
 		return DragonApps.newApplicationSubmissionContext(applicationId, conf,
 		    amContainer);
 	}
+
+  @Override
+  public AccessControlList getQueueAdmins(String queueName) throws IOException {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
 }

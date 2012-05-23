@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.authorize.AccessControlList;
 
 /**
  */
@@ -56,5 +57,16 @@ public interface DragonJobService {
    * @return the directory where job-specific files are to be placed.
    */
   public String getStagingAreaDir() throws IOException, InterruptedException;
+  
+  
+  /**
+   * Get the administrators of the given job-queue.
+   * This method is for hadoop internal use only.
+   * @param queueName
+   * @return Queue administrators ACL for the queue to which job is
+   *         submitted to
+   * @throws IOException
+   */
+  public AccessControlList getQueueAdmins(String queueName) throws IOException;
 
 }

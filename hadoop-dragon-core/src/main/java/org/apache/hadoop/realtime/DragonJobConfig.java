@@ -68,6 +68,7 @@ public class DragonJobConfig {
       "dragon.job.credentials.json";
 
 	public static final String QUEUE_NAME = "dragon.job.queuename";
+	public static final String DEFAULT_QUEUE_NAME = "default";
 
 	public static final String DRAGON_JOB_USER_CLASSPATH_FIRST = "dragon.job.user.classpath.first";
 
