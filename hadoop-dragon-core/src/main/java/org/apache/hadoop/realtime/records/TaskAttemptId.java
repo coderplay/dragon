@@ -20,5 +20,26 @@ package org.apache.hadoop.realtime.records;
 
 public class TaskAttemptId {
 
+	private TaskId taskId;
+	private int id;
+	
+	public TaskAttemptId(TaskId taskId,int attemptId){
+		
+	}
+	
+	public int getId() {
+  	return id;
+  }
+	public void setId(int id) {
+  	this.id = id;
+  }
+	public void setTaskId(TaskId taskId) {
+  	this.taskId = taskId;
+  }
+
+	public TaskId getTaskId(){
+		return taskId;
+	}
+
 }
 
