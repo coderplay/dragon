@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.realtime.job;
 
-import java.util.List;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.security.Credentials;
 
 /**
@@ -71,20 +68,5 @@ public interface Job {
 	 * @return the username
 	 */
 	public String getUser();
-
-	/**
-	 * Get all tasks of this job
-	 * 
-	 * @return the list of task
-	 */
-	public List<Task> getTasks();
-
-	/**
-	 * Get task with given taskId
-	 * 
-	 * @param taskID
-	 * @return
-	 */
-	public Task getTask(TaskId taskId);
 
 }

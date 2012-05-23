@@ -21,21 +21,25 @@ package org.apache.hadoop.realtime.records;
  */
 public class TaskId {
 
-	private JobId jobId;
-	private int id;
-	
-	public int getId() {
-  	return id;
+  private JobId jobId;
+  private int id;
+
+  public int getId() {
+    return id;
   }
-	public void setId(int id) {
-  	this.id = id;
+
+  public void setId(int id) {
+    this.id = id;
   }
-	public void setJobId(JobId jobId) {
-  	this.jobId = jobId;
+
+  public void setJobId(JobId jobId) {
+    this.jobId = jobId;
   }
-	public TaskId(JobId jobId,int id){	
-	}
-	public JobId getJobId(){
-		return jobId;
-	}
+
+  public TaskId(JobId jobId, int id) {
+  }
+
+  public JobId getJobId() {
+    return jobId;
+  }
 }
