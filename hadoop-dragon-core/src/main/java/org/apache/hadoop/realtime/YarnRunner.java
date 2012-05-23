@@ -23,6 +23,7 @@ import org.apache.hadoop.realtime.protocol.records.GetJobReportRequest;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -264,5 +265,11 @@ public class YarnRunner implements DragonJobService {
 		rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
 		return rsrc;
 	}
+
+  @Override
+  public AccessControlList getQueueAdmins(String queueName) throws IOException {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
 }

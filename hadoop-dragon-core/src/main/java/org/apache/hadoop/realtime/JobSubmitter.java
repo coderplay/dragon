@@ -40,6 +40,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.token.Token;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -107,7 +109,7 @@ class JobSubmitter {
     job.setJobId(jobId);
 
     Path submitJobDir = new Path(jobStagingArea, jobId.toString());
-//    JobStatus status = null;
+
     try {
       conf.set("hadoop.http.filter.initializers", 
           "org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer");
@@ -123,42 +125,31 @@ class JobSubmitter {
       populateTokenCache(conf, job.getCredentials());
 
       copyAndConfigureFiles(job, submitJobDir);
-//      Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
-//      
-//      // Create the splits for the job
-//      LOG.debug("Creating splits at " + jtFs.makeQualified(submitJobDir));
-//      int maps = writeSplits(job, submitJobDir);
-//      conf.setInt(MRJobConfig.NUM_MAPS, maps);
-//      LOG.info("number of splits:" + maps);
-//
-//      // write "queue admins of the queue to which job is being submitted"
-//      // to job file.
-//      String queue = conf.get(MRJobConfig.QUEUE_NAME,
-//          JobConf.DEFAULT_QUEUE_NAME);
-//      AccessControlList acl = submitClient.getQueueAdmins(queue);
-//      conf.set(toFullPropertyName(queue,
-//          QueueACL.ADMINISTER_JOBS.getAclName()), acl.getAclString());
-//
-//      // removing jobtoken referrals before copying the jobconf to HDFS
-//      // as the tasks don't need this setting, actually they may break
-//      // because of it if present as the referral will point to a
-//      // different job.
-//      TokenCache.cleanUpTokenReferral(conf);
-//
-//      // Write job file to submit dir
-//      writeConf(conf, submitJobFile);
-//      
-//      //
-//      // Now, actually submit the job (using the submit name)
-//      //
-//      printTokens(jobId, job.getCredentials());
-//      status = submitClient.submitJob(
-//          jobId, submitJobDir.toString(), job.getCredentials());
-//      if (status != null) {
-//        return status;
-//      } else {
-//        throw new IOException("Could not launch job");
-//      }
+      Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
+
+      // write "queue admins of the queue to which job is being submitted"
+      // to job file.
+      String queue = conf.get(DragonJobConfig.QUEUE_NAME,
+          DragonJobConfig.DEFAULT_QUEUE_NAME);
+      AccessControlList acl = client.getQueueAdmins(queue);
+      conf.set(toFullPropertyName(queue,
+          QueueACL.ADMINISTER_JOBS.getAclName()), acl.getAclString());
+
+      // removing jobtoken referrals before copying the jobconf to HDFS
+      // as the tasks don't need this setting, actually they may break
+      // because of it if present as the referral will point to a
+      // different job.
+      TokenCache.cleanUpTokenReferral(conf);
+
+      // Write job file to submit dir
+      writeConf(conf, submitJobFile);
+      
+      //
+      // Now, actually submit the job (using the submit name)
+      //
+      printTokens(jobId, job.getCredentials());
+      return client.submitJob(
+          jobId, submitJobDir.toString(), job.getCredentials());
     } finally {
 //      if (status == null) {
 //        LOG.info("Cleaning up the staging area " + submitJobDir);
@@ -167,7 +158,6 @@ class JobSubmitter {
 //
 //      }
     }
-    return false;
   }
   
   private void writeConf(Configuration conf, Path jobFile) throws IOException {
@@ -277,8 +267,8 @@ class JobSubmitter {
     Path archivesDir = JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
     Path libjarsDir = JobSubmissionFiles.getJobDistCacheLibjars(submitJobDir);
     // add all the command line files/ jars and archive
-    // first copy them to jobtrackers filesystem 
-      
+    // first copy them to dragon job service provider's
+    // filesystem
     if (files != null) {
       FileSystem.mkdirs(submitFs, filesDir, sysPerms);
       String[] fileArr = files.split(",");
@@ -443,6 +433,26 @@ class JobSubmitter {
     FileUtil.copy(remoteFs, originalPath, submitFs, newPath, false, conf);
     submitFs.setReplication(newPath, replication);
     return newPath;
+  }
+
+  private void printTokens(JobId jobId,
+      Credentials credentials) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Printing tokens for job: " + jobId);
+      for(Token<?> token: credentials.getAllTokens()) {
+        if (token.getKind().toString().equals("HDFS_DELEGATION_TOKEN")) {
+          LOG.debug("Submitting with " +
+              org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.stringifyToken(token));
+        }
+      }
+    }
+  }
+
+  // this method is for internal use only
+  private static final String toFullPropertyName(
+    String queue,
+    String property) {
+    return "dragon.queue." + queue + "." + property;
   }
 
 }

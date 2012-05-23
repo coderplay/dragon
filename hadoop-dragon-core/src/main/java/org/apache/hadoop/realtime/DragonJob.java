@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.security.Credentials;
@@ -96,6 +97,9 @@ public class DragonJob implements Job {
   private Cluster cluster;
   
   private JobId jobId;
+  
+  private DirectedAcyclicGraph<DragonVertex, DragonEdge> jobGraph;
+
 
   DragonJob(final Configuration conf) throws IOException {
     this.conf = new Configuration(conf);
@@ -198,5 +202,13 @@ public class DragonJob implements Job {
   @Override
   public String getQueue() {
     return null;
+  }
+  
+  public void setJobGraph(DirectedAcyclicGraph<DragonVertex, DragonEdge> jobGraph) {
+    this.jobGraph =  jobGraph;
+  }
+  
+  public DirectedAcyclicGraph<DragonVertex, DragonEdge> getJobGraph() {
+    return jobGraph;
   }
 }

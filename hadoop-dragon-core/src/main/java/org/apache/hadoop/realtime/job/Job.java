@@ -68,6 +68,6 @@ public interface Job {
    * @return the username
    */
   public String getUser();
-  
+ 
   
 }
