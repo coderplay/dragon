@@ -67,7 +67,7 @@ public class TestYarnRunner extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestYarnRunner.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
-  private YarnRunner yarnRunner;
+  private DragonJobRunner yarnRunner;
   private ResourceMgrDelegate resourceMgrDelegate;
   private YarnConfiguration conf;
   private ApplicationId appId;
@@ -81,7 +81,7 @@ public class TestYarnRunner extends TestCase {
   public void setUp() throws Exception {
     resourceMgrDelegate = mock(ResourceMgrDelegate.class);
     conf = new YarnConfiguration();
-    yarnRunner = new YarnRunner(conf, resourceMgrDelegate);
+    yarnRunner = new DragonJobRunner(conf, resourceMgrDelegate);
     yarnRunner = spy(yarnRunner);
     submissionContext = mock(ApplicationSubmissionContext.class);
     doAnswer(

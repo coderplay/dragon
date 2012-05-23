@@ -26,15 +26,21 @@ import org.apache.hadoop.realtime.event.EventProcessor;
 import org.apache.hadoop.realtime.event.EventProducer;
 
 /**
+ * {@link DragonVertex}s is the basic component of a
+ * {@link DirectedAcyclicGraph} for describing the topology of a {@link DragonJob}.
  * 
+ * 
+ * @see DragonJob
+ * @see DirectedAcyclicGraph
+ * @see DragonEdge
  */
 public class DragonVertex implements Serializable {
 
   private static final long serialVersionUID = -8959502704094556166L;
   private String label;
   private int tasks;
-  private List<Path> files;
-  private List<Path> archives;
+  private List<String> files;
+  private List<String> archives;
   private String childOpts;
 
   DragonVertex() {
@@ -52,16 +58,20 @@ public class DragonVertex implements Serializable {
     return label;
   }
   
-  List<Path> getFiles() {
+  List<String> getFiles() {
     return files;
   }
   
-  List<Path> getArchives() {
+  List<String> getArchives() {
     return archives;
   }
   
   String getChildOptins() {
     return childOpts;
+  }
+  
+  int getTasks() {
+    return tasks;
   }
 
   @Override
@@ -73,24 +83,24 @@ public class DragonVertex implements Serializable {
   public static final class Builder {
     String label;
     int tasks;
-    List<Path> jars;
-    List<Path> files;
-    List<Path> archives;
+    List<String> jars;
+    List<String> files;
+    List<String> archives;
     String childOpts;
 
     public Builder(final String label) {
       this.label = label;
-      jars = new ArrayList<Path>();
-      files = new ArrayList<Path>();
-      archives = new ArrayList<Path>();
+      jars = new ArrayList<String>();
+      files = new ArrayList<String>();
+      archives = new ArrayList<String>();
     }
 
-    public Builder addArchieve(final Path archive){
+    public Builder addArchieve(final String archive){
       archives.add(archive);
       return this;
     }
 
-    public Builder files(final Path file) {
+    public Builder addFile(final String file) {
       files.add(file);
       return this;
     }
