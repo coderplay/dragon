@@ -41,5 +41,7 @@ public interface DragonConfig {
    */
   public static final String LOCAL_CACHE_KEEP_AROUND_PCT =
     "dragon.cache.local.keep.pct";
+	public static final String SYSTEM_DIR = null;
+	public static final String STAGING_AREA_ROOT = null;
   
 }

@@ -15,27 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.records;
+package org.apache.hadoop.realtime.job;
 
-/**
- */
-public class TaskId {
+import java.util.Map;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskId;
 
-	private JobId jobId;
-	private int id;
-	
-	public int getId() {
-  	return id;
-  }
-	public void setId(int id) {
-  	this.id = id;
-  }
-	public void setJobId(JobId jobId) {
-  	this.jobId = jobId;
-  }
-	public TaskId(JobId jobId,int id){	
-	}
-	public JobId getJobId(){
-		return jobId;
-	}
+public interface Task {
+
+	TaskId getId();
+
+	Map<TaskAttemptId, TaskAttempt> getAttempts();
+
+	TaskAttempt getAttempt(TaskAttemptId attemptId);
+
+	Mission getMisstion();
+
 }

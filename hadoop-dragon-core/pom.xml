@@ -45,6 +45,12 @@
         <artifactId>guava</artifactId>
         <version>11.0.2</version>
     </dependency>
+	<dependency>
+		<groupId>org.mockito</groupId>
+		<artifactId>mockito-all</artifactId>
+		<version>1.8.5</version>
+		<scope>test</scope>
+	</dependency>
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -72,7 +78,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
@@ -115,7 +120,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
