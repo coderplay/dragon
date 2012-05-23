@@ -208,7 +208,7 @@ public class DragonJob implements Job {
     this.jobGraph =  jobGraph;
   }
   
-  public DirectedAcyclicGraph<DragonVertex, DragonEdge> getJobGraph() {
+  DirectedAcyclicGraph<DragonVertex, DragonEdge> getJobGraph() {
     return jobGraph;
   }
 }
