@@ -28,7 +28,7 @@ public interface Task {
 	Map<TaskAttemptId, TaskAttempt> getAttempts();
 
 	TaskAttempt getAttempt(TaskAttemptId attemptId);
-	
+
 	Mission getMisstion();
 
 }

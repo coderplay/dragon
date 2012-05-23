@@ -28,9 +28,10 @@ import org.apache.hadoop.security.Credentials;
 
 public class LocalJob implements Job {
 
-	public LocalJob(Configuration conf){
-		
+	public LocalJob(Configuration conf) {
+
 	}
+
 	@Override
 	public JobId getJobId() {
 		// TODO Auto-generated method stub
