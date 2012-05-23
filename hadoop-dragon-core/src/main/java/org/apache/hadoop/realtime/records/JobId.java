@@ -23,27 +23,27 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
  */
 public class JobId {
 
-	private ApplicationId appId;
-	private int id;
+  private ApplicationId appId;
+  private int id;
 
-	public JobId(ApplicationId applicationId) {
-		this.appId = applicationId;
-	}
+  public JobId(ApplicationId applicationId) {
+    this.appId = applicationId;
+  }
 
-	public ApplicationId getAppId() {
-		return appId;
-	}
+  public ApplicationId getAppId() {
+    return appId;
+  }
 
-	public void setAppId(ApplicationId appId) {
-		this.appId = appId;
-	}
+  public void setAppId(ApplicationId appId) {
+    this.appId = appId;
+  }
 
-	public int getId() {
-		return id;
-	}
+  public int getId() {
+    return id;
+  }
 
-	public void setId(int id) {
-		this.id = id;
-	}
+  public void setId(int id) {
+    this.id = id;
+  }
 
 }

@@ -27,46 +27,46 @@ import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 
 class LocalJobRunnerMetrics implements Updater {
-	private final MetricsRecord metricsRecord;
+  private final MetricsRecord metricsRecord;
 
-	private int numTasksLaunched = 0;
-	private int numTasksCompleted = 0;
-	private int numWaitingTasks = 0;
+  private int numTasksLaunched = 0;
+  private int numTasksCompleted = 0;
+  private int numWaitingTasks = 0;
 
-	public LocalJobRunnerMetrics(Configuration conf) {
-		MetricsContext context = MetricsUtil.getContext("dragon");
-		metricsRecord = MetricsUtil.createRecord(context, "jobtracker");
-		context.registerUpdater(this);
-	}
+  public LocalJobRunnerMetrics(Configuration conf) {
+    MetricsContext context = MetricsUtil.getContext("dragon");
+    metricsRecord = MetricsUtil.createRecord(context, "jobtracker");
+    context.registerUpdater(this);
+  }
 
-	/**
-	 * Since this object is a registered updater, this method will be called
-	 * periodically, e.g. every 5 seconds.
-	 */
-	public void doUpdates(MetricsContext unused) {
-		synchronized (this) {
-			metricsRecord.incrMetric("task_launched", numTasksLaunched);
-			metricsRecord.incrMetric("task_completed", numTasksCompleted);
-			metricsRecord.incrMetric("waiting_tasks", numWaitingTasks);
+  /**
+   * Since this object is a registered updater, this method will be called
+   * periodically, e.g. every 5 seconds.
+   */
+  public void doUpdates(MetricsContext unused) {
+    synchronized (this) {
+      metricsRecord.incrMetric("task_launched", numTasksLaunched);
+      metricsRecord.incrMetric("task_completed", numTasksCompleted);
+      metricsRecord.incrMetric("waiting_tasks", numWaitingTasks);
 
-			numTasksLaunched = 0;
-			numTasksCompleted = 0;
-			numWaitingTasks = 0;
-		}
-		metricsRecord.update();
-	}
+      numTasksLaunched = 0;
+      numTasksCompleted = 0;
+      numWaitingTasks = 0;
+    }
+    metricsRecord.update();
+  }
 
-	public synchronized void launchTask(TaskAttemptId taskAttemptId) {
-		++numTasksLaunched;
-		decWaitingTasks(taskAttemptId.getTaskId().getJobId(), 1);
-	}
+  public synchronized void launchTask(TaskAttemptId taskAttemptId) {
+    ++numTasksLaunched;
+    decWaitingTasks(taskAttemptId.getTaskId().getJobId(), 1);
+  }
 
-	public synchronized void completeTask(TaskAttemptId taskAttemptId) {
-		++numTasksCompleted;
-	}
+  public synchronized void completeTask(TaskAttemptId taskAttemptId) {
+    ++numTasksCompleted;
+  }
 
-	private synchronized void decWaitingTasks(JobId id, int task) {
-		numWaitingTasks -= task;
-	}
+  private synchronized void decWaitingTasks(JobId id, int task) {
+    numWaitingTasks -= task;
+  }
 
 }

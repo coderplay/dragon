@@ -23,12 +23,10 @@ import org.apache.hadoop.realtime.records.TaskId;
 
 public interface Task {
 
-	TaskId getId();
+  TaskId getId();
 
-	Map<TaskAttemptId, TaskAttempt> getAttempts();
+  Map<TaskAttemptId, TaskAttempt> getAttempts();
 
-	TaskAttempt getAttempt(TaskAttemptId attemptId);
-
-	Mission getMisstion();
+  TaskAttempt getAttempt(TaskAttemptId attemptId);
 
 }
