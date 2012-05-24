@@ -18,24 +18,62 @@
 package org.apache.hadoop.realtime;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.event.EventProcessor;
 import org.apache.hadoop.realtime.event.EventProducer;
 
 /**
+ * {@link DragonVertex}s is the basic component of a
+ * {@link DirectedAcyclicGraph} for describing the topology of a {@link DragonJob}.
  * 
+ * 
+ * @see DragonJob
+ * @see DirectedAcyclicGraph
+ * @see DragonEdge
  */
 public class DragonVertex implements Serializable {
 
   private static final long serialVersionUID = -8959502704094556166L;
+  private String label;
+  private int tasks;
+  private List<String> files;
+  private List<String> archives;
+  private String childOpts;
 
   DragonVertex() {
   };
 
   DragonVertex(Builder builder) {
-
+    label = builder.label;
+    files = builder.files;
+    archives = builder.archives;
+    childOpts = builder.childOpts;
+    tasks = (builder.tasks > 0) ? builder.tasks : 1;
   }
   
+  public String getLabel() {
+    return label;
+  }
+  
+  List<String> getFiles() {
+    return files;
+  }
+  
+  List<String> getArchives() {
+    return archives;
+  }
+  
+  String getChildOptins() {
+    return childOpts;
+  }
+  
+  int getTasks() {
+    return tasks;
+  }
+
   @Override
   public int hashCode() {
     // TODO: implements it
@@ -44,36 +82,44 @@ public class DragonVertex implements Serializable {
 
   public static final class Builder {
     String label;
+    int tasks;
+    List<String> jars;
+    List<String> files;
+    List<String> archives;
+    String childOpts;
 
-    public Builder(String label) {
+    public Builder(final String label) {
       this.label = label;
+      jars = new ArrayList<String>();
+      files = new ArrayList<String>();
+      archives = new ArrayList<String>();
     }
 
-    public Builder jars(String[] jars) {
+    public Builder addArchieve(final String archive){
+      archives.add(archive);
       return this;
     }
 
-    public Builder archieves(String[] archieves) {
+    public Builder addFile(final String file) {
+      files.add(file);
       return this;
     }
 
-    public Builder files(String[] files) {
+    public Builder producer(final Class<? extends EventProducer> clazz) {
       return this;
     }
 
-    public Builder producer(Class<? extends EventProducer> clazz) {
+    public Builder processor(final Class<? extends EventProcessor> clazz) {
       return this;
     }
 
-    public Builder processor(Class<? extends EventProcessor> clazz) {
+    public Builder tasks(final int num) {
+      this.tasks = num;
       return this;
     }
 
-    public Builder tasks(int num) {
-      return this;
-    }
-
-    public Builder childOptions(String options) {
+    public Builder childOptions(final String options) {
+      childOpts = options;
       return this;
     }
 
