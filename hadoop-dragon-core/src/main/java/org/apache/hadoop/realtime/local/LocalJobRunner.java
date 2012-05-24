@@ -36,12 +36,15 @@ import org.apache.hadoop.realtime.DragonJobService;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -256,6 +259,32 @@ public class LocalJobRunner implements DragonJobService {
 
   @Override
   public AccessControlList getQueueAdmins(String queueName) throws IOException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public void killJob(JobId jobid) throws IOException, InterruptedException {
+    // TODO Auto-generated method stub
+    
+  }
+
+  @Override
+  public boolean killTask(TaskAttemptId taskId, boolean shouldFail)
+      throws IOException, InterruptedException {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public List<TaskReport> getTaskReports(JobId jobid) throws IOException,
+      InterruptedException {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public JobReport getJobReport(JobId jobId) throws YarnRemoteException {
     // TODO Auto-generated method stub
     return null;
   }

@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.realtime.records;
 
+import java.text.NumberFormat;
+
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 /**
  */
-public class JobId {
+public class JobId implements Comparable<JobId>{
 
   private ApplicationId appId;
   private int id;
 
+  public JobId(){
+  }
   public JobId(ApplicationId applicationId) {
     this.appId = applicationId;
   }
@@ -45,5 +49,63 @@ public class JobId {
   public void setId(int id) {
     this.id = id;
   }
+  protected static final String JOB = "job";
+  protected static final char SEPARATOR = '_';
+  static final ThreadLocal<NumberFormat> jobIdFormat =
+      new ThreadLocal<NumberFormat>() {
+        @Override
+        public NumberFormat initialValue() {
+          NumberFormat fmt = NumberFormat.getInstance();
+          fmt.setGroupingUsed(false);
+          fmt.setMinimumIntegerDigits(4);
+          return fmt;
+        }
+      };
+
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder(JOB);
+    builder.append(SEPARATOR);
+    builder.append(getAppId().getClusterTimestamp());
+    builder.append(SEPARATOR);
+    builder.append(jobIdFormat.get().format(getId()));
+    return builder.toString();
+  }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + getAppId().hashCode();
+    result = prime * result + getId();
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    JobId other = (JobId) obj;
+    if (!this.getAppId().equals(other.getAppId()))
+      return false;
+    if (this.getId() != other.getId())
+      return false;
+    return true;
+  }
+
+  @Override
+  public int compareTo(JobId other) {
+    int appIdComp = this.getAppId().compareTo(other.getAppId());
+    if (appIdComp == 0) {
+      return this.getId() - other.getId();
+    } else {
+      return appIdComp;
+    }
+  }
+   
 
 }

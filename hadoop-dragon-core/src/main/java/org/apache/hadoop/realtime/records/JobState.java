@@ -16,18 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.realtime.protocol.records;
+package org.apache.hadoop.realtime.records;
 
-import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.realtime.records.TaskAttemptId;
-
-public interface GetDiagnosticsRequest {
-  public abstract TaskAttemptId getTaskAttemptId();
-  
-  public abstract void setTaskAttemptId(TaskAttemptId taskAttemptId);
-  
-  public abstract void setJobId(JobId jobId);
-  
-  public abstract JobId getJobId();
-  
+public enum JobState {
+  NEW,
+  INITED,
+  RUNNING,
+  ALLLAUNCHED,
+  FAILED,
+  KILL_WAIT,
+  KILLED,
+  ERROR
 }

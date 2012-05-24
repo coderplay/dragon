@@ -16,18 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.realtime.protocol.records;
+package org.apache.hadoop.realtime.util;
 
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.Records;
 
-public interface GetDiagnosticsRequest {
-  public abstract TaskAttemptId getTaskAttemptId();
-  
-  public abstract void setTaskAttemptId(TaskAttemptId taskAttemptId);
-  
-  public abstract void setJobId(JobId jobId);
-  
-  public abstract JobId getJobId();
-  
+public class DragonBuilderUtils {
+
+  public static JobId newJobId(ApplicationId appId, int id) {
+    JobId jobId = Records.newRecord(JobId.class);
+    jobId.setAppId(appId);
+    jobId.setId(id);
+    return jobId;
+  }
+
+  public static TaskId newTaskId(JobId jobId, int id) {
+    TaskId taskId = Records.newRecord(TaskId.class);
+    taskId.setJobId(jobId);
+    taskId.setId(id);
+    return taskId;
+  }
+
+  public static TaskAttemptId newTaskAttemptId(TaskId taskId, int attemptId) {
+    TaskAttemptId taskAttemptId = Records.newRecord(TaskAttemptId.class);
+    taskAttemptId.setTaskId(taskId);
+    taskAttemptId.setId(attemptId);
+    return taskAttemptId;
+  }
 }

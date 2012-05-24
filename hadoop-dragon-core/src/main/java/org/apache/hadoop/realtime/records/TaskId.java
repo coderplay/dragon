@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.realtime.records;
 
+import java.text.NumberFormat;
+
 /**
  */
-public class TaskId {
+public class TaskId implements Comparable<TaskId>{
 
   private JobId jobId;
   private int id;
@@ -41,5 +43,64 @@ public class TaskId {
 
   public JobId getJobId() {
     return jobId;
+  }
+  protected static final String TASK = "task";
+
+  static final ThreadLocal<NumberFormat> taskIdFormat =
+      new ThreadLocal<NumberFormat>() {
+        @Override
+        public NumberFormat initialValue() {
+          NumberFormat fmt = NumberFormat.getInstance();
+          fmt.setGroupingUsed(false);
+          fmt.setMinimumIntegerDigits(6);
+          return fmt;
+        }
+      };
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + getId();
+    result = prime * result + getJobId().hashCode();
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    TaskId other = (TaskId) obj;
+    if (getId() != other.getId())
+      return false;
+    if (!getJobId().equals(other.getJobId()))
+      return false;
+    return true;
+  }
+      
+  @Override
+  public String toString() {
+    StringBuilder builder = new StringBuilder(TASK);
+    JobId jobId = getJobId();
+    builder.append("_").append(jobId.getAppId().getClusterTimestamp());
+    builder.append("_").append(
+        JobId.jobIdFormat.get().format(jobId.getAppId().getId()));
+    builder.append("_");
+    builder.append(taskIdFormat.get().format(getId()));
+    return builder.toString();
+  }
+
+  @Override
+  public int compareTo(TaskId other) {
+    int jobIdComp = this.getJobId().compareTo(other.getJobId());
+    if (jobIdComp == 0) {
+        return this.getId() - other.getId();
+    } else {
+      return jobIdComp;
+    }
   }
 }

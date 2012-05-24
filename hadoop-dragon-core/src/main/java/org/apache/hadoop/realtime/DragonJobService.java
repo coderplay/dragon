@@ -19,10 +19,16 @@
 package org.apache.hadoop.realtime;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.JobReport;
+import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
 /**
  */
@@ -68,5 +74,25 @@ public interface DragonJobService {
    * @throws IOException
    */
   public AccessControlList getQueueAdmins(String queueName) throws IOException;
+  
+  /**
+   * Kill the indicated job
+   */
+  public void killJob(JobId jobid) throws IOException, InterruptedException;
+  
+  /**
+   * Kill indicated task attempt.
+   * @param taskId the id of the task to kill.
+   * @param shouldFail if true the task is failed and added to failed tasks list, otherwise
+   * it is just killed, w/o affecting job failure status.  
+   */ 
+  public boolean killTask(TaskAttemptId taskId, boolean shouldFail) throws IOException, InterruptedException;
 
+  /**
+   * Grab a bunch of info on the tasks that make up the job
+   */
+  public List<TaskReport> getTaskReports(JobId jobid) throws IOException,
+      InterruptedException;
+
+  public JobReport getJobReport(JobId jobId) throws YarnRemoteException;
 }
