@@ -21,6 +21,8 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.event.EventProcessor;
 import org.apache.hadoop.realtime.event.EventProducer;
@@ -28,12 +30,15 @@ import org.apache.hadoop.realtime.event.EventProducer;
 /**
  * {@link DragonVertex}s is the basic component of a
  * {@link DirectedAcyclicGraph} for describing the topology of a {@link DragonJob}.
- * 
+ * A {@link DirectedAcyclicGraph} for dragon jobs is formed by a collection of 
+ * {@link DragonVertex}s and directed {@link DragonEdge}s.
  * 
  * @see DragonJob
  * @see DirectedAcyclicGraph
  * @see DragonEdge
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class DragonVertex implements Serializable {
 
   private static final long serialVersionUID = -8959502704094556166L;
@@ -95,7 +100,7 @@ public class DragonVertex implements Serializable {
       archives = new ArrayList<String>();
     }
 
-    public Builder addArchieve(final String archive){
+    public Builder addArchive(final String archive){
       archives.add(archive);
       return this;
     }
