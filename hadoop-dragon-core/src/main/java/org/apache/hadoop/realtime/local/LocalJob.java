@@ -77,5 +77,8 @@ public class LocalJob implements Job {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	public void setCredentials(Credentials credentials){
+	  
+	}
 
 }
