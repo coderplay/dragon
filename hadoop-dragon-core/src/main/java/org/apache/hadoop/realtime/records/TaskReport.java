@@ -17,8 +17,18 @@
  */
 package org.apache.hadoop.realtime.records;
 
+import java.util.ArrayList;
+
 /**
  */
 public interface TaskReport {
+
+  public void setTaskId(TaskId taskId);
+
+  public void setTaskState(TaskState taskState);
+
+  public void addAllRunningAttempts(ArrayList<TaskAttemptId> taskAttempts);
+  
+  public TaskState getTaskState();
 
 }

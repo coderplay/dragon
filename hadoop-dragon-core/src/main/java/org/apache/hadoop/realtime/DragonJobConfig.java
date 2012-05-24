@@ -156,4 +156,19 @@ public class DragonJobConfig {
 	/** The staging directory for dragon. */
 	public static final String DRAGON_AM_STAGING_DIR = DRAGON_AM_PREFIX
 	    + "staging-dir";
+
+  public static final String APPLICATION_ATTEMPT_ID =
+      "dragon.job.application.attempt.id";
+  
+  /** The number of client retires to the AM - before reconnecting to the RM
+   * to fetch Application State. 
+   */
+  public static final String DRAGON_CLIENT_TO_AM_IPC_MAX_RETRIES = 
+    DRAGON_PREFIX + "client-am.ipc.max-retries";
+  public static final int DEFAULT_DRAGON_CLIENT_TO_AM_IPC_MAX_RETRIES = 3;
+  
+  /** AM ACL disabled. **/
+  public static final String JOB_AM_ACCESS_DISABLED = 
+    "dragon.job.am-access-disabled";
+  public static final boolean DEFAULT_JOB_AM_ACCESS_DISABLED = false;
 }

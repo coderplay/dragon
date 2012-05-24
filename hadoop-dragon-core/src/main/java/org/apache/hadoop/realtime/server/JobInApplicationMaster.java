@@ -82,5 +82,9 @@ public class JobInApplicationMaster implements Job {
     // TODO Auto-generated method stub
     return null;
   }
+  
+  public Task getTask(TaskId taskId){
+    return null;  
+  }
 
 }

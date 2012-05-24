@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
@@ -107,21 +108,20 @@ public class ResourceMgrDelegate {
 		return metrics;
 	}
 
-	@SuppressWarnings("rawtypes")
-	public Token getDelegationToken(Text renewer) throws IOException,
-	    InterruptedException {
-		/* get the token from RM */
+  @SuppressWarnings("rawtypes")
+  public Token getDelegationToken(Text renewer) throws IOException,
+      InterruptedException {
+    /* get the token from RM */
     GetDelegationTokenRequest rmDTRequest =
-        recordFactory
-            .newRecordInstance(GetDelegationTokenRequest.class);
+        recordFactory.newRecordInstance(GetDelegationTokenRequest.class);
     rmDTRequest.setRenewer(renewer.toString());
-    org.apache.hadoop.yarn.api.protocolrecords.GetDelegationTokenResponse response =
+    GetDelegationTokenResponse response =
         applicationsManager.getDelegationToken(rmDTRequest);
     DelegationToken yarnToken = response.getRMDelegationToken();
     return new Token<RMDelegationTokenIdentifier>(yarnToken.getIdentifier()
         .array(), yarnToken.getPassword().array(),
         new Text(yarnToken.getKind()), new Text(yarnToken.getService()));
-	}
+  }
 
 	public String getFilesystemName() throws IOException, InterruptedException {
 		return FileSystem.get(conf).getUri().toString();
