@@ -37,11 +37,15 @@ import org.apache.hadoop.security.UserGroupInformation;
  * otherwises they will throw an IllegalStateException. </p>
  *
  * <p>
- * Normally the user creates the application, describes various facets of the
- * job via {@link DragonJob} and then submits the job and monitor its progress.
+ * The key component of a {@link DragonJob} is a {@link DirectedAcyclicGraph},
+ * which is formed by a collection of {@link DragonVertex}s and directed 
+ * {@link DragonEdge}s.
+ * Normally user creates the application, describes various facets of the job 
+ * , sets {@link DirectedAcyclicGraph} via {@link DragonJob} , and then 
+ * submits the job and monitor its progress.
  * </p>
  * 
- * <p>Here is an example on how to submit a Dragon {@link DragonJob}:</p>
+ * <p>Here is an example on how to submit a {@link DragonJob}:</p>
  * <p><blockquote><pre>
  *   Configuration conf = getConf();
  *   conf.setInt(INT_PROPERTY, 1);
@@ -57,14 +61,17 @@ import org.apache.hadoop.security.UserGroupInformation;
  *                                         .build();
  *   DragonVertex m1 = new DragonVertex.Builder("intermediate1")
  *                                     .processor(EventProcessor.class)
- *                                     .cache("file.txt,dict.dat")
+ *                                     .addFile("file.txt")
+ *                                     .addFile("dict.dat")
+ *                                     .addAchive("archive.zip")
  *                                     .tasks(10)
  *                                     .build();
  *   DragonVertex m2 = new DragonVertex.Builder("intermediate2")
  *                                     .processor(EventProcessor.class)
+ *                                     .addFile("aux")
  *                                     .tasks(10)
  *                                     .build();
- *   DragonVertex dest = new DragonVertex.Builder("source")
+ *   DragonVertex dest = new DragonVertex.Builder("dest")
  *                                       .processor(EventProcessor.class)
  *                                       .tasks(10)
  *                                       .build();
@@ -75,10 +82,14 @@ import org.apache.hadoop.security.UserGroupInformation;
  *   g.addEdge(source, m2).parition(HashPartitioner.class);
  *   g.addEdge(m1, dest).parition(CustomPartitioner.class);
  *   g.addEdge(m2, dest).parition(CustomPartitioner.class);
- *   job.setGraph(serializer.serialze(g));
+ *   job.setJobGraph(g);
  *   // check all source vertex hold event producers when submitting
  *   job.submit();
  * </pre></blockquote></p>
+ * 
+ * @see DirectedAcyclicGraph
+ * @see DragonVertex
+ * @see DragonEdge
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
