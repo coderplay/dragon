@@ -42,6 +42,7 @@ import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.realtime.serialize.HessianSerializer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
@@ -129,6 +130,7 @@ class JobSubmitter {
 
       copyAndConfigureFiles(job, submitJobDir);
       Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
+      Path submitJobDescFile = JobSubmissionFiles.getJobDescriptionFile(submitJobDir);
 
       // write "queue admins of the queue to which job is being submitted"
       // to job file.
@@ -147,6 +149,9 @@ class JobSubmitter {
       // Write job file to submit dir
       writeConf(conf, submitJobFile);
       
+      // Write the serialized job description dag to submit dir
+      writeJobDescription(job.getJobGraph(), submitJobDescFile);
+
       //
       // Now, actually submit the job (using the submit name)
       //
@@ -164,12 +169,28 @@ class JobSubmitter {
   }
   
   private void writeConf(Configuration conf, Path jobFile) throws IOException {
-    // Write job file to JobTracker's fs
+    // Write job file to job service provider's fs
     FSDataOutputStream out =
         FileSystem.create(submitFs, jobFile, new FsPermission(
             JobSubmissionFiles.JOB_FILE_PERMISSION));
     try {
       conf.writeXml(out);
+    } finally {
+      out.close();
+    }
+  }
+  
+  private void writeJobDescription(
+      DirectedAcyclicGraph<DragonVertex, DragonEdge> graph, Path descFile)
+      throws IOException {
+    // Write job description to job service provider's fs
+    FSDataOutputStream out =
+        FileSystem.create(submitFs, descFile, new FsPermission(
+            JobSubmissionFiles.JOB_FILE_PERMISSION));
+    try {
+      HessianSerializer<DirectedAcyclicGraph<DragonVertex, DragonEdge>> serializer =
+          new HessianSerializer<DirectedAcyclicGraph<DragonVertex, DragonEdge>>();
+      serializer.serialize(out, graph);
     } finally {
       out.close();
     }
