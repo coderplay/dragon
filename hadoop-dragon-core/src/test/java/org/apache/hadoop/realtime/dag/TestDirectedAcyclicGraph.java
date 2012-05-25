@@ -19,13 +19,17 @@ package org.apache.hadoop.realtime.dag;
 
 import java.util.Iterator;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-public class TestDirectedAcyclicGraph extends TestCase {
+import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
+public class TestDirectedAcyclicGraph {
+
+  @Test
   public void testAddVertex() {
     // vertex type: String, edge type: String
     String vertex1 = "new vertex1";
@@ -37,6 +41,7 @@ public class TestDirectedAcyclicGraph extends TestCase {
     assertFalse(dag.containsVertex(vertex2));
   }
 
+  @Test
   public void testCycleDetection() {
     // vertex type: String, edge type: String
     String vertex1 = "new vertex1";
@@ -59,7 +64,8 @@ public class TestDirectedAcyclicGraph extends TestCase {
     assertTrue(dagRejectedEdge);
   }
   
-  public void textIteration() throws Exception {
+  @Test
+  public void testIteration() throws Exception {
     String vertex1 = "new vertex1";
     String vertex2 = "new vertex2";
     String vertex3 = "new vertex3";

@@ -38,7 +38,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.delegation.DelegationTokenIdentifier;
@@ -180,16 +179,15 @@ class JobSubmitter {
     }
   }
   
-  private void writeJobDescription(
-      DirectedAcyclicGraph<DragonVertex, DragonEdge> graph, Path descFile)
+  private void writeJobDescription(DragonJobGraph graph, Path descFile)
       throws IOException {
     // Write job description to job service provider's fs
     FSDataOutputStream out =
         FileSystem.create(submitFs, descFile, new FsPermission(
             JobSubmissionFiles.JOB_FILE_PERMISSION));
     try {
-      HessianSerializer<DirectedAcyclicGraph<DragonVertex, DragonEdge>> serializer =
-          new HessianSerializer<DirectedAcyclicGraph<DragonVertex, DragonEdge>>();
+      HessianSerializer<DragonJobGraph> serializer =
+          new HessianSerializer<DragonJobGraph>();
       serializer.serialize(out, graph);
     } finally {
       out.close();
@@ -279,7 +277,7 @@ class JobSubmitter {
     // add all the command line files/ jars and archive
     // first copy them to dragon job service provider's
     // filesystem
-    DirectedAcyclicGraph<DragonVertex, DragonEdge> jobGraph = job.getJobGraph();
+    DragonJobGraph jobGraph = job.getJobGraph();
     for (DragonVertex vertex : jobGraph.vertexSet()) {
       List<String> files = vertex.getFiles();
       if (files.size() > 0) {

@@ -15,38 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.dag;
+package org.apache.hadoop.realtime;
 
-import java.io.Serializable;
+import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 
 /**
- * An internal view of edges from a {@link DirectedAcyclicGraph}
+ * {@link DragonJobGraph} is the key component of a {@link DragonJob}.
+ * It is formed by a collection of {@link DragonVertex}s and directed 
+ * {@link DragonEdge}s.
  */
-class InternalEdge<V> implements Serializable {
-  private static final long serialVersionUID = 1917792937475311485L;
+public class DragonJobGraph extends
+    DirectedAcyclicGraph<DragonVertex, DragonEdge> {
 
-  V source;
-  V target;
+  private static final long serialVersionUID = -4182450268966910597L;
 
-  InternalEdge(V source, V target) {
-    this.source = source;
-    this.target = target;
+  public DragonJobGraph() {
+    super(DragonEdge.class);
   }
-  
-  /**
-   * Get the source vertex of this edge.
-   * @return the source vertex of this edge.
-   */
-  public V getSource() {
-    return source;
-  }
-
-  /**
-   * Get the target vertex of this edge.
-   * @return the target vertex of this edge.
-   */
-  public V getTarget() {
-    return target;
-  }
-
 }
