@@ -33,10 +33,12 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -48,6 +50,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.realtime.security.token.delegation.DelegationTokenIdentifier;
 
 public class DragonJobRunner implements DragonJobService {
   private static final Log LOG = LogFactory.getLog(DragonJobRunner.class);
@@ -56,7 +59,7 @@ public class DragonJobRunner implements DragonJobService {
   private final FileContext defaultFileContext;
 
   /**
-   * Yarn runner incapsulates the client interface of yarn
+   * Dragon runner incapsulates the client interface of yarn
    * 
    * @param conf the configuration object for the client
    */
@@ -65,7 +68,7 @@ public class DragonJobRunner implements DragonJobService {
   }
 
   /**
-   * Similar to {@link #YARNRunner(Configuration)} but allowing injecting
+   * Similar to {@link #DragonRunner(Configuration)} but allowing injecting
    * {@link ResourceMgrDelegate}. Enables mocking and testing.
    * 
    * @param conf the configuration object for the client
@@ -89,6 +92,7 @@ public class DragonJobRunner implements DragonJobService {
   @Override
   public boolean submitJob(JobId jobId, String jobSubmitDir, Credentials ts)
       throws IOException, InterruptedException {
+    // Get the security token of the jobSubmitDir and store in Credentials
     Path applicationTokensFile =
         new Path(jobSubmitDir, DragonJobConfig.APPLICATION_TOKENS_FILE);
     try {
@@ -184,4 +188,10 @@ public class DragonJobRunner implements DragonJobService {
     return null;
   }
 
+  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
+      throws IOException, InterruptedException {
+    // The token is only used for serialization. So the type information
+    // mismatch should be fine.
+    return resMgrDelegate.getDelegationToken(renewer);
+  }
 }
