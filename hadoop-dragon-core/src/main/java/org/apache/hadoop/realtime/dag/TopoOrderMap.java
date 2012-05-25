@@ -1,5 +1,6 @@
 package org.apache.hadoop.realtime.dag;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,7 +10,8 @@ import java.util.Map;
  * For performance and flexibility uses an ArrayList for topological index to
  * vertex mapping, and a HashMap for vertex to topological index mapping.
  */
-class TopoOrderMap<V> {
+class TopoOrderMap<V> implements Serializable {
+  private static final long serialVersionUID = 7834322521006147372L;
 
   private final List<V> topoToVertex = new ArrayList<V>();
   private final Map<V, Integer> vertexToTopo =

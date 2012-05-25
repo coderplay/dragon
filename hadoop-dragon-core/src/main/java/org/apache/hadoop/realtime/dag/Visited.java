@@ -44,7 +44,6 @@ class Visited {
   }
 
   public void setVisited(int index) {
-    System.out.println("set visited: " + index );
     visited.set(translateIndex(index), Boolean.TRUE);
   }
 

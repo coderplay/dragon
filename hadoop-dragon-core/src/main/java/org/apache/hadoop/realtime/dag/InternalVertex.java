@@ -1,5 +1,6 @@
 package org.apache.hadoop.realtime.dag;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -7,7 +8,9 @@ import java.util.Set;
 /**
  * An internal view of vertices.
  */
-class InternalVertex<E> {
+class InternalVertex<E> implements Serializable {
+  private static final long serialVersionUID = 337763367843853900L;
+
   Set<E> incoming;
   Set<E> outgoing;
   private transient Set<E> unmodifiableIncoming = null;

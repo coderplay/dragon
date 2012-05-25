@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.realtime.dag;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,7 +45,9 @@ import java.util.TreeSet;
  * multiple threads will produce undefined results.
  * </p>
  */
-public final class DirectedAcyclicGraph<V, E> {
+public class DirectedAcyclicGraph<V, E> implements Serializable {
+  private static final long serialVersionUID = -8352536912775689101L;
+
   /* vertex -> internal vertex */
   private Map<V, InternalVertex<E>> vertexMap =
       new LinkedHashMap<V, InternalVertex<E>>();
@@ -66,6 +69,9 @@ public final class DirectedAcyclicGraph<V, E> {
 
   // this update count is used to keep internal topological iterators honest
   private long topologyUpdateCount = 0;
+
+  protected DirectedAcyclicGraph() {
+  }
 
   /**
    * @param edgeClass
