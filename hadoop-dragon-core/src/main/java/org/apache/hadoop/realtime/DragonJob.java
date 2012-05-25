@@ -19,13 +19,20 @@ package org.apache.hadoop.realtime;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.JobReport;
+import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -93,6 +100,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Evolving
 public class DragonJob implements Job {
 
+  private static final Log LOG = LogFactory.getLog(DragonJob.class);
   public static final String USED_GENERIC_PARSER = 
       "dragon.client.genericoptionsparser.used";
   
@@ -106,9 +114,11 @@ public class DragonJob implements Job {
   private Cluster cluster;
   
   private JobId jobId;
-  
+
   private DragonJobGraph jobGraph;
 
+  private JobState state = JobState.NEW;
+  private static final long MAX_JOBSTATE_AGE = 1000 * 2;
 
   DragonJob(final Configuration conf) throws IOException {
     this.conf = new Configuration(conf);
@@ -176,6 +186,7 @@ public class DragonJob implements Job {
         return submitter.submitJobInternal(DragonJob.this, cluster);
       }
     });
+    state = JobState.RUNNING;
   }
 
   void setJobId(JobId jobid) {
@@ -218,5 +229,43 @@ public class DragonJob implements Job {
   
   DragonJobGraph getJobGraph() {
     return jobGraph;
+  }
+  
+  /**
+   * Monitor a job and print status in real-time as progress is made and tasks
+   * fail.
+   * 
+   * @return true if the job succeeded
+   * @throws IOException if communication to the JobTracker fails
+   */
+  public boolean monitorAndPrintJob() throws IOException, InterruptedException {
+    JobId jobId = getJobId();
+    LOG.info("Running job: " + jobId);
+    JobReport report=getJobReport(jobId);
+    while (state!=JobState.ALLLAUNCHED) {
+      LOG.info(report.getDiagnostics());
+      Thread.sleep(MAX_JOBSTATE_AGE);
+      report=getJobReport(jobId);
+    }
+    LOG.info(report.getDiagnostics());
+    return true;
+  }
+
+  /**
+   * Get events indicating completion (success/failure) of component tasks.
+   * 
+   * @param startFrom index to start fetching events from
+   * @param numEvents number of events to fetch
+   * @return an array of {@link TaskCompletionEvent}s
+   * @throws IOException
+   */
+  public JobReport getJobReport(final JobId jobId) throws IOException,
+      InterruptedException {
+    return ugi.doAs(new PrivilegedExceptionAction<JobReport>() {
+      @Override
+      public JobReport run() throws IOException, InterruptedException {
+        return cluster.getClient().getJobReport(jobId);
+      }
+    });
   }
 }

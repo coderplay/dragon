@@ -34,11 +34,20 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.realtime.client.ClientCache;
+import org.apache.hadoop.realtime.protocol.records.GetJobReportRequest;
+import org.apache.hadoop.realtime.protocol.records.GetJobReportResponse;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.JobReport;
+import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskReport;
+import org.apache.hadoop.realtime.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -49,12 +58,15 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.util.BuilderUtils;
-import org.apache.hadoop.realtime.security.token.delegation.DelegationTokenIdentifier;
+
+import com.google.inject.spi.TypeConverter;
 
 public class DragonJobRunner implements DragonJobService {
   private static final Log LOG = LogFactory.getLog(DragonJobRunner.class);
   private ResourceMgrDelegate resMgrDelegate;
+  private ClientCache clientCache;
   private Configuration conf;
   private final FileContext defaultFileContext;
 
@@ -193,5 +205,57 @@ public class DragonJobRunner implements DragonJobService {
     // The token is only used for serialization. So the type information
     // mismatch should be fine.
     return resMgrDelegate.getDelegationToken(renewer);
+  }
+
+  @Override
+  public void killJob(JobId jobId) throws IOException, InterruptedException {
+    /* check if the status is not running, if not send kill to RM */
+    JobState state = clientCache.getClient(jobId).getJobReport(jobId).getJobState();
+    if (state != JobState.RUNNING) {
+      resMgrDelegate.killApplication(jobId.getAppId());
+      return;
+    }
+    try {
+      /* send a kill to the AM */
+      clientCache.getClient(jobId).killJob(jobId);
+      long currentTimeMillis = System.currentTimeMillis();
+      long timeKillIssued = currentTimeMillis;
+      while ((currentTimeMillis < timeKillIssued + 10000L) && (state
+          != JobState.KILLED)) {
+          try {
+            Thread.sleep(1000L);
+          } catch(InterruptedException ie) {
+            /** interrupted, just break */
+            break;
+          }
+          currentTimeMillis = System.currentTimeMillis();
+          state = clientCache.getClient(jobId).getJobReport(jobId).getJobState();
+      }
+    } catch(IOException io) {
+      LOG.debug("Error when checking for application status", io);
+    }
+    if (state != JobState.KILLED) {
+      resMgrDelegate.killApplication(jobId.getAppId());
+    }
+  }
+
+  @Override
+  public boolean killTask(TaskAttemptId taskId, boolean shouldFail)
+      throws IOException, InterruptedException {
+    clientCache.getClient(taskId.getTaskId().getJobId()).killTask(taskId,
+        shouldFail);
+    return false;
+  }
+
+  @Override
+  public List<TaskReport> getTaskReports(JobId jobId) throws IOException,
+      InterruptedException {
+    return clientCache.getClient(jobId).getTaskReports(jobId);
+  }
+
+
+  @Override
+  public JobReport getJobReport(JobId jobId) throws YarnRemoteException {
+    return clientCache.getClient(jobId).getJobReport(jobId);
   }
 }

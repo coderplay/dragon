@@ -21,4 +21,25 @@ package org.apache.hadoop.realtime.records;
  */
 public interface JobReport {
 
+  public abstract JobId getJobId();
+  public abstract JobState getJobState();
+  public abstract long getSubmitTime();
+  public abstract long getStartTime();
+  public abstract String getUser();
+  public abstract String getJobName();
+  public abstract String getTrackingUrl();
+  public abstract String getDiagnostics();
+  public abstract String getJobFile();
+
+
+  public abstract void setJobId(JobId jobId);
+  public abstract void setJobState(JobState jobState);
+  public abstract void setSubmitTime(long submitTime);
+  public abstract void setStartTime(long startTime);
+  public abstract void setUser(String user);
+  public abstract void setJobName(String jobName);
+  public abstract void setTrackingUrl(String trackingUrl);
+  public abstract void setDiagnostics(String diagnostics);
+  public abstract void setJobFile(String jobFile);
+
 }
