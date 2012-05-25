@@ -171,4 +171,17 @@ public class DragonJobConfig {
   public static final String JOB_AM_ACCESS_DISABLED = 
     "dragon.job.am-access-disabled";
   public static final boolean DEFAULT_JOB_AM_ACCESS_DISABLED = false;
+
+  /** Number of threads to handle job client RPC requests. */
+  public static final String DRAGON_AM_JOB_CLIENT_THREAD_COUNT =
+      DRAGON_AM_PREFIX + "job.client.thread-count";
+  public static final int DEFAULT_DRAGON_AM_JOB_CLIENT_THREAD_COUNT = 1;
+  
+  /*
+   * Dragon AM Service Authorization
+   */
+  public static final String DRAGON_AM_SECURITY_SERVICE_AUTHORIZATION_TASK_UMBILICAL =
+      "security.job.task.protocol.acl";
+  public static final String DRAGON_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT =
+      "security.job.client.protocol.acl";
 }

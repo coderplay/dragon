@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonConfig;
 import org.apache.hadoop.realtime.DragonJobService;
-import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;

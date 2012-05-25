@@ -18,8 +18,10 @@
 package org.apache.hadoop.realtime.job;
 
 import java.util.Map;
+
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskReport;
 
 public interface Task {
 
@@ -28,5 +30,7 @@ public interface Task {
   Map<TaskAttemptId, TaskAttempt> getAttempts();
 
   TaskAttempt getAttempt(TaskAttemptId attemptId);
+  
+  TaskReport getReport();
 
 }

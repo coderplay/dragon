@@ -34,6 +34,10 @@ public class JobId implements Comparable<JobId>{
     this.appId = applicationId;
   }
 
+  public JobId(ApplicationId applicationId, int jobId) {
+    this.appId=applicationId;
+    this.id=jobId;
+  }
   public ApplicationId getAppId() {
     return appId;
   }

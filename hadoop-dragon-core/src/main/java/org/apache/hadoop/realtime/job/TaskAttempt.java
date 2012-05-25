@@ -18,10 +18,15 @@
 package org.apache.hadoop.realtime.job;
 
 import java.util.List;
+
 import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskAttemptReport;
 
 public interface TaskAttempt {
   TaskAttemptId getId();
 
   List<String> getDiagnostics();
+  
+  TaskAttemptReport getReport();
+  
 }

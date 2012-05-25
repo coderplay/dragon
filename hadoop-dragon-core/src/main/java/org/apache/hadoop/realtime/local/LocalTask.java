@@ -6,6 +6,7 @@ import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.job.TaskAttempt;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskReport;
 
 public class LocalTask implements Task{
 
@@ -29,6 +30,12 @@ public class LocalTask implements Task{
   
   public void run(){
     
+  }
+
+  @Override
+  public TaskReport getReport() {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 }
