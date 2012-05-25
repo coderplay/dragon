@@ -18,10 +18,14 @@
 
 package org.apache.hadoop.realtime.dag;
 
+import java.io.Serializable;
+
 /**
  * An {@link EdgeFactory} for producing edges by using a class as a factory.
  */
-public class EdgeFactory<V, E> {
+public class EdgeFactory<V, E> implements Serializable {
+  private static final long serialVersionUID = -7890706652865009651L;
+
   private final Class<? extends E> edgeClass;
 
   public EdgeFactory(Class<? extends E> edgeClass) {
