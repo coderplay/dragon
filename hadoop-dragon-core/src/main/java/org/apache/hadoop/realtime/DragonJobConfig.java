@@ -39,7 +39,7 @@ public class DragonJobConfig {
   
   // This should be the name of the localized job-configuration file on the node
   // running ApplicationMaster and Task
-  public static final String JOB_CONF_FILE = "graphjob.xml";
+  public static final String JOB_CONF_FILE = "job.xml";
 
 	public static final String USER_NAME = "dragon.job.user.name";
 

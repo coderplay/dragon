@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
@@ -187,7 +188,7 @@ public class DragonJob implements Job {
     state = JobState.RUNNING;
   }
 
-  void setJobId(JobId jobid) {
+  void setJobId(JobId jobId) {
     this.jobId = jobId;
   }
 
@@ -239,11 +240,16 @@ public class DragonJob implements Job {
   public boolean monitorAndPrintJob() throws IOException, InterruptedException {
     JobId jobId = getJobId();
     LOG.info("Running job: " + jobId);
-    JobReport report=getJobReport(jobId);
-    while (state!=JobState.ALLLAUNCHED) {
-      LOG.info(report.getDiagnostics());
+    JobReport report=null;
+    while (state!=JobState.SUCCEEDED) {
       Thread.sleep(MAX_JOBSTATE_AGE);
+      if(jobId==null){
+        jobId=getJobId();
+        continue;
+      }
+      LOG.info(jobId+" "+state);
       report=getJobReport(jobId);
+      state=report.getJobState();
     }
     LOG.info(report.getDiagnostics());
     return true;

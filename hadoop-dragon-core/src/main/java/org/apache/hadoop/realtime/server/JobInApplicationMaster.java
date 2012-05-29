@@ -28,12 +28,14 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.client.app.TaskAttemptListener;
-import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.job.IJobInApp;
 import org.apache.hadoop.realtime.job.Task;
-import org.apache.hadoop.realtime.job.event.JobEvent;
-import org.apache.hadoop.realtime.job.event.JobEventType;
+import org.apache.hadoop.realtime.job.app.event.JobEvent;
+import org.apache.hadoop.realtime.job.app.event.JobEventType;
+import org.apache.hadoop.realtime.records.AMInfo;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
@@ -50,7 +52,8 @@ import org.apache.hadoop.yarn.util.Records;
 
 /**
  */
-public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
+public class JobInApplicationMaster implements IJobInApp,
+    EventHandler<JobEvent> {
   private static final Log LOG = LogFactory
       .getLog(JobInApplicationMaster.class);
   // final fields
@@ -61,7 +64,6 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
   private final Lock writeLock;
   private final String jobName;
   private final JobId jobId;
-  private final TaskAttemptListener taskAttemptListener;
   private final EventHandler<JobEvent> eventHandler;
   private final String userName;
   private final String queueName;
@@ -72,12 +74,12 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
   volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
   private Credentials fsTokens;
   private Configuration conf;
-  
+
   private final StateMachine<JobState, JobEventType, JobEvent> stateMachine;
   protected static final StateMachineFactory<JobInApplicationMaster, JobState, JobEventType, JobEvent> stateMachineFactory =
       new StateMachineFactory<JobInApplicationMaster, JobState, JobEventType, JobEvent>(
           JobState.NEW)
-          // Transitions from NEW state
+      // Transitions from NEW state
           .addTransition(JobState.NEW, JobState.INITED, JobEventType.JOB_INIT,
               new InitTransition())
           // Transitions from INITED state
@@ -87,16 +89,15 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
           .addTransition(JobState.RUNNING, JobState.KILL_WAIT,
               JobEventType.JOB_KILL, new KillWaitTaskCompletedTransition())
           // Transitions from KILL_WAIT state.
-          .addTransition(JobState.KILL_WAIT, JobState.KILLED,
+          .addTransition(JobState.KILL_WAIT, JobState.SUCCEEDED,
               JobEventType.JOB_KILL, new KillTaskTransition())
           // create the topology tables
           .installTopology();
 
   public JobInApplicationMaster(JobId jobId,
       ApplicationAttemptId applicationAttemptId, Configuration conf,
-      EventHandler<JobEvent> eventHandler, TaskAttemptListener taskAttemptListener,
-      Credentials fsTokenCredentials, Clock clock, String userName,
-      long appSubmitTime) {
+      EventHandler<JobEvent> eventHandler, Credentials fsTokenCredentials,
+      Clock clock, String userName, long appSubmitTime) {
     this.applicationAttemptId = applicationAttemptId;
     this.jobId = jobId;
     this.jobName = conf.get(DragonJobConfig.JOB_NAME, "<missing job name>");
@@ -106,7 +107,6 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
     this.queueName = conf.get(DragonJobConfig.QUEUE_NAME, "default");
     this.appSubmitTime = appSubmitTime;
 
-    this.taskAttemptListener = taskAttemptListener;
     this.eventHandler = eventHandler;
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     this.readLock = readWriteLock.readLock();
@@ -123,8 +123,9 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to start Job
+      LOG.error(job.getState());
       job.getEventHandler().handle(
-          new JobEvent(job.getJobId(), JobEventType.JOB_START));
+          new JobEvent(job.getID(), JobEventType.JOB_START));
     }
   }
 
@@ -133,8 +134,9 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Running Job
+      LOG.error(job.getState());
       job.getEventHandler().handle(
-          new JobEvent(job.getJobId(), JobEventType.JOB_KILL));
+          new JobEvent(job.getID(), JobEventType.JOB_KILL));
     }
   }
 
@@ -143,8 +145,9 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Kill Job
+      LOG.error(job.getState());
       job.getEventHandler().handle(
-          new JobEvent(job.getJobId(), JobEventType.JOB_KILL));
+          new JobEvent(job.getID(), JobEventType.JOB_KILL));
     }
   }
 
@@ -153,38 +156,9 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Clean the killed Job
-      LOG.info("Job "+job.getJobId()+"is killed");
+      LOG.error(job.getState());
+      LOG.info("Job " + job.getID() + "is killed");
     }
-  }
-
-  @Override
-  public JobId getJobId() {
-    return jobId;
-  }
-
-  @Override
-  public String getJobName() {
-    return jobName;
-  }
-
-  @Override
-  public String getQueue() {
-    return queueName;
-  }
-
-  @Override
-  public Credentials getCredentials() {
-    return fsTokens;
-  }
-
-  @Override
-  public Configuration getConfiguration() {
-    return conf;
-  }
-
-  @Override
-  public String getUser() {
-    return userName;
   }
 
   public Task getTask(TaskId taskId) {
@@ -237,11 +211,11 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
   private void addDiagnostic(String diag) {
     diagnostics.add(diag);
   }
-  
-  public Map<TaskId,Task> getTasks(){
+
+  public Map<TaskId, Task> getTasks() {
     return tasks;
   }
-  
+
   public EventHandler<JobEvent> getEventHandler() {
     return this.eventHandler;
   }
@@ -254,6 +228,56 @@ public class JobInApplicationMaster implements Job, EventHandler<JobEvent> {
     report.setUser(userName);
     readLock.unlock();
     return report;
+  }
+
+  @Override
+  public JobId getID() {
+    return jobId;
+  }
+
+  @Override
+  public String getName() {
+    return jobName;
+  }
+
+  @Override
+  public Counters getAllCounters() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public List<String> getDiagnostics() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public float getProgress() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
+  public String getUserName() {
+    return userName;
+  }
+
+  @Override
+  public String getQueueName() {
+    return queueName;
+  }
+
+  @Override
+  public Path getConfFile() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public List<AMInfo> getAMInfos() {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 }

@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.util.Records;
 
 // TODO: This should be part of something like yarn-client.
 public class ResourceMgrDelegate {
@@ -132,7 +133,10 @@ public class ResourceMgrDelegate {
 		    .newRecordInstance(GetNewApplicationRequest.class);
 		applicationId = applicationsManager.getNewApplication(request)
 		    .getApplicationId();
-		return new JobId(applicationId);
+    JobId jobId = Records.newRecord(JobId.class);
+    jobId.setAppId(applicationId);
+    jobId.setId(applicationId.getId());
+		return jobId;
 
 	}
 

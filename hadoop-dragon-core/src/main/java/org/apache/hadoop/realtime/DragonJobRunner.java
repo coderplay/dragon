@@ -45,7 +45,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -86,6 +85,7 @@ public class DragonJobRunner implements DragonJobService {
     try {
       this.resMgrDelegate = resMgrDelegate;
       this.defaultFileContext = FileContext.getFileContext(this.conf);
+      this.clientCache= new ClientCache(conf, resMgrDelegate);
     } catch (UnsupportedFileSystemException ufe) {
       throw new RuntimeException("Error in instantiating YarnClient", ufe);
     }

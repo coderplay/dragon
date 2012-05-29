@@ -32,15 +32,18 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.app.AppContext;
-import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.client.app.ClientService;
+import org.apache.hadoop.realtime.job.IJobInApp;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.job.TaskAttempt;
-import org.apache.hadoop.realtime.job.event.JobEvent;
-import org.apache.hadoop.realtime.job.event.JobEventType;
-import org.apache.hadoop.realtime.job.event.TaskAttemptEvent;
-import org.apache.hadoop.realtime.job.event.TaskAttemptEventType;
-import org.apache.hadoop.realtime.job.event.TaskEvent;
-import org.apache.hadoop.realtime.job.event.TaskEventType;
+import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
+import org.apache.hadoop.realtime.job.app.event.JobEvent;
+import org.apache.hadoop.realtime.job.app.event.JobEventType;
+import org.apache.hadoop.realtime.job.app.event.TaskAttemptDiagnosticsUpdateEvent;
+import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
+import org.apache.hadoop.realtime.job.app.event.TaskAttemptEventType;
+import org.apache.hadoop.realtime.job.app.event.TaskEvent;
+import org.apache.hadoop.realtime.job.app.event.TaskEventType;
 import org.apache.hadoop.realtime.protocol.DragonClientProtocol;
 import org.apache.hadoop.realtime.protocol.records.FailTaskAttemptRequest;
 import org.apache.hadoop.realtime.protocol.records.FailTaskAttemptResponse;
@@ -68,7 +71,7 @@ import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.security.authorize.DragonAMPolicyProvider;
-import org.apache.hadoop.realtime.server.JobInApplicationMaster;
+import org.apache.hadoop.realtime.webapp.DragonWebApp;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.yarn.YarnException;
@@ -82,17 +85,19 @@ import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
 import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
 
 /**
  * This module is responsible for talking to the 
  * jobclient (user facing).
  *
  */
-public class DragonClientService extends AbstractService {
+public class DragonClientService extends AbstractService 
+    implements ClientService {
 
   static final Log LOG = LogFactory.getLog(DragonClientService.class);
   
-  private DragonClientProtocolHandler protocolHandler;
+  private DragonClientProtocol protocolHandler;
   private Server server;
   private WebApp webApp;
   private InetSocketAddress bindAddress;
@@ -144,13 +149,12 @@ public class DragonClientService extends AbstractService {
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
             + ":" + server.getPort());
     LOG.info("Instantiated DragonClientService at " + this.bindAddress);
-    // TODO: start the web service
-/*    try {
+    try {
       webApp = WebApps.$for("mapreduce", AppContext.class, appContext, "ws").with(conf).
-          start(new AMWebApp());
+          start(new DragonWebApp());
     } catch (Exception e) {
       LOG.error("Webapps failed to start. Ignoring for now:", e);
-    }*/
+    }
     super.start();
   }
 
@@ -167,18 +171,28 @@ public class DragonClientService extends AbstractService {
     super.stop();
   }
 
+  @Override
+  public InetSocketAddress getBindAddress() {
+    return bindAddress;
+  }
+
+  @Override
+  public int getHttpPort() {
+    return webApp.port();
+  }
+
   class DragonClientProtocolHandler implements DragonClientProtocol {
 
     private RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
 
-    private JobInApplicationMaster verifyAndGetJob(JobId jobID, 
+    private IJobInApp verifyAndGetJob(JobId jobID, 
         boolean modifyAccess) throws YarnRemoteException {
-      Job job = appContext.getJob(jobID);
+      IJobInApp job = appContext.getJob(jobID);
       if (job == null) {
         throw RPCUtil.getRemoteException("Unknown job " + jobID);
       }
-      return (JobInApplicationMaster)job;
+      return job;
     }
  
     private Task verifyAndGetTask(TaskId taskID, 
@@ -205,11 +219,10 @@ public class DragonClientService extends AbstractService {
     public GetCountersResponse getCounters(GetCountersRequest request) 
       throws YarnRemoteException {
       JobId jobId = request.getJobId();
-      Job job = verifyAndGetJob(jobId, false);
+      IJobInApp job = verifyAndGetJob(jobId, false);
       GetCountersResponse response =
         recordFactory.newRecordInstance(GetCountersResponse.class);
-      // TODO: getCounters?
-      //response.setCounters(TypeConverter.toYarn(job.getAllCounters()));
+      response.setCounters(job.getAllCounters());
       return response;
     }
     
@@ -217,7 +230,7 @@ public class DragonClientService extends AbstractService {
     public GetJobReportResponse getJobReport(GetJobReportRequest request) 
       throws YarnRemoteException {
       JobId jobId = request.getJobId();
-      JobInApplicationMaster job = verifyAndGetJob(jobId, false);
+      IJobInApp job = verifyAndGetJob(jobId, false);
       GetJobReportResponse response = 
         recordFactory.newRecordInstance(GetJobReportResponse.class);
       response.setJobReport(job.getReport());
@@ -252,7 +265,9 @@ public class DragonClientService extends AbstractService {
       JobId jobId = request.getJobId();
       String message = "Kill Job received from client " + jobId;
       LOG.info(message);
-      verifyAndGetJob(jobId, true);
+  	  verifyAndGetJob(jobId, true);
+      appContext.getEventHandler().handle(
+          new JobDiagnosticsUpdateEvent(jobId, message));
       appContext.getEventHandler().handle(
           new JobEvent(jobId, JobEventType.JOB_KILL));
       KillJobResponse response = 
@@ -284,6 +299,8 @@ public class DragonClientService extends AbstractService {
       LOG.info(message);
       verifyAndGetAttempt(taskAttemptId, true);
       appContext.getEventHandler().handle(
+          new TaskAttemptDiagnosticsUpdateEvent(taskAttemptId, message));
+      appContext.getEventHandler().handle(
           new TaskAttemptEvent(taskAttemptId, 
               TaskAttemptEventType.TA_KILL));
       KillTaskAttemptResponse response = 
@@ -312,6 +329,8 @@ public class DragonClientService extends AbstractService {
       LOG.info(message);
       verifyAndGetAttempt(taskAttemptId, true);
       appContext.getEventHandler().handle(
+          new TaskAttemptDiagnosticsUpdateEvent(taskAttemptId, message));
+      appContext.getEventHandler().handle(
           new TaskAttemptEvent(taskAttemptId, 
               TaskAttemptEventType.TA_FAILMSG));
       FailTaskAttemptResponse response = recordFactory.
@@ -329,9 +348,9 @@ public class DragonClientService extends AbstractService {
       GetTaskReportsResponse response = 
         recordFactory.newRecordInstance(GetTaskReportsResponse.class);
       
-      JobInApplicationMaster job = verifyAndGetJob(jobId, false);
+      IJobInApp job = verifyAndGetJob(jobId, false);
       Collection<Task> tasks = job.getTasks().values();
-      LOG.info("Getting task report for " + jobId
+      LOG.info("Getting task report for " + "   " + jobId
           + ". Report-size will be " + tasks.size());
 
       // Take lock to allow only one call, otherwise heap will blow up because
@@ -349,7 +368,7 @@ public class DragonClientService extends AbstractService {
     public GetDelegationTokenResponse getDelegationToken(
         GetDelegationTokenRequest request) throws YarnRemoteException {
       throw RPCUtil.getRemoteException("Dragon AM not authorized to issue delegation" +
-          " token");
+      		" token");
     }
   }
 }

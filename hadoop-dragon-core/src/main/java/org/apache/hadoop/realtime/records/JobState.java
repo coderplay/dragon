@@ -22,7 +22,7 @@ public enum JobState {
   NEW,
   INITED,
   RUNNING,
-  ALLLAUNCHED,
+  SUCCEEDED,
   FAILED,
   KILL_WAIT,
   KILLED,

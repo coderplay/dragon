@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.realtime.records;
 
 import java.text.NumberFormat;
@@ -22,37 +23,36 @@ import java.text.NumberFormat;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 
 /**
+ * <p><code>JobId</code> represents the <em>globally unique</em> 
+ * identifier for a MapReduce job.</p>
+ * 
+ * <p>The globally unique nature of the identifier is achieved by using the 
+ * <em>cluster timestamp</em> from the associated ApplicationId. i.e. 
+ * start-time of the <code>ResourceManager</code> along with a monotonically
+ * increasing counter for the jobId.</p>
  */
-public class JobId implements Comparable<JobId>{
+public abstract class JobId implements Comparable<JobId> {
 
-  private ApplicationId appId;
-  private int id;
+  /**
+   * Get the associated <em>ApplicationId</em> which represents the 
+   * start time of the <code>ResourceManager</code> and is used to generate 
+   * the globally unique <code>JobId</code>.
+   * @return associated <code>ApplicationId</code>
+   */
+  public abstract ApplicationId getAppId();
+  
+  /**
+   * Get the short integer identifier of the <code>JobId</code>
+   * which is unique for all applications started by a particular instance
+   * of the <code>ResourceManager</code>.
+   * @return short integer identifier of the <code>JobId</code>
+   */
+  public abstract int getId();
+  
+  public abstract void setAppId(ApplicationId appId);
+  public abstract void setId(int id);
 
-  public JobId(){
-  }
-  public JobId(ApplicationId applicationId) {
-    this.appId = applicationId;
-  }
 
-  public JobId(ApplicationId applicationId, int jobId) {
-    this.appId=applicationId;
-    this.id=jobId;
-  }
-  public ApplicationId getAppId() {
-    return appId;
-  }
-
-  public void setAppId(ApplicationId appId) {
-    this.appId = appId;
-  }
-
-  public int getId() {
-    return id;
-  }
-
-  public void setId(int id) {
-    this.id = id;
-  }
   protected static final String JOB = "job";
   protected static final char SEPARATOR = '_';
   static final ThreadLocal<NumberFormat> jobIdFormat =
@@ -110,6 +110,4 @@ public class JobId implements Comparable<JobId>{
       return appIdComp;
     }
   }
-   
-
 }

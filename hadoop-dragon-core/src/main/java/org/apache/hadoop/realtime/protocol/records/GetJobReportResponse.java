@@ -20,7 +20,6 @@ package org.apache.hadoop.realtime.protocol.records;
 
 import org.apache.hadoop.realtime.records.JobReport;
 
-
 public interface GetJobReportResponse {
   public abstract JobReport getJobReport();
   

@@ -20,6 +20,7 @@ package org.apache.hadoop.realtime.serialize;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
 import com.caucho.hessian.io.Hessian2StreamingInput;
 import com.caucho.hessian.io.Hessian2StreamingOutput;
 /**

@@ -44,6 +44,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
+import org.apache.hadoop.yarn.util.Records;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -70,16 +71,14 @@ public class LocalJobRunner implements DragonJobService {
 
   @Override
   public JobId getNewJobId() throws IOException, InterruptedException {
-    jobId = new JobId(appId);
+    
+    appId = Records.newRecord(ApplicationId.class);
+    appId.setClusterTimestamp(System.currentTimeMillis());
+    appId.setId(1);
+    jobId = Records.newRecord(JobId.class);
+    jobId.setAppId(appId);
+    jobId.setId(appId.getId());
     return jobId;
-  }
-
-  @Override
-  public boolean submitJob(JobId jobId, String jobSubmitDir, Credentials ts)
-      throws IOException, InterruptedException {
-    job = new LocalJob(conf);
-    job.setCredentials(ts);
-    return false;
   }
 
   @Override
@@ -161,8 +160,12 @@ public class LocalJobRunner implements DragonJobService {
   protected List<TaskRunnable> getTaskRunnables(LocalJob job, JobId jobId) {
     int numTasks = 0;
     ArrayList<TaskRunnable> list = new ArrayList<TaskRunnable>();
+    
     for (Task task : job.getTasks()) {
-      list.add(new TaskRunnable((LocalTask)task, numTasks++, jobId));
+      TaskId taskId=Records.newRecord(TaskId.class);
+      taskId.setId(numTasks++);
+      taskId.setJobId(jobId);
+      list.add(new TaskRunnable((LocalTask)task, taskId));
     }
     return list;
   }
@@ -200,23 +203,22 @@ public class LocalJobRunner implements DragonJobService {
    */
   protected class TaskRunnable implements Runnable {
     private final LocalTask task;
-    private final int taskId;
-    private final JobId jobId;
+    private final TaskId taskId;
     private final Configuration localConf;
 
     public volatile Throwable storedException;
 
-    public TaskRunnable(LocalTask task, int taskId, JobId jobId) {
+    public TaskRunnable(LocalTask task, TaskId taskId) {
       this.task = task;
       this.taskId = taskId;
-      this.jobId = jobId;
       this.localConf = new Configuration(conf);
     }
 
     public void run() {
       try {
-        TaskAttemptId attemptId =
-            new TaskAttemptId(new TaskId(jobId, taskId), 0);
+        TaskAttemptId attemptId =Records.newRecord(TaskAttemptId.class);
+        attemptId.setId(0);
+        attemptId.setTaskId(taskId);
         LOG.info("Starting task: " + taskId);
         setupChildMapredLocalDirs(task, localConf);
         localMetrics.launchTask(attemptId);
@@ -232,8 +234,8 @@ public class LocalJobRunner implements DragonJobService {
 
   void setupChildMapredLocalDirs(Task t, Configuration conf) {
     String[] localDirs = conf.getTrimmedStrings(DragonConfig.LOCAL_DIR);
-    String jobId = t.getId().getJobId().toString();
-    String taskId = t.getId().toString();
+    String jobId = t.getID().getJobId().toString();
+    String taskId = t.getID().toString();
     String user = job.getUser();
     StringBuffer childMapredLocalDir =
         new StringBuffer(localDirs[0] + Path.SEPARATOR
@@ -286,6 +288,14 @@ public class LocalJobRunner implements DragonJobService {
   public JobReport getJobReport(JobId jobId) throws YarnRemoteException {
     // TODO Auto-generated method stub
     return null;
+  }
+
+
+  @Override
+  public boolean submitJob(JobId jobId, String jobSubmitDir, Credentials ts)
+      throws IOException, InterruptedException {
+    job = new LocalJob(conf);
+    return false;
   }
 
 }
