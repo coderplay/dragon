@@ -27,6 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
@@ -111,18 +112,26 @@ public class DragonJob implements Job {
 
   private Configuration conf;
   
-  private Cluster cluster;
+  private DragonJobService jobService;
   
   private JobId jobId;
 
   private DragonJobGraph jobGraph;
 
+  protected final Credentials credentials;
+
   private JobState state = JobState.NEW;
   private static final long MAX_JOBSTATE_AGE = 1000 * 2;
 
-  DragonJob(final Configuration conf) throws IOException {
-    this.conf = new Configuration(conf);
-    this.cluster = null;
+  DragonJob(final DragonConfiguration conf) throws IOException {
+    this.conf = conf;
+    this.jobService = null;
+    this.credentials = new Credentials();
+    try {
+      this.ugi = UserGroupInformation.getCurrentUser();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -132,8 +141,8 @@ public class DragonJob implements Job {
    * @throws IOException
    */
   public static DragonJob getInstance() throws IOException {
-    // create with a null Cluster
-    return getInstance(new Configuration());
+    DragonConfiguration newConf = new DragonConfiguration();
+    return new DragonJob(newConf);
   }
 
   /**
@@ -148,25 +157,25 @@ public class DragonJob implements Job {
    * @throws IOException
    */
   public static DragonJob getInstance(final Configuration conf) throws IOException {
-    // create with a null Cluster
-    return new DragonJob(conf);
+    DragonConfiguration newConf = new DragonConfiguration(conf);
+    return new DragonJob(newConf);
   }
 
   private synchronized void connect() throws IOException, InterruptedException,
       ClassNotFoundException {
-    if (cluster == null) {
-      cluster = ugi.doAs(new PrivilegedExceptionAction<Cluster>() {
-        public Cluster run() throws IOException, InterruptedException,
+    if (jobService == null) {
+      jobService = ugi.doAs(new PrivilegedExceptionAction<DragonJobService>() {
+        public DragonJobService run() throws IOException, InterruptedException,
             ClassNotFoundException {
-          return new Cluster(getConfiguration());
+          DragonJobServiceFactory serviceFactory = new DragonJobServiceFactory();
+          try {
+            return serviceFactory.create(conf);
+          } catch (Exception e) {
+            throw new IOException(e);
+          }
         }
       });
     }
-  }
-  
-  public JobSubmitter getJobSubmitter(FileSystem fs,
-      DragonJobService submitClient) throws IOException {
-    return new JobSubmitter(fs, submitClient);
   }
   
   /**
@@ -177,13 +186,10 @@ public class DragonJob implements Job {
   public void submit() throws IOException, InterruptedException,
       ClassNotFoundException {
     connect();
-    final JobSubmitter submitter =
-        getJobSubmitter(cluster.getFileSystem(), cluster.getClient());
-
     ugi.doAs(new PrivilegedExceptionAction<Boolean>() {
       public Boolean run() throws IOException, InterruptedException,
           ClassNotFoundException {
-        return submitter.submitJobInternal(DragonJob.this, cluster);
+        return jobService.submitJob(DragonJob.this);
       }
     });
     state = JobState.RUNNING;
@@ -198,6 +204,10 @@ public class DragonJob implements Job {
     return jobId;
   }
 
+  public void setJobName(String name) {
+    conf.set(DragonJobConfig.JOB_NAME, name);
+  }
+
   @Override
   public String getJobName() {
     return null;
@@ -205,17 +215,17 @@ public class DragonJob implements Job {
 
   @Override
   public Credentials getCredentials() {
-    return null;
+    return credentials;
   }
 
   @Override
   public Configuration getConfiguration() {
-    return null;
+    return conf;
   }
 
   @Override
   public String getUser() {
-    return null;
+    return ugi.getUserName();
   }
 
   @Override
@@ -264,7 +274,7 @@ public class DragonJob implements Job {
     return ugi.doAs(new PrivilegedExceptionAction<JobReport>() {
       @Override
       public JobReport run() throws IOException, InterruptedException {
-        return cluster.getClient().getJobReport(jobId);
+        return jobService.getJobReport(jobId);
       }
     });
   }

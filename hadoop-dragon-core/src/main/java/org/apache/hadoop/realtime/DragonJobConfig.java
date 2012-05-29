@@ -18,6 +18,8 @@
 package org.apache.hadoop.realtime;
 
 public class DragonJobConfig {
+
+  public static final String JOB_SERVICE_CLASS = "dragon.job.service.class";
   
   public static final String ID = "dragon.job.id";
 

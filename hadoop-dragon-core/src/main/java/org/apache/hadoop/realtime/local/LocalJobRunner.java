@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonConfig;
+import org.apache.hadoop.realtime.DragonJob;
 import org.apache.hadoop.realtime.DragonJobService;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.Task;
@@ -73,14 +74,6 @@ public class LocalJobRunner implements DragonJobService {
   public JobId getNewJobId() throws IOException, InterruptedException {
     jobId = new JobId(appId);
     return jobId;
-  }
-
-  @Override
-  public boolean submitJob(JobId jobId, String jobSubmitDir, Credentials ts)
-      throws IOException, InterruptedException {
-    job = new LocalJob(conf);
-    job.setCredentials(ts);
-    return false;
   }
 
   @Override
@@ -287,6 +280,14 @@ public class LocalJobRunner implements DragonJobService {
   public JobReport getJobReport(JobId jobId) throws YarnRemoteException {
     // TODO Auto-generated method stub
     return null;
+  }
+
+  @Override
+  public boolean submitJob(DragonJob dragonJob) throws IOException,
+      InterruptedException {
+    job = new LocalJob(conf);
+    job.setCredentials(dragonJob.getCredentials());
+    return false;
   }
 
 }
