@@ -63,8 +63,8 @@ import org.mockito.stubbing.Answer;
  * Test YarnRunner and make sure the client side plugin works
  * fine
  */
-public class TestYarnRunner extends TestCase {
-  private static final Log LOG = LogFactory.getLog(TestYarnRunner.class);
+public class TestDragonJobRunner extends TestCase {
+  private static final Log LOG = LogFactory.getLog(TestDragonJobRunner.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   private DragonJobRunner yarnRunner;
@@ -73,7 +73,7 @@ public class TestYarnRunner extends TestCase {
   private ApplicationId appId;
   private JobId jobId;
   private File testWorkDir =
-      new File("target", TestYarnRunner.class.getName());
+      new File("target", TestDragonJobRunner.class.getName());
   private ApplicationSubmissionContext submissionContext;
   private static final String failString = "Rejected job";
 
@@ -93,7 +93,7 @@ public class TestYarnRunner extends TestCase {
           }
         }
         ).when(yarnRunner).createApplicationSubmissionContext(
-            any(String.class), any(Credentials.class));
+            any(Path.class), any(Credentials.class));
 
     appId = recordFactory.newRecordInstance(ApplicationId.class);
     appId.setClusterTimestamp(System.currentTimeMillis());
