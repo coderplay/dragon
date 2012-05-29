@@ -4,13 +4,17 @@ import java.util.Map;
 
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.job.TaskAttempt;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskReport;
+import org.apache.hadoop.realtime.records.TaskState;
+import org.apache.hadoop.realtime.records.TaskType;
 
 public class LocalTask implements Task{
 
   @Override
-  public TaskId getId() {
+  public TaskId getID() {
     // TODO Auto-generated method stub
     return null;
   }
@@ -29,6 +33,42 @@ public class LocalTask implements Task{
   
   public void run(){
     
+  }
+
+  @Override
+  public TaskReport getReport() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public TaskState getState() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Counters getCounters() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public float getProgress() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
+  public TaskType getType() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public boolean isFinished() {
+    // TODO Auto-generated method stub
+    return false;
   }
 
 }

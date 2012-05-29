@@ -25,7 +25,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.ResourceMgrDelegate;
-import org.apache.hadoop.realtime.client.ClientServiceDelegate;
 import org.apache.hadoop.realtime.records.JobId;
 
 public class ClientCache {

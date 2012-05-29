@@ -45,8 +45,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.client.ClientCache;
-import org.apache.hadoop.realtime.protocol.records.GetJobReportRequest;
-import org.apache.hadoop.realtime.protocol.records.GetJobReportResponse;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
@@ -59,7 +57,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -75,8 +72,6 @@ import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
-
-import com.google.inject.spi.TypeConverter;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -111,6 +106,7 @@ public class DragonJobRunner implements DragonJobService {
       this.ugi = UserGroupInformation.getCurrentUser();
       this.resMgrDelegate = resMgrDelegate;
       this.defaultFileContext = FileContext.getFileContext(this.conf);
+      this.clientCache= new ClientCache(conf, resMgrDelegate);
     } catch (Exception e) {
       throw new RuntimeException("Error in instantiating YarnClient", e);
     }
@@ -298,10 +294,11 @@ public class DragonJobRunner implements DragonJobService {
         new HashMap<String, LocalResource>();
 
     // JonConf
+    
     Path jobConfPath = new Path(jobSubmitDir, DragonJobConfig.JOB_CONF_FILE);
     localResources.put(DragonJobConfig.JOB_CONF_FILE,
         DragonApps.createApplicationResource(defaultFileContext, jobConfPath));
-
+    
     // JobJar
     if (conf.get(DragonJobConfig.JAR) != null) {
       localResources.put(DragonJobConfig.JOB_JAR, DragonApps
@@ -313,21 +310,21 @@ public class DragonJobRunner implements DragonJobService {
     }
 
     // Setup security tokens
+    
     ByteBuffer securityTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       DataOutputBuffer dob = new DataOutputBuffer();
       ts.writeTokenStorageToStream(dob);
       securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
     }
+    
     // Setup the command to run the AM
     List<String> vargs = DragonApps.setupCommands(conf);
-
     // Setup environment
     Map<String, String> environment = new HashMap<String, String>();
 
     // Setup the CLASSPATH in environment
     DragonApps.setClasspath(environment, conf);
-
     // Setup the ACLs
     Map<ApplicationAccessType, String> acls = DragonApps.setupACLs(conf);
 

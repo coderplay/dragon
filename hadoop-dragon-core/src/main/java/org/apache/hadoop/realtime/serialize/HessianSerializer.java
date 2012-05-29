@@ -23,7 +23,6 @@ import java.io.OutputStream;
 
 import com.caucho.hessian.io.Hessian2StreamingInput;
 import com.caucho.hessian.io.Hessian2StreamingOutput;
-
 /**
  * Hessian serializer implemenation.
  */
