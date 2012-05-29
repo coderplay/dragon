@@ -15,10 +15,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.realtime.records;
 
-/**
- */
-public interface TaskAttemptReport {
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
+public interface TaskAttemptReport {
+  public abstract TaskAttemptId getTaskAttemptId();
+  public abstract TaskAttemptState getTaskAttemptState();
+  public abstract float getProgress();
+  public abstract long getStartTime();
+  public abstract long getFinishTime();
+  public abstract Counters getCounters();
+  public abstract String getDiagnosticInfo();
+  public abstract String getStateString();
+  public abstract String getNodeManagerHost();
+  public abstract int getNodeManagerPort();
+  public abstract int getNodeManagerHttpPort();
+  public abstract ContainerId getContainerId();
+
+  public abstract void setTaskAttemptId(TaskAttemptId taskAttemptId);
+  public abstract void setTaskAttemptState(TaskAttemptState taskAttemptState);
+  public abstract void setProgress(float progress);
+  public abstract void setStartTime(long startTime);
+  public abstract void setFinishTime(long finishTime);
+  public abstract void setCounters(Counters counters);
+  public abstract void setDiagnosticInfo(String diagnosticInfo);
+  public abstract void setStateString(String stateString);
+  public abstract void setNodeManagerHost(String nmHost);
+  public abstract void setNodeManagerPort(int nmPort);
+  public abstract void setNodeManagerHttpPort(int nmHttpPort);
+  public abstract void setContainerId(ContainerId containerId);
+  
 }

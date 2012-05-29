@@ -15,31 +15,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.realtime.records;
 
-/**
- */
-public interface JobReport {
+import java.util.List;
 
+public interface JobReport {
   public abstract JobId getJobId();
   public abstract JobState getJobState();
+  public abstract float getCleanupProgress();
+  public abstract float getSetupProgress();
   public abstract long getSubmitTime();
   public abstract long getStartTime();
+  public abstract long getFinishTime();
   public abstract String getUser();
   public abstract String getJobName();
   public abstract String getTrackingUrl();
   public abstract String getDiagnostics();
   public abstract String getJobFile();
-
+  public abstract List<AMInfo> getAMInfos();
+  public abstract boolean isUber();
 
   public abstract void setJobId(JobId jobId);
   public abstract void setJobState(JobState jobState);
+  public abstract void setCleanupProgress(float progress);
+  public abstract void setSetupProgress(float progress);
   public abstract void setSubmitTime(long submitTime);
   public abstract void setStartTime(long startTime);
+  public abstract void setFinishTime(long finishTime);
   public abstract void setUser(String user);
   public abstract void setJobName(String jobName);
   public abstract void setTrackingUrl(String trackingUrl);
   public abstract void setDiagnostics(String diagnostics);
   public abstract void setJobFile(String jobFile);
-
+  public abstract void setAMInfos(List<AMInfo> amInfos);
+  public abstract void setIsUber(boolean isUber);
 }

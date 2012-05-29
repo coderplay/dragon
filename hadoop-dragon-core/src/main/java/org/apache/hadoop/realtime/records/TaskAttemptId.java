@@ -18,28 +18,34 @@
 
 package org.apache.hadoop.realtime.records;
 
-public class TaskAttemptId implements Comparable<TaskAttemptId>{
+/**
+ * <p>
+ * <code>TaskAttemptId</code> represents the unique identifier for a task
+ * attempt. Each task attempt is one particular instance of a Map or Reduce Task
+ * identified by its TaskId.
+ * </p>
+ * 
+ * <p>
+ * TaskAttemptId consists of 2 parts. First part is the <code>TaskId</code>,
+ * that this <code>TaskAttemptId</code> belongs to. Second part is the task
+ * attempt number.
+ * </p>
+ */
+public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
+  /**
+   * @return the associated TaskId.
+   */
+  public abstract TaskId getTaskId();
 
-	private TaskId taskId;
-	private int id;
-	
-	public TaskAttemptId(TaskId taskId,int attemptId){
-		
-	}
-	
-	public int getId() {
-  	return id;
-  }
-	public void setId(int id) {
-  	this.id = id;
-  }
-	public void setTaskId(TaskId taskId) {
-  	this.taskId = taskId;
-  }
+  /**
+   * @return the attempt id.
+   */
+  public abstract int getId();
 
-	public TaskId getTaskId(){
-		return taskId;
-	}
+  public abstract void setTaskId(TaskId taskId);
+
+  public abstract void setId(int id);
+
   protected static final String TASKATTEMPT = "attempt";
 
   @Override
@@ -77,7 +83,8 @@ public class TaskAttemptId implements Comparable<TaskAttemptId>{
     builder.append("_").append(
         JobId.jobIdFormat.get().format(
             getTaskId().getJobId().getAppId().getId()));
-    builder.append("_").append(TaskId.taskIdFormat.get().format(taskId.getId()));
+    builder.append("_")
+        .append(TaskId.taskIdFormat.get().format(taskId.getId()));
     builder.append("_");
     builder.append(getId());
     return builder.toString();
@@ -93,4 +100,3 @@ public class TaskAttemptId implements Comparable<TaskAttemptId>{
     }
   }
 }
-

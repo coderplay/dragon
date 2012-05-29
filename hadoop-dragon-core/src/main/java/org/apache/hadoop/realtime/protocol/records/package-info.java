@@ -18,3 +18,4 @@
 @InterfaceAudience.Private
 package org.apache.hadoop.realtime.protocol.records;
 import org.apache.hadoop.classification.InterfaceAudience;
+

@@ -25,5 +25,4 @@ public interface GetTaskReportsRequest {
   public abstract JobId getJobId();
   
   public abstract void setJobId(JobId jobId);
-
 }

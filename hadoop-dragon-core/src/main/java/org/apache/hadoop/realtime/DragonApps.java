@@ -158,7 +158,7 @@ public class DragonApps extends Apps {
 	public static List<String> setupCommands(Configuration conf) {
 		Vector<CharSequence> vargs = new Vector<CharSequence>(8);
 		vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
-		addLog4jSystemProperties(conf, vargs);
+		//addLog4jSystemProperties(conf, vargs);
 		vargs.add(conf.get(DragonJobConfig.DRAGON_AM_COMMAND_OPTS,
 		    DragonJobConfig.DEFAULT_DRAGON_AM_COMMAND_OPTS));
 		vargs.add(DragonJobConfig.APPLICATION_MASTER_CLASS);

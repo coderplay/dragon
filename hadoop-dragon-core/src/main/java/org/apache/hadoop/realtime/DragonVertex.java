@@ -23,7 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 import org.apache.hadoop.realtime.event.EventProcessor;
 import org.apache.hadoop.realtime.event.EventProducer;
 
