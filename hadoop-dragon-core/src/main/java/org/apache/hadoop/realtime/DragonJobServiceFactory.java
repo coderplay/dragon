@@ -29,8 +29,6 @@ class DragonJobServiceFactory {
         conf.getClass(DragonJobConfig.JOB_SERVICE_CLASS, 
                       DragonJobRunner.class,
                       DragonJobService.class);
-    return new DragonJobRunner(conf);
-    // TODO: DragonJobRunner don't have constructor with no parameter
-    //return ReflectionUtils.newInstance(clazz, conf);
+    return ReflectionUtils.newInstance(clazz, conf);
   }
 }
