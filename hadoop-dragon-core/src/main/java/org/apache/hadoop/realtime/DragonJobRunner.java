@@ -102,11 +102,13 @@ public class DragonJobRunner implements DragonJobService {
     // Get the security token of the jobSubmitDir and store in Credentials
     Path applicationTokensFile =
         new Path(jobSubmitDir, DragonJobConfig.APPLICATION_TOKENS_FILE);
+    /*
     try {
       ts.writeTokenStorageFile(applicationTokensFile, conf);
     } catch (IOException e) {
       throw new YarnException(e);
     }
+    */
     // Construct necessary information to start the Dragon AM
     ApplicationSubmissionContext appContext =
         createApplicationSubmissionContext(jobSubmitDir, ts);
@@ -147,10 +149,11 @@ public class DragonJobRunner implements DragonJobService {
         new HashMap<String, LocalResource>();
 
     // JonConf
+    
     Path jobConfPath = new Path(jobSubmitDir, DragonJobConfig.JOB_CONF_FILE);
     localResources.put(DragonJobConfig.JOB_CONF_FILE,
         DragonApps.createApplicationResource(defaultFileContext, jobConfPath));
-
+    
     // JobJar
     if (conf.get(DragonJobConfig.JAR) != null) {
       localResources.put(DragonJobConfig.JOB_JAR, DragonApps
@@ -162,21 +165,21 @@ public class DragonJobRunner implements DragonJobService {
     }
 
     // Setup security tokens
+    
     ByteBuffer securityTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       DataOutputBuffer dob = new DataOutputBuffer();
       ts.writeTokenStorageToStream(dob);
       securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
     }
+    
     // Setup the command to run the AM
     List<String> vargs = DragonApps.setupCommands(conf);
-
     // Setup environment
     Map<String, String> environment = new HashMap<String, String>();
 
     // Setup the CLASSPATH in environment
     DragonApps.setClasspath(environment, conf);
-
     // Setup the ACLs
     Map<ApplicationAccessType, String> acls = DragonApps.setupACLs(conf);
 

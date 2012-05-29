@@ -15,31 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.realtime;
 
-package org.apache.hadoop.realtime.dag;
-
-import java.io.Serializable;
+import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 
 /**
- * An {@link EdgeFactory} for producing edges by using a class as a factory.
+ * {@link DragonJobGraph} is the key component of a {@link DragonJob}.
+ * It is formed by a collection of {@link DragonVertex}s and directed 
+ * {@link DragonEdge}s.
  */
-public class EdgeFactory<V, E> implements Serializable {
-  private static final long serialVersionUID = -7890706652865009651L;
+public class DragonJobGraph extends
+    DirectedAcyclicGraph<DragonVertex, DragonEdge> {
 
-  private final Class<? extends E> edgeClass;
+  private static final long serialVersionUID = -4182450268966910597L;
 
-  public EdgeFactory(Class<? extends E> edgeClass) {
-    this.edgeClass = edgeClass;
-  }
-
-  /**
-   * @see EdgeFactory#createEdge(Object, Object)
-   */
-  public E createEdge(V source, V target) {
-    try {
-      return edgeClass.newInstance();
-    } catch (Exception ex) {
-      throw new RuntimeException("Edge factory failed", ex);
-    }
+  public DragonJobGraph() {
+    super(DragonEdge.class);
   }
 }

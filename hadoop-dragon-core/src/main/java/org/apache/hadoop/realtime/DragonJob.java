@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
@@ -41,11 +40,11 @@ import org.apache.hadoop.security.UserGroupInformation;
  * otherwises they will throw an IllegalStateException. </p>
  *
  * <p>
- * The key component of a {@link DragonJob} is a {@link DirectedAcyclicGraph},
+ * The key component of a {@link DragonJob} is a {@link DragonJobGraph},
  * which is formed by a collection of {@link DragonVertex}s and directed 
  * {@link DragonEdge}s.
  * Normally user creates the application, describes various facets of the job 
- * , sets {@link DirectedAcyclicGraph} via {@link DragonJob} , and then 
+ * , sets {@link DragonJobGraph} via {@link DragonJob} , and then 
  * submits the job and monitor its progress.
  * </p>
  * 
@@ -67,7 +66,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  *                                     .processor(EventProcessor.class)
  *                                     .addFile("file.txt")
  *                                     .addFile("dict.dat")
- *                                     .addAchive("archive.zip")
+ *                                     .addArchive("archive.zip")
  *                                     .tasks(10)
  *                                     .build();
  *   DragonVertex m2 = new DragonVertex.Builder("intermediate2")
@@ -79,8 +78,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  *                                       .processor(EventProcessor.class)
  *                                       .tasks(10)
  *                                       .build();
- *   DirectedAcyclicGraph<DragonVertex, DragonEdge> g = 
- *       new DirectedAcyclicGraph<DragonVertex, DragonEdge>();
+ *   DragonJobGraph g = new DragonJobGraph();
  *   // check if the graph is cyclic when adding edge
  *   g.addEdge(source, m1).parition(HashPartitioner.class);
  *   g.addEdge(source, m2).parition(HashPartitioner.class);
@@ -113,16 +111,16 @@ public class DragonJob implements Job {
   private Cluster cluster;
   
   private JobId jobId;
-  
+
+  private DragonJobGraph jobGraph;
+
   private JobState state = JobState.NEW;
   private static final long MAX_JOBSTATE_AGE = 1000 * 2;
-  
-  private DirectedAcyclicGraph<DragonVertex, DragonEdge> jobGraph;
 
-
-  DragonJob(final Configuration conf) throws IOException {
+  public DragonJob(final Configuration conf) throws IOException {
     this.conf = new Configuration(conf);
     this.cluster = null;
+    this.ugi=UserGroupInformation.getCurrentUser();
   }
 
   /**
@@ -177,7 +175,6 @@ public class DragonJob implements Job {
   public void submit() throws IOException, InterruptedException,
       ClassNotFoundException {
     connect();
-    final FileSystem fs = FileSystem.get(conf);
     final JobSubmitter submitter =
         getJobSubmitter(cluster.getFileSystem(), cluster.getClient());
 
@@ -211,7 +208,7 @@ public class DragonJob implements Job {
 
   @Override
   public Configuration getConfiguration() {
-    return null;
+    return conf;
   }
 
   @Override
@@ -224,11 +221,11 @@ public class DragonJob implements Job {
     return null;
   }
   
-  public void setJobGraph(DirectedAcyclicGraph<DragonVertex, DragonEdge> jobGraph) {
+  public void setJobGraph(DragonJobGraph jobGraph) {
     this.jobGraph =  jobGraph;
   }
   
-  DirectedAcyclicGraph<DragonVertex, DragonEdge> getJobGraph() {
+  DragonJobGraph getJobGraph() {
     return jobGraph;
   }
   

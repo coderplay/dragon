@@ -59,6 +59,7 @@ public class Cluster {
   private void initialize(Configuration conf)
       throws IOException {
     // TODO: initialize client serivce here
+    this.client=new DragonJobRunner(conf);
   }
 
   DragonJobService getClient() {

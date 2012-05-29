@@ -68,7 +68,8 @@ import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
 public class DragonAppMaster extends CompositeService {
   
   private static final Log LOG = LogFactory.getLog(DragonAppMaster.class);
@@ -181,6 +182,21 @@ public class DragonAppMaster extends CompositeService {
    */
   public static void main(String[] args) {
     try {
+      for(int i=0;i<30;i++){
+	    Options opts = new Options();
+    opts.addOption("child_class", true,
+        "Java child class to be executed by the Container");
+    opts.addOption("child_args", true, "Command line args for the child class");
+    opts.addOption("child_env", true,
+        "Environment for child class. Specified as env_key=env_val pairs");
+    opts.addOption("priority", true, "Priority for the child class containers");
+    opts.addOption("container_memory", true,
+        "Amount of memory in MB to be requested to run the shell command");
+    opts.addOption("num_containers", true,
+        "No. of containers on which the shell command needs to be executed");
+    opts.addOption("help", false, "Print usage");
+         new HelpFormatter().printHelp("AMStream", opts);
+      }
       String containerIdStr =
           System.getenv(ApplicationConstants.AM_CONTAINER_ID_ENV);
       String nodeHostString = System.getenv(ApplicationConstants.NM_HOST_ENV);
@@ -218,7 +234,7 @@ public class DragonAppMaster extends CompositeService {
       initAndStartAppMaster(appMaster, conf, jobUserName);
       
     } catch (Throwable t) {
-      LOG.fatal("Error starting DragonAppMaster", t);
+      LOG.error("Error starting DragonAppMaster", t);
       System.exit(1);
     }
   }

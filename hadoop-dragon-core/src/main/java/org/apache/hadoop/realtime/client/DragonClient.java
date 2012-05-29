@@ -518,8 +518,8 @@ public class DragonClient {
       } catch (InterruptedException e) {
         LOG.debug("Thread sleep in monitoring loop interrupted");
       }
-
-      // Get application report for the appId we are interested in
+      
+ /*     // Get application report for the appId we are interested in
       GetApplicationReportRequest reportRequest =
           Records.newRecord(GetApplicationReportRequest.class);
       reportRequest.setApplicationId(appId);
@@ -556,7 +556,7 @@ public class DragonClient {
             + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
             + ". Breaking monitoring loop");
         return false;
-      }
+      }*/
 
     }
   }

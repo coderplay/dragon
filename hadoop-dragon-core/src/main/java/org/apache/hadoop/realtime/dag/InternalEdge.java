@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.realtime.dag;
 
+import java.io.Serializable;
+
 /**
  * An internal view of edges from a {@link DirectedAcyclicGraph}
  */
-class InternalEdge<V> {
+class InternalEdge<V> implements Serializable {
+  private static final long serialVersionUID = 1917792937475311485L;
+
   V source;
   V target;
 

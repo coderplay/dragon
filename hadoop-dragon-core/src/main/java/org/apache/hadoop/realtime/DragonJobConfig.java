@@ -126,7 +126,7 @@ public class DragonJobConfig {
 	// Containers.
 	public static final String APPLICATION_TOKENS_FILE = "appTokens";
 
-	public static final String APPLICATION_MASTER_CLASS = "org.apache.hadoop.realtime.server.DragonApplicationMaster";
+	public static final String APPLICATION_MASTER_CLASS = "org.apache.hadoop.realtime.client.app.DragonAppMaster";
 
 	public static final String DRAGON_PREFIX = "yarn.app.dragon.";
 

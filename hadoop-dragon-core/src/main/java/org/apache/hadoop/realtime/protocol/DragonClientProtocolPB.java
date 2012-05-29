@@ -18,7 +18,6 @@
 package org.apache.hadoop.realtime.protocol;
 
 import org.apache.hadoop.realtime.proto.DragonClientProtocol.DragonClientProtocolService;
-
 public interface DragonClientProtocolPB extends DragonClientProtocolService.BlockingInterface {
 
 }

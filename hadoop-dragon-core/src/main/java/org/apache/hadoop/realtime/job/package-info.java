@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,31 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.realtime.dag;
-
-import java.io.Serializable;
-
-/**
- * An {@link EdgeFactory} for producing edges by using a class as a factory.
- */
-public class EdgeFactory<V, E> implements Serializable {
-  private static final long serialVersionUID = -7890706652865009651L;
-
-  private final Class<? extends E> edgeClass;
-
-  public EdgeFactory(Class<? extends E> edgeClass) {
-    this.edgeClass = edgeClass;
-  }
-
-  /**
-   * @see EdgeFactory#createEdge(Object, Object)
-   */
-  public E createEdge(V source, V target) {
-    try {
-      return edgeClass.newInstance();
-    } catch (Exception ex) {
-      throw new RuntimeException("Edge factory failed", ex);
-    }
-  }
-}
+@InterfaceAudience.Private
+package org.apache.hadoop.realtime.job;
+import org.apache.hadoop.classification.InterfaceAudience;

@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.delegation.DelegationTokenIdentifier;
@@ -132,21 +131,25 @@ class JobSubmitter {
       // to job file.
       String queue = conf.get(DragonJobConfig.QUEUE_NAME,
           DragonJobConfig.DEFAULT_QUEUE_NAME);
+      /*
       AccessControlList acl = client.getQueueAdmins(queue);
       conf.set(toFullPropertyName(queue,
           QueueACL.ADMINISTER_JOBS.getAclName()), acl.getAclString());
-
+      */
       // removing jobtoken referrals before copying the jobconf to HDFS
       // as the tasks don't need this setting, actually they may break
       // because of it if present as the referral will point to a
       // different job.
       TokenCache.cleanUpTokenReferral(conf);
 
+      Path appJarSrc = new Path(conf.get(DragonJobConfig.JAR));
+      Path appJarDst = new Path(submitJobDir.toString(),DragonJobConfig.JOB_JAR);
+      submitFs.copyFromLocalFile(false, true, appJarSrc, appJarDst);
       // Write job file to submit dir
       writeConf(conf, submitJobFile);
       
       // Write the serialized job description dag to submit dir
-      writeJobDescription(job.getJobGraph(), submitJobDescFile);
+      //writeJobDescription(job.getJobGraph(), submitJobDescFile);
 
       //
       // Now, actually submit the job (using the submit name)
@@ -176,16 +179,15 @@ class JobSubmitter {
     }
   }
   
-  private void writeJobDescription(
-      DirectedAcyclicGraph<DragonVertex, DragonEdge> graph, Path descFile)
+  private void writeJobDescription(DragonJobGraph graph, Path descFile)
       throws IOException {
     // Write job description to job service provider's fs
     FSDataOutputStream out =
         FileSystem.create(submitFs, descFile, new FsPermission(
             JobSubmissionFiles.JOB_FILE_PERMISSION));
     try {
-      HessianSerializer<DirectedAcyclicGraph<DragonVertex, DragonEdge>> serializer =
-          new HessianSerializer<DirectedAcyclicGraph<DragonVertex, DragonEdge>>();
+      HessianSerializer<DragonJobGraph> serializer =
+          new HessianSerializer<DragonJobGraph>();
       serializer.serialize(out, graph);
     } finally {
       out.close();
@@ -275,7 +277,8 @@ class JobSubmitter {
     // add all the command line files/ jars and archive
     // first copy them to dragon job service provider's
     // filesystem
-    DirectedAcyclicGraph<DragonVertex, DragonEdge> jobGraph = job.getJobGraph();
+    /*
+    DragonJobGraph jobGraph = job.getJobGraph();
     for (DragonVertex vertex : jobGraph.vertexSet()) {
       List<String> files = vertex.getFiles();
       if (files.size() > 0) {
@@ -296,7 +299,7 @@ class JobSubmitter {
               archivesDir);
         }
       }
-    }
+    }*/
   }
 
   /**
