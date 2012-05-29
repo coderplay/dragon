@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.ResourceMgrDelegate;
 import org.apache.hadoop.realtime.records.JobId;
 
-
 public class ClientCache {
 
   private final Configuration conf;
