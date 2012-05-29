@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonConfig;
+import org.apache.hadoop.realtime.DragonJob;
 import org.apache.hadoop.realtime.DragonJobService;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.records.JobId;
@@ -290,11 +291,11 @@ public class LocalJobRunner implements DragonJobService {
     return null;
   }
 
-
   @Override
-  public boolean submitJob(JobId jobId, String jobSubmitDir, Credentials ts)
-      throws IOException, InterruptedException {
+  public boolean submitJob(DragonJob dragonJob) throws IOException,
+      InterruptedException {
     job = new LocalJob(conf);
+    job.setCredentials(dragonJob.getCredentials());
     return false;
   }
 

@@ -17,31 +17,38 @@
  */
 package org.apache.hadoop.realtime.serialize;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Iterator;
 
 import org.apache.hadoop.realtime.DragonEdge;
+import org.apache.hadoop.realtime.DragonJobGraph;
 import org.apache.hadoop.realtime.DragonVertex;
 import org.apache.hadoop.realtime.dag.CycleFoundException;
-import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
 import org.apache.hadoop.realtime.event.EventProcessor;
 import org.apache.hadoop.realtime.event.EventProducer;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
+
+
 /**
  */
 public class TestSerializer {
 
-  private DirectedAcyclicGraph<DragonVertex, DragonEdge> graph = null;
+  private DragonJobGraph graph = null;
 
   @Before
   public void setUp() throws CycleFoundException {
+  }
+
+  @Test
+  public void serdeDagbyHessian() throws CycleFoundException, IOException {
     DragonVertex source =
         new DragonVertex.Builder("source").producer(EventProducer.class)
             .processor(EventProcessor.class).tasks(10).build();
@@ -55,26 +62,20 @@ public class TestSerializer {
     DragonVertex dest =
         new DragonVertex.Builder("dest").processor(EventProcessor.class)
             .tasks(10).build();
-    graph =
-        new DirectedAcyclicGraph<DragonVertex, DragonEdge>(DragonEdge.class);
+    graph = new DragonJobGraph();
     // check if the graph is cyclic when adding edge
     graph.addEdge(source, m1);
     graph.addEdge(source, m2);
     graph.addEdge(m1, dest);
     graph.addEdge(m2, dest);
-  }
-
-  @Test
-  public void serdeDagbyHessian() throws IOException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    HessianSerializer<DirectedAcyclicGraph<DragonVertex, DragonEdge>> serializer =
-        new HessianSerializer<DirectedAcyclicGraph<DragonVertex, DragonEdge>>();
+    HessianSerializer<DragonJobGraph> serializer =
+        new HessianSerializer<DragonJobGraph>();
     serializer.serialize(out, graph);
     byte[] bytes = out.toByteArray();
 
     ByteArrayInputStream in = new ByteArrayInputStream(bytes);
-    DirectedAcyclicGraph<DragonVertex, DragonEdge> dag =
-        serializer.deserialize(in);
+    DragonJobGraph dag = serializer.deserialize(in);
 
     Iterator<DragonVertex> iter1 = graph.iterator();
     Iterator<DragonVertex> iter2 = dag.iterator();
@@ -86,5 +87,20 @@ public class TestSerializer {
       assertEquals(next1.getLabel(), next2.getLabel());
     }
 
+    assertFalse(iter2.hasNext());
+  }
+  
+  @Test
+  public void testNull() throws IOException {
+    Object o = null;
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    HessianSerializer<Object> serializer =
+        new HessianSerializer<Object>();
+    serializer.serialize(out, o);
+    byte[] bytes = out.toByteArray();
+    
+    ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+    Object result = serializer.deserialize(in);
+    assertNull(result);
   }
 }

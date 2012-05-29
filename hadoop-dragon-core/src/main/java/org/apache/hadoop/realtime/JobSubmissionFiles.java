@@ -88,12 +88,12 @@ public class JobSubmissionFiles {
   /**
    * Initializes the staging directory and returns the path. It also
    * keeps track of all necessary ownership & permissions
-   * @param cluster
+   * @param jobService
    * @param conf
    */
-  public static Path getStagingDir(Cluster cluster, Configuration conf) 
+  public static Path getStagingDir(DragonJobService jobService, Configuration conf) 
   throws IOException, InterruptedException {
-    Path stagingArea = cluster.getStagingAreaDir();
+    Path stagingArea = new Path(jobService.getStagingAreaDir());
     FileSystem fs = stagingArea.getFileSystem(conf);
     String realUser;
     String currentUser;

@@ -20,18 +20,28 @@
  */
 package org.apache.hadoop.realtime;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.client.ClientCache;
@@ -40,11 +50,14 @@ import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskReport;
+import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.realtime.serialize.HessianSerializer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -56,9 +69,16 @@ import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
+import org.codehaus.jackson.map.ObjectMapper;
 
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class DragonJobRunner implements DragonJobService {
   private static final Log LOG = LogFactory.getLog(DragonJobRunner.class);
+
+  private UserGroupInformation ugi;
   private ResourceMgrDelegate resMgrDelegate;
   private ClientCache clientCache;
   private Configuration conf;
@@ -83,11 +103,12 @@ public class DragonJobRunner implements DragonJobService {
   public DragonJobRunner(Configuration conf, ResourceMgrDelegate resMgrDelegate) {
     this.conf = conf;
     try {
+      this.ugi = UserGroupInformation.getCurrentUser();
       this.resMgrDelegate = resMgrDelegate;
       this.defaultFileContext = FileContext.getFileContext(this.conf);
       this.clientCache= new ClientCache(conf, resMgrDelegate);
-    } catch (UnsupportedFileSystemException ufe) {
-      throw new RuntimeException("Error in instantiating YarnClient", ufe);
+    } catch (Exception e) {
+      throw new RuntimeException("Error in instantiating YarnClient", e);
     }
   }
 
@@ -96,22 +117,127 @@ public class DragonJobRunner implements DragonJobService {
     return resMgrDelegate.getNewJobID();
   }
 
+  /**
+   * Method for submitting jobs to the system.
+   * 
+   * <p>
+   * The job submission process involves:
+   * 
+   * <ol>
+   * <li>
+   * Checking the first vertex has specified input data path or not</li>
+   * <li>
+   * Computing the {@link InputSplit}s for the job.</li>
+   * <li>
+   * Fetching a new application id from resource manager</li>
+   * <li>
+   * Optionally getting secret keys and tokens from namenodes and store them
+   * into TokenCache</li>
+   * <li>
+   * Coping local files/archives into remote filesystem (e.g. hdfs)</li>
+   * <li>
+   * Writing job config files (job.xml, job.desc) to submit dir</li>
+   * <li>
+   * Optionally getting the security token of the jobSubmitDir and store in
+   * Credentials</li>
+   * <li>
+   * Creating submission context for the job and launch context for application
+   * master
+   * <li>Submitting the application to resource manager and optionally
+   * monitoring it's status.</li>
+   * </p>
+   * 
+   * @param job the configuration to submit
+   * @param cluster the handle to the Cluster
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   * @throws IOException
+   */
   @Override
-  public boolean submitJob(JobId jobId, String jobSubmitDir, Credentials ts)
-      throws IOException, InterruptedException {
+  public boolean submitJob(DragonJob job) throws IOException,
+      InterruptedException {
+    Configuration conf = job.getConfiguration();
+
+    if (!(conf.getBoolean(DragonJob.USED_GENERIC_PARSER, false))) {
+      LOG.warn("Use GenericOptionsParser for parsing the arguments. "
+          + "Applications should implement Tool for the same.");
+    }
+
+    // configure submit host
+    configureSubmitHost(conf);
+    // fetch a new job id from resource manager
+    JobId jobId = getNewJobId();
+    job.setJobId(jobId);
+
+    Path jobStagingArea = JobSubmissionFiles.getStagingDir(this, conf);
+    Path submitJobDir = new Path(jobStagingArea, jobId.toString());
+    FileSystem submitFs = submitJobDir.getFileSystem(conf);
+    submitJobDir = submitFs.makeQualified(submitJobDir);
+    submitJobDir = new Path(submitJobDir.toUri().getPath());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Default FileSystem: " + submitFs.getUri());
+    }
+
+    short replication =
+        (short) conf.getInt(DragonJobConfig.JOB_SUBMIT_FILE_REPLICATION, 10);
+
+    try {
+      // conf.set("hadoop.http.filter.initializers",
+      // "org.apache.hadoop.yarn.server.webproxy.amfilter.AmFilterInitializer");
+      conf.set(DragonJobConfig.JOB_SUBMIT_DIR, submitJobDir.toString());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Configuring job " + jobId + " with " + submitJobDir
+            + " as the submit dir");
+      }
+      // get delegation token for the dir
+      TokenCache.obtainTokensForNamenodes(job.getCredentials(),
+          new Path[] { submitJobDir }, conf);
+
+      populateTokenCache(conf, job.getCredentials());
+
+      copyFilesFromLocal(job.getJobGraph(), submitFs, submitJobDir, replication);
+
+      // write "queue admins of the queue to which job is being submitted"
+      // to job file.
+      configureQueueAdmins(conf);
+
+      // removing jobtoken referrals before copying the jobconf to HDFS
+      // as the tasks don't need this setting, actually they may break
+      // because of it if present as the referral will point to a
+      // different job.
+      TokenCache.cleanUpTokenReferral(conf);
+
+      // Write job file to submit dir
+      writeConf(conf, submitFs, submitJobDir);
+
+      // Write the serialized job description dag to submit dir
+      writeJobDescription(job.getJobGraph(), submitFs, submitJobDir);
+
+      //
+      // Now, actually submit the job (using the submit name)
+      //
+      printTokens(jobId, job.getCredentials());
+    } finally {
+      // if (status == null) {
+      // LOG.info("Cleaning up the staging area " + submitJobDir);
+      // if (jtFs != null && submitJobDir != null)
+      // jtFs.delete(submitJobDir, true);
+      //
+      // }
+    }
+
     // Get the security token of the jobSubmitDir and store in Credentials
     Path applicationTokensFile =
-        new Path(jobSubmitDir, DragonJobConfig.APPLICATION_TOKENS_FILE);
-    /*
+        new Path(submitJobDir, DragonJobConfig.APPLICATION_TOKENS_FILE);
+    Credentials ts = job.getCredentials();
     try {
       ts.writeTokenStorageFile(applicationTokensFile, conf);
     } catch (IOException e) {
       throw new YarnException(e);
     }
-    */
     // Construct necessary information to start the Dragon AM
     ApplicationSubmissionContext appContext =
-        createApplicationSubmissionContext(jobSubmitDir, ts);
+        createApplicationSubmissionContext(submitJobDir, ts);
     // Submit to ResourceManager
     ApplicationId applicationId = resMgrDelegate.submitApplication(appContext);
     ApplicationReport appMaster =
@@ -126,6 +252,25 @@ public class DragonJobRunner implements DragonJobService {
     }
     return true;
   }
+  
+  private void configureQueueAdmins(Configuration conf) throws IOException {
+    String queue =
+        conf.get(DragonJobConfig.QUEUE_NAME,
+            DragonJobConfig.DEFAULT_QUEUE_NAME);
+    AccessControlList acl = getQueueAdmins(queue);
+    conf.set(
+        toFullPropertyName(queue, QueueACL.ADMINISTER_JOBS.getAclName()),
+        acl.getAclString());
+  }
+
+  private void configureSubmitHost(Configuration conf)
+      throws UnknownHostException {
+    InetAddress ip = InetAddress.getLocalHost();
+    if (ip != null) {
+      conf.set(DragonJobConfig.JOB_SUBMITHOST, ip.getHostName());
+      conf.set(DragonJobConfig.JOB_SUBMITHOSTADDR, ip.getHostAddress());
+    }
+  }
 
   @Override
   public String getSystemDir() throws IOException, InterruptedException {
@@ -138,7 +283,7 @@ public class DragonJobRunner implements DragonJobService {
   }
 
   public ApplicationSubmissionContext createApplicationSubmissionContext(
-      String jobSubmitDir, Credentials ts) throws IOException {
+      final Path jobSubmitDir, final Credentials ts) throws IOException {
     ApplicationId applicationId = resMgrDelegate.getApplicationId();
 
     // Setup capability
@@ -208,7 +353,8 @@ public class DragonJobRunner implements DragonJobService {
   @Override
   public void killJob(JobId jobId) throws IOException, InterruptedException {
     /* check if the status is not running, if not send kill to RM */
-    JobState state = clientCache.getClient(jobId).getJobReport(jobId).getJobState();
+    JobState state =
+        clientCache.getClient(jobId).getJobReport(jobId).getJobState();
     if (state != JobState.RUNNING) {
       resMgrDelegate.killApplication(jobId.getAppId());
       return;
@@ -218,18 +364,18 @@ public class DragonJobRunner implements DragonJobService {
       clientCache.getClient(jobId).killJob(jobId);
       long currentTimeMillis = System.currentTimeMillis();
       long timeKillIssued = currentTimeMillis;
-      while ((currentTimeMillis < timeKillIssued + 10000L) && (state
-          != JobState.KILLED)) {
-          try {
-            Thread.sleep(1000L);
-          } catch(InterruptedException ie) {
-            /** interrupted, just break */
-            break;
-          }
-          currentTimeMillis = System.currentTimeMillis();
-          state = clientCache.getClient(jobId).getJobReport(jobId).getJobState();
+      while ((currentTimeMillis < timeKillIssued + 10000L)
+          && (state != JobState.KILLED)) {
+        try {
+          Thread.sleep(1000L);
+        } catch (InterruptedException ie) {
+          /** interrupted, just break */
+          break;
+        }
+        currentTimeMillis = System.currentTimeMillis();
+        state = clientCache.getClient(jobId).getJobReport(jobId).getJobState();
       }
-    } catch(IOException io) {
+    } catch (IOException io) {
       LOG.debug("Error when checking for application status", io);
     }
     if (state != JobState.KILLED) {
@@ -251,9 +397,153 @@ public class DragonJobRunner implements DragonJobService {
     return clientCache.getClient(jobId).getTaskReports(jobId);
   }
 
-
   @Override
   public JobReport getJobReport(JobId jobId) throws YarnRemoteException {
     return clientCache.getClient(jobId).getJobReport(jobId);
+  }
+
+  private void writeConf(final Configuration conf, final FileSystem submitFs,
+      final Path submitJobDir) throws IOException {
+    // Write job file to job service provider's fs
+    Path jobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
+    FSDataOutputStream out =
+        FileSystem.create(submitFs, jobFile, new FsPermission(
+            JobSubmissionFiles.JOB_FILE_PERMISSION));
+    try {
+      conf.writeXml(out);
+    } finally {
+      out.close();
+    }
+  }
+
+  private void writeJobDescription(final DragonJobGraph graph,
+      final FileSystem submitFs, final Path submitJobDir) throws IOException {
+    // Write job description to job service provider's fs
+    Path descFile = JobSubmissionFiles.getJobDescriptionFile(submitJobDir);
+    FSDataOutputStream out =
+        FileSystem.create(submitFs, descFile, new FsPermission(
+            JobSubmissionFiles.JOB_FILE_PERMISSION));
+    try {
+      HessianSerializer<DragonJobGraph> serializer =
+          new HessianSerializer<DragonJobGraph>();
+      serializer.serialize(out, graph);
+    } finally {
+      out.close();
+    }
+  }
+
+  // get secret keys and tokens and store them into TokenCache
+  @SuppressWarnings("unchecked")
+  private void populateTokenCache(Configuration conf, Credentials credentials)
+      throws IOException {
+    readTokensFromFiles(conf, credentials);
+    // add the delegation tokens from configuration
+    String[] nameNodes = conf.getStrings(DragonJobConfig.JOB_NAMENODES);
+    LOG.debug("adding the following namenodes' delegation tokens:"
+        + Arrays.toString(nameNodes));
+    if (nameNodes != null) {
+      Path[] ps = new Path[nameNodes.length];
+      for (int i = 0; i < nameNodes.length; i++) {
+        ps[i] = new Path(nameNodes[i]);
+      }
+      TokenCache.obtainTokensForNamenodes(credentials, ps, conf);
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void readTokensFromFiles(Configuration conf, Credentials credentials)
+      throws IOException {
+    // add tokens and secrets coming from a token storage file
+    String binaryTokenFilename =
+        conf.get(DragonJobConfig.DRAGON_JOB_CREDENTIALS_BINARY);
+    if (binaryTokenFilename != null) {
+      Credentials binary =
+          Credentials.readTokenStorageFile(new Path("file:///"
+              + binaryTokenFilename), conf);
+      credentials.addAll(binary);
+    }
+    // add secret keys coming from a json file
+    String tokensFileName =
+        conf.get(DragonJobConfig.DRAGON_JOB_CREDENTIALS_JSON);
+    if (tokensFileName != null) {
+      LOG.info("loading user's secret keys from " + tokensFileName);
+      String localFileName = new Path(tokensFileName).toUri().getPath();
+
+      boolean json_error = false;
+      try {
+        // read JSON
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, String> nm =
+            mapper.readValue(new File(localFileName), Map.class);
+
+        for (Map.Entry<String, String> ent : nm.entrySet()) {
+          credentials.addSecretKey(new Text(ent.getKey()), ent.getValue()
+              .getBytes());
+        }
+      } catch (JsonMappingException e) {
+        json_error = true;
+      } catch (JsonParseException e) {
+        json_error = true;
+      }
+      if (json_error)
+        LOG.warn("couldn't parse Token Cache JSON file with user secret keys");
+    }
+  }
+
+  private void copyFilesFromLocal(final DragonJobGraph jobGraph,
+                                  final FileSystem submitFs,
+                                  final Path submitJobDir,
+                                  final short replication) 
+      throws IOException {
+    if (submitFs.exists(submitJobDir)) {
+      throw new IOException("Not submitting job. Job directory " + submitJobDir
+          + " already exists!! This is unexpected.Please check what's there in"
+          + " that directory");
+    }
+    FsPermission sysPerms =
+        new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
+    FileSystem.mkdirs(submitFs, submitJobDir, sysPerms);
+    // add all the command line files/ jars and archive
+    // first copy them to dragon job service provider's
+    // filesystem
+    for (DragonVertex vertex : jobGraph.vertexSet()) {
+      List<String> files = vertex.getFiles();
+      if (files.size() > 0) {
+        Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
+        FileSystem.mkdirs(submitFs, filesDir, sysPerms);
+        for (String file : files) {
+          submitFs.copyFromLocalFile(false, true, new Path(file), filesDir);
+        }
+      }
+
+      List<String> archives = vertex.getArchives();
+      if (archives.size() > 0) {
+        Path archivesDir =
+            JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
+        FileSystem.mkdirs(submitFs, archivesDir, sysPerms);
+        for (String archive : archives) {
+          submitFs.copyFromLocalFile(false, true, new Path(archive),
+              archivesDir);
+        }
+      }
+    }
+  }
+
+  private void printTokens(JobId jobId, Credentials credentials)
+      throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Printing tokens for job: " + jobId);
+      for (Token<?> token : credentials.getAllTokens()) {
+        if (token.getKind().toString().equals("HDFS_DELEGATION_TOKEN")) {
+          LOG.debug("Submitting with "
+              + DelegationTokenIdentifier.stringifyToken(token));
+        }
+      }
+    }
+  }
+
+  // this method is for internal use only
+  private static final String toFullPropertyName(String queue, String property) {
+    return "dragon.queue." + queue + "." + property;
   }
 }
