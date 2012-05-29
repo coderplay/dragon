@@ -176,13 +176,17 @@ public class ResourceMgrDelegate {
 	public ApplicationId getApplicationId() {
 		return applicationId;
 	}
+
   private static final String STAGING_CONSTANT = ".staging";
-	public String getStagingAreaDir() throws IOException, InterruptedException {
-		String user = UserGroupInformation.getCurrentUser().getShortUserName();
-    Path path= new Path(
-        conf.get(DragonJobConfig.DRAGON_AM_STAGING_DIR) + 
-        Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
-		LOG.debug("getStagingAreaDir: dir=" + path);
-		return path.toString();
-	}
+
+  public String getStagingAreaDir() throws IOException, InterruptedException {
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    Path path =
+        new Path(conf.get(DragonJobConfig.DRAGON_AM_STAGING_DIR)
+            + Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("getStagingAreaDir: dir=" + path);
+    }
+    return path.toString();
+  }
 }
