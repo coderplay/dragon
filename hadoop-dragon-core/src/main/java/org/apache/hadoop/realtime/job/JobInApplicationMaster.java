@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.server;
+package org.apache.hadoop.realtime.job;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -30,7 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.job.IJobInApp;
+import org.apache.hadoop.realtime.job.JobInApplicationMaster;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
@@ -52,7 +52,7 @@ import org.apache.hadoop.yarn.util.Records;
 
 /**
  */
-public class JobInApplicationMaster implements IJobInApp,
+public class JobInApplicationMaster implements Job,
     EventHandler<JobEvent> {
   private static final Log LOG = LogFactory
       .getLog(JobInApplicationMaster.class);
@@ -86,10 +86,10 @@ public class JobInApplicationMaster implements IJobInApp,
           .addTransition(JobState.INITED, JobState.RUNNING,
               JobEventType.JOB_START, new StartTransition())
           // Transitions from RUNNING state
-          .addTransition(JobState.RUNNING, JobState.KILL_WAIT,
-              JobEventType.JOB_KILL, new KillWaitTaskCompletedTransition())
+          .addTransition(JobState.RUNNING, JobState.SUCCEEDED,
+              JobEventType.JOB_TASK_COMPLETED, new KillWaitTaskCompletedTransition())
           // Transitions from KILL_WAIT state.
-          .addTransition(JobState.KILL_WAIT, JobState.SUCCEEDED,
+          .addTransition(JobState.SUCCEEDED, JobState.KILLED,
               JobEventType.JOB_KILL, new KillTaskTransition())
           // create the topology tables
           .installTopology();
@@ -123,7 +123,12 @@ public class JobInApplicationMaster implements IJobInApp,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to start Job
-      LOG.error(job.getState());
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       job.getEventHandler().handle(
           new JobEvent(job.getID(), JobEventType.JOB_START));
     }
@@ -134,9 +139,14 @@ public class JobInApplicationMaster implements IJobInApp,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Running Job
-      LOG.error(job.getState());
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       job.getEventHandler().handle(
-          new JobEvent(job.getID(), JobEventType.JOB_KILL));
+          new JobEvent(job.getID(), JobEventType.JOB_TASK_COMPLETED));
     }
   }
 
@@ -145,7 +155,12 @@ public class JobInApplicationMaster implements IJobInApp,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Kill Job
-      LOG.error(job.getState());
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       job.getEventHandler().handle(
           new JobEvent(job.getID(), JobEventType.JOB_KILL));
     }
@@ -156,7 +171,12 @@ public class JobInApplicationMaster implements IJobInApp,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Clean the killed Job
-      LOG.error(job.getState());
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       LOG.info("Job " + job.getID() + "is killed");
     }
   }
@@ -226,6 +246,7 @@ public class JobInApplicationMaster implements IJobInApp,
     report.setJobId(jobId);
     report.setJobName(jobName);
     report.setUser(userName);
+    report.setJobState(getState());
     readLock.unlock();
     return report;
   }
@@ -240,25 +261,21 @@ public class JobInApplicationMaster implements IJobInApp,
     return jobName;
   }
 
-  @Override
   public Counters getAllCounters() {
     // TODO Auto-generated method stub
     return null;
   }
 
-  @Override
   public List<String> getDiagnostics() {
     // TODO Auto-generated method stub
     return null;
   }
 
-  @Override
   public float getProgress() {
     // TODO Auto-generated method stub
     return 0;
   }
 
-  @Override
   public String getUserName() {
     return userName;
   }
@@ -268,14 +285,30 @@ public class JobInApplicationMaster implements IJobInApp,
     return queueName;
   }
 
-  @Override
   public Path getConfFile() {
     // TODO Auto-generated method stub
     return null;
   }
 
-  @Override
   public List<AMInfo> getAMInfos() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Credentials getCredentials() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Configuration getConfiguration() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public String getUser() {
     // TODO Auto-generated method stub
     return null;
   }

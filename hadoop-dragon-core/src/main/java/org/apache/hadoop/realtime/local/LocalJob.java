@@ -33,19 +33,19 @@ public class LocalJob implements Job {
 	}
 
 	@Override
-	public JobId getJobId() {
+	public JobId getID() {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String getJobName() {
+	public String getName() {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public String getQueue() {
+	public String getQueueName() {
 		// TODO Auto-generated method stub
 		return null;
 	}

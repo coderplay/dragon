@@ -33,7 +33,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.client.app.ClientService;
-import org.apache.hadoop.realtime.job.IJobInApp;
+import org.apache.hadoop.realtime.job.JobInApplicationMaster;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.job.TaskAttempt;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
@@ -148,6 +148,8 @@ public class DragonClientService extends AbstractService
     this.bindAddress =
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
             + ":" + server.getPort());
+    conf.set("host", hostNameResolved.getHostAddress());
+    conf.setInt("port", server.getPort());
     LOG.info("Instantiated DragonClientService at " + this.bindAddress);
     try {
       webApp = WebApps.$for("mapreduce", AppContext.class, appContext, "ws").with(conf).
@@ -186,9 +188,9 @@ public class DragonClientService extends AbstractService
     private RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
 
-    private IJobInApp verifyAndGetJob(JobId jobID, 
+    private JobInApplicationMaster verifyAndGetJob(JobId jobID, 
         boolean modifyAccess) throws YarnRemoteException {
-      IJobInApp job = appContext.getJob(jobID);
+      JobInApplicationMaster job = appContext.getJob(jobID);
       if (job == null) {
         throw RPCUtil.getRemoteException("Unknown job " + jobID);
       }
@@ -219,7 +221,7 @@ public class DragonClientService extends AbstractService
     public GetCountersResponse getCounters(GetCountersRequest request) 
       throws YarnRemoteException {
       JobId jobId = request.getJobId();
-      IJobInApp job = verifyAndGetJob(jobId, false);
+      JobInApplicationMaster job = verifyAndGetJob(jobId, false);
       GetCountersResponse response =
         recordFactory.newRecordInstance(GetCountersResponse.class);
       response.setCounters(job.getAllCounters());
@@ -230,7 +232,7 @@ public class DragonClientService extends AbstractService
     public GetJobReportResponse getJobReport(GetJobReportRequest request) 
       throws YarnRemoteException {
       JobId jobId = request.getJobId();
-      IJobInApp job = verifyAndGetJob(jobId, false);
+      JobInApplicationMaster job = verifyAndGetJob(jobId, false);
       GetJobReportResponse response = 
         recordFactory.newRecordInstance(GetJobReportResponse.class);
       response.setJobReport(job.getReport());
@@ -348,7 +350,7 @@ public class DragonClientService extends AbstractService
       GetTaskReportsResponse response = 
         recordFactory.newRecordInstance(GetTaskReportsResponse.class);
       
-      IJobInApp job = verifyAndGetJob(jobId, false);
+      JobInApplicationMaster job = verifyAndGetJob(jobId, false);
       Collection<Task> tasks = job.getTasks().values();
       LOG.info("Getting task report for " + "   " + jobId
           + ". Report-size will be " + tasks.size());

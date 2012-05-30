@@ -197,7 +197,7 @@ public class DragonJob implements Job {
   }
 
   @Override
-  public JobId getJobId() {
+  public JobId getID() {
     return jobId;
   }
 
@@ -206,7 +206,7 @@ public class DragonJob implements Job {
   }
 
   @Override
-  public String getJobName() {
+  public String getName() {
     return null;
   }
 
@@ -226,7 +226,7 @@ public class DragonJob implements Job {
   }
 
   @Override
-  public String getQueue() {
+  public String getQueueName() {
     return null;
   }
   
@@ -246,13 +246,13 @@ public class DragonJob implements Job {
    * @throws IOException if communication to the JobTracker fails
    */
   public boolean monitorAndPrintJob() throws IOException, InterruptedException {
-    JobId jobId = getJobId();
+    JobId jobId = getID();
     LOG.info("Running job: " + jobId);
     JobReport report=null;
     while (state!=JobState.SUCCEEDED) {
       Thread.sleep(MAX_JOBSTATE_AGE);
       if(jobId==null){
-        jobId=getJobId();
+        jobId=getID();
         continue;
       }
       LOG.info(jobId+" "+state);
