@@ -34,11 +34,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.DragonClientService;
-import org.apache.hadoop.realtime.job.IJobInApp;
+import org.apache.hadoop.realtime.job.JobInApplicationMaster;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
 import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.realtime.server.JobInApplicationMaster;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -81,7 +80,7 @@ public class DragonAppMaster extends CompositeService {
   private final int nmHttpPort;
 
   private JobId jobId;
-  private IJobInApp job;
+  private JobInApplicationMaster job;
   private JobEventDispatcher jobEventDispatcher;
 
   private DragonClientService clientService;
@@ -179,10 +178,29 @@ public class DragonAppMaster extends CompositeService {
 
     // Mock something about ResourceManager
     rpc = YarnRPC.create(conf);
+    Map<String, String> envs = System.getenv();
     appAttemptID = Records.newRecord(ApplicationAttemptId.class);
-    appAttemptID = ConverterUtils.toApplicationAttemptId("");
-    resourceManager = connectToRM();
+    ContainerId containerId =
+        ConverterUtils.toContainerId(envs
+            .get(ApplicationConstants.AM_CONTAINER_ID_ENV));
+    appAttemptID = containerId.getApplicationAttemptId();
+    super.init(conf);
+  } // end of init()
 
+  @Override
+  public void start() {
+    job = createJob(getConfig());
+    JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
+    super.start();
+    resourceManager = connectToRM(conf);
+    while(conf.get("host")==null || "".equals(conf.get("host"))){
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    }
     try {
       RegisterApplicationMasterResponse response = registerToRM();
 
@@ -193,16 +211,7 @@ public class DragonAppMaster extends CompositeService {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
-
-    super.init(conf);
-  } // end of init()
-
-  @Override
-  public void start() {
-    job = createJob(getConfig());
-    JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
     jobEventDispatcher.handle(initJobEvent);
-    super.start();
   }
 
   /**
@@ -247,7 +256,8 @@ public class DragonAppMaster extends CompositeService {
       String jobUserName =
           System.getenv(ApplicationConstants.Environment.USER.name());
       conf.set(DragonJobConfig.USER_NAME, jobUserName);
-      initAndStartAppMaster(appMaster, conf, jobUserName);
+      appMaster.conf=conf;
+      initAndStartAppMaster(appMaster, appMaster.conf, jobUserName);
 
     } catch (Throwable t) {
       LOG.error("Error starting DragonAppMaster", t);
@@ -256,7 +266,7 @@ public class DragonAppMaster extends CompositeService {
   }
 
   protected static void initAndStartAppMaster(final DragonAppMaster appMaster,
-      final YarnConfiguration conf, String jobUserName) throws IOException,
+      final Configuration conf, String jobUserName) throws IOException,
       InterruptedException {
     UserGroupInformation.setConfiguration(conf);
     UserGroupInformation appMasterUgi =
@@ -281,9 +291,9 @@ public class DragonAppMaster extends CompositeService {
   }
 
   /** Create and initialize (but don't start) a single job. */
-  protected IJobInApp createJob(Configuration conf) {
+  protected JobInApplicationMaster createJob(Configuration conf) {
     // create single job
-    IJobInApp newJob =
+    JobInApplicationMaster newJob =
         new JobInApplicationMaster(jobId, appAttemptId, conf,
             dispatcher.getEventHandler(), fsTokens, clock,
             currentUser.getUserName(), appSubmitTime);
@@ -297,8 +307,8 @@ public class DragonAppMaster extends CompositeService {
 
   private class RunningAppContext implements AppContext {
 
-    private final Map<JobId, IJobInApp> jobs =
-        new ConcurrentHashMap<JobId, IJobInApp>();
+    private final Map<JobId, JobInApplicationMaster> jobs =
+        new ConcurrentHashMap<JobId, JobInApplicationMaster>();
     private final Configuration conf;
 
     public RunningAppContext(Configuration config) {
@@ -326,12 +336,12 @@ public class DragonAppMaster extends CompositeService {
     }
 
     @Override
-    public IJobInApp getJob(JobId jobID) {
+    public JobInApplicationMaster getJob(JobId jobID) {
       return jobs.get(jobID);
     }
 
     @Override
-    public Map<JobId, IJobInApp> getAllJobs() {
+    public Map<JobId, JobInApplicationMaster> getAllJobs() {
       return jobs;
     }
 
@@ -394,20 +404,19 @@ public class DragonAppMaster extends CompositeService {
     @SuppressWarnings("unchecked")
     @Override
     public void handle(JobEvent event) {
-      if (event.equals(JobEventType.JOB_KILL)) {
+      ((EventHandler<JobEvent>) context.getJob(event.getJobId())).handle(event);
+      if (event.getType().equals(JobEventType.JOB_KILL)) {
         FinishApplicationMasterRequest finishReq =
             Records.newRecord(FinishApplicationMasterRequest.class);
         finishReq.setAppAttemptId(appAttemptID);
         finishReq.setFinishApplicationStatus(FinalApplicationStatus.SUCCEEDED);
-        try {
+        try {        
           resourceManager.finishApplicationMaster(finishReq);
         } catch (YarnRemoteException e) {
           // TODO Auto-generated catch block
           e.printStackTrace();
         }
-      }
-
-      ((EventHandler<JobEvent>) context.getJob(event.getJobId())).handle(event);
+      }     
     }
   }
 
@@ -415,7 +424,7 @@ public class DragonAppMaster extends CompositeService {
     return new DragonClientService(context);
   }
 
-  private AMRMProtocol connectToRM() {
+  private AMRMProtocol connectToRM(Configuration conf) {
     YarnConfiguration yarnConf = new YarnConfiguration(conf);
     InetSocketAddress rmAddress =
         NetUtils.createSocketAddr(yarnConf.get(
@@ -427,15 +436,13 @@ public class DragonAppMaster extends CompositeService {
 
   private RegisterApplicationMasterResponse registerToRM()
       throws YarnRemoteException, UnknownHostException {
-    InetAddress host = InetAddress.getLocalHost();
-
     RegisterApplicationMasterRequest appMasterRequest =
         Records.newRecord(RegisterApplicationMasterRequest.class);
 
     appMasterRequest.setApplicationAttemptId(appAttemptID);
-    appMasterRequest.setHost(host.getCanonicalHostName());
-    appMasterRequest.setRpcPort(9999);
-    appMasterRequest.setTrackingUrl(host.getCanonicalHostName() + ":" + 9999);
+    appMasterRequest.setHost(conf.get("host"));
+    appMasterRequest.setRpcPort(conf.getInt("port", 0));
+    appMasterRequest.setTrackingUrl(conf.get("host") + ":" + conf.getInt("port", 0));
 
     return resourceManager.registerApplicationMaster(appMasterRequest);
   }

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.server;
+package org.apache.hadoop.realtime.job;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -30,7 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.job.JobInApplicationMaster;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
@@ -123,6 +123,12 @@ public class JobInApplicationMaster implements Job,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to start Job
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       job.getEventHandler().handle(
           new JobEvent(job.getID(), JobEventType.JOB_START));
     }
@@ -133,6 +139,12 @@ public class JobInApplicationMaster implements Job,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Running Job
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       job.getEventHandler().handle(
           new JobEvent(job.getID(), JobEventType.JOB_TASK_COMPLETED));
     }
@@ -143,6 +155,12 @@ public class JobInApplicationMaster implements Job,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Kill Job
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       job.getEventHandler().handle(
           new JobEvent(job.getID(), JobEventType.JOB_KILL));
     }
@@ -153,6 +171,12 @@ public class JobInApplicationMaster implements Job,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Clean the killed Job
+      try {
+        Thread.sleep(10000);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
       LOG.info("Job " + job.getID() + "is killed");
     }
   }
@@ -227,10 +251,12 @@ public class JobInApplicationMaster implements Job,
     return report;
   }
 
+  @Override
   public JobId getID() {
     return jobId;
   }
 
+  @Override
   public String getName() {
     return jobName;
   }
@@ -254,6 +280,7 @@ public class JobInApplicationMaster implements Job,
     return userName;
   }
 
+  @Override
   public String getQueueName() {
     return queueName;
   }

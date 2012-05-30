@@ -30,7 +30,7 @@ public interface Job {
    * 
    * @return the object with the job id
    */
-  public JobId getJobId();
+  public JobId getID();
 
   /**
    * Get the user-specified job name. This is only used to identify the job to
@@ -38,7 +38,7 @@ public interface Job {
    * 
    * @return the job's name, defaulting to "".
    */
-  public String getJobName();
+  public String getName();
 
   /**
    * Get the user-specified queue name. This is only used to identify the job to
@@ -46,7 +46,7 @@ public interface Job {
    * 
    * @return the job's name, defaulting to "".
    */
-  public String getQueue();
+  public String getQueueName();
 
   /**
    * Get credentials for the job.

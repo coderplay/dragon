@@ -21,7 +21,7 @@ package org.apache.hadoop.realtime.client.app;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.realtime.job.IJobInApp;
+import org.apache.hadoop.realtime.job.JobInApplicationMaster;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -45,9 +45,9 @@ public interface AppContext {
 
   CharSequence getUser();
 
-  IJobInApp getJob(JobId jobID);
+  JobInApplicationMaster getJob(JobId jobID);
 
-  Map<JobId, IJobInApp> getAllJobs();
+  Map<JobId, JobInApplicationMaster> getAllJobs();
 
   EventHandler getEventHandler();
 
