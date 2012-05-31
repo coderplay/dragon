@@ -19,10 +19,9 @@ package org.apache.hadoop.realtime.client.app;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,14 +29,25 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.DragonClientService;
 import org.apache.hadoop.realtime.job.JobInApplicationMaster;
+import org.apache.hadoop.realtime.job.Task;
+import org.apache.hadoop.realtime.job.TaskAttempt;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
+import org.apache.hadoop.realtime.job.app.event.JobFinishEvent;
+import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
+import org.apache.hadoop.realtime.job.app.event.TaskAttemptEventType;
+import org.apache.hadoop.realtime.job.app.event.TaskEvent;
+import org.apache.hadoop.realtime.job.app.event.TaskEventType;
+import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.rm.ContainerAllocator;
+import org.apache.hadoop.realtime.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.realtime.rm.RMContainerAllocator;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -46,26 +56,20 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
-import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.service.CompositeService;
 import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.Records;
 
+@SuppressWarnings("rawtypes")
 public class DragonAppMaster extends CompositeService {
 
   private static final Log LOG = LogFactory.getLog(DragonAppMaster.class);
@@ -78,28 +82,19 @@ public class DragonAppMaster extends CompositeService {
   private final String nmHost;
   private final int nmPort;
   private final int nmHttpPort;
+  private List<AMInfo> amInfos;
 
   private JobId jobId;
   private JobInApplicationMaster job;
   private JobEventDispatcher jobEventDispatcher;
 
   private DragonClientService clientService;
+  private ContainerAllocator containerAllocator;
 
   private AppContext context;
   private Dispatcher dispatcher;
   private UserGroupInformation currentUser;
-  private Credentials fsTokens = new Credentials(); // Filled during init
-
-  // Para used to connect ResourceManager
-  private Configuration conf;
-  private YarnRPC rpc;
-  private AMRMProtocol resourceManager;
-
-  // Para used to regist ResourceManager
-  private ApplicationAttemptId appAttemptID;
-  private String appMasterHostname = "";
-  private int appMasterRpcPort = 1;
-  private String appMasterTrackingUrl = "";
+  private Credentials fsTokens = new Credentials();
 
   public DragonAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
@@ -158,60 +153,38 @@ public class DragonAppMaster extends CompositeService {
 
     // register the event dispatchers
     dispatcher.register(JobEventType.class, jobEventDispatcher);
-    /*
-     * dispatcher.register(TaskEventType.class, new TaskEventDispatcher());
-     * dispatcher.register(TaskAttemptEventType.class, new
-     * TaskAttemptEventDispatcher());
-     * 
-     * // service to allocate containers from RM containerAllocator =
-     * createContainerAllocator(clientService, context);
-     * addIfService(containerAllocator);
-     * dispatcher.register(ContainerAllocator.EventType.class,
-     * containerAllocator);
-     * 
-     * // corresponding service to launch allocated containers via NodeManager
-     * containerLauncher = createContainerLauncher(context);
-     * addIfService(containerLauncher);
-     * dispatcher.register(ContainerLauncher.EventType.class,
-     * containerLauncher);
-     */
-
-    // Mock something about ResourceManager
-    rpc = YarnRPC.create(conf);
-    Map<String, String> envs = System.getenv();
-    appAttemptID = Records.newRecord(ApplicationAttemptId.class);
-    ContainerId containerId =
-        ConverterUtils.toContainerId(envs
-            .get(ApplicationConstants.AM_CONTAINER_ID_ENV));
-    appAttemptID = containerId.getApplicationAttemptId();
+    dispatcher.register(TaskEventType.class, new TaskEventDispatcher());
+    dispatcher.register(TaskAttemptEventType.class, new TaskAttemptEventDispatcher());
+    
+    containerAllocator = createContainerAllocator(clientService, context);
+    addIfService(containerAllocator);
+    dispatcher.register(ContainerAllocator.EventType.class, containerAllocator);
+    
     super.init(conf);
-  } // end of init()
+  }
 
   @Override
   public void start() {
+    // / Create the AMInfo for the current AppMaster
+    if (amInfos == null) {
+      amInfos = new LinkedList<AMInfo>();
+    }
+    AMInfo amInfo =
+        DragonBuilderUtils.newAMInfo(appAttemptId, startTime, containerID,
+            nmHost, nmPort, nmHttpPort);
+    amInfos.add(amInfo);
     job = createJob(getConfig());
     JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
-    super.start();
-    resourceManager = connectToRM(conf);
-    while(conf.get("host")==null || "".equals(conf.get("host"))){
-      try {
-        Thread.sleep(10000);
-      } catch (InterruptedException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-    }
-    try {
-      RegisterApplicationMasterResponse response = registerToRM();
-
-    } catch (YarnRemoteException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (UnknownHostException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
     jobEventDispatcher.handle(initJobEvent);
+    super.start();
+    startJobs();
+  }
+  @SuppressWarnings("unchecked")
+  protected void startJobs() {
+    /** create a job-start event to get this ball rolling */
+    JobEvent startJobEvent = new JobEvent(job.getID(), JobEventType.JOB_START);
+    /** send the job-start event. this triggers the job execution. */
+    dispatcher.getEventHandler().handle(startJobEvent);
   }
 
   /**
@@ -256,8 +229,7 @@ public class DragonAppMaster extends CompositeService {
       String jobUserName =
           System.getenv(ApplicationConstants.Environment.USER.name());
       conf.set(DragonJobConfig.USER_NAME, jobUserName);
-      appMaster.conf=conf;
-      initAndStartAppMaster(appMaster, appMaster.conf, jobUserName);
+      initAndStartAppMaster(appMaster, conf, jobUserName);
 
     } catch (Throwable t) {
       LOG.error("Error starting DragonAppMaster", t);
@@ -291,6 +263,7 @@ public class DragonAppMaster extends CompositeService {
   }
 
   /** Create and initialize (but don't start) a single job. */
+  @SuppressWarnings("unchecked")
   protected JobInApplicationMaster createJob(Configuration conf) {
     // create single job
     JobInApplicationMaster newJob =
@@ -298,6 +271,8 @@ public class DragonAppMaster extends CompositeService {
             dispatcher.getEventHandler(), fsTokens, clock,
             currentUser.getUserName(), appSubmitTime);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
+    dispatcher.register(JobFinishEvent.Type.class,
+        createJobFinishEventHandler());   
     return newJob;
   }
 
@@ -399,52 +374,123 @@ public class DragonAppMaster extends CompositeService {
       addService((Service) object);
     }
   }
+  protected ContainerAllocator createContainerAllocator(
+      final ClientService clientService, final AppContext context) {
+    return new ContainerAllocatorRouter(clientService, context);
+  }
+  /**
+   * create an event handler that handles the job finish event.
+   * @return the job finish event handler.
+   */
+  protected EventHandler<JobFinishEvent> createJobFinishEventHandler() {
+    return new JobFinishEventHandler();
+  }
+  private class JobFinishEventHandler implements EventHandler<JobFinishEvent> {
+    @Override
+    public void handle(JobFinishEvent event) {
+      // TODO:currently just wait for some time so clients can know the
+      // final states. Will be removed once RM come on.
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      try {
+        // Stop all services
+        // This will also send the final report to the ResourceManager
+        LOG.info("Calling stop for all the services");
+        stop();
 
+        // Send job-end notification
+      } catch (Throwable t) {
+        LOG.warn("Graceful stop failed ", t);
+      }
+
+      // Cleanup staging directory
+      // cleanupStagingDir();
+
+      //Bring the process down by force.
+      //Not needed after HADOOP-7140
+      LOG.info("Exiting Dragon AppMaster..GoodBye!");
+      sysexit();
+    }
+  }
+  /**
+   * Exit call. Just in a function call to enable testing.
+   */
+  protected void sysexit() {
+    System.exit(0);
+  }
   private class JobEventDispatcher implements EventHandler<JobEvent> {
-    @SuppressWarnings("unchecked")
     @Override
     public void handle(JobEvent event) {
-      ((EventHandler<JobEvent>) context.getJob(event.getJobId())).handle(event);
-      if (event.getType().equals(JobEventType.JOB_KILL)) {
-        FinishApplicationMasterRequest finishReq =
-            Records.newRecord(FinishApplicationMasterRequest.class);
-        finishReq.setAppAttemptId(appAttemptID);
-        finishReq.setFinishApplicationStatus(FinalApplicationStatus.SUCCEEDED);
-        try {        
-          resourceManager.finishApplicationMaster(finishReq);
-        } catch (YarnRemoteException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        }
-      }     
+      ((EventHandler<JobEvent>)context.getJob(event.getJobId())).handle(event);
+    }
+  }
+  
+  private class TaskEventDispatcher implements EventHandler<TaskEvent> {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void handle(TaskEvent event) {
+      Task task =
+          context.getJob(event.getTaskID().getJobId()).getTask(
+              event.getTaskID());
+      ((EventHandler<TaskEvent>) task).handle(event);
+    }
+  }
+
+  private class TaskAttemptEventDispatcher implements
+      EventHandler<TaskAttemptEvent> {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void handle(TaskAttemptEvent event) {
+      JobInApplicationMaster job =
+          context.getJob(event.getTaskAttemptID().getTaskId().getJobId());
+      Task task = job.getTask(event.getTaskAttemptID().getTaskId());
+      TaskAttempt attempt = task.getAttempt(event.getTaskAttemptID());
+      ((EventHandler<TaskAttemptEvent>) attempt).handle(event);
     }
   }
 
   protected DragonClientService createClientService(AppContext context) {
     return new DragonClientService(context);
   }
+  /**
+   * By the time life-cycle of this router starts, job-init would have already
+   * happened.
+   */
+  private final class ContainerAllocatorRouter extends AbstractService
+      implements ContainerAllocator {
+    private final ClientService clientService;
+    private final AppContext context;
+    private ContainerAllocator containerAllocator;
 
-  private AMRMProtocol connectToRM(Configuration conf) {
-    YarnConfiguration yarnConf = new YarnConfiguration(conf);
-    InetSocketAddress rmAddress =
-        NetUtils.createSocketAddr(yarnConf.get(
-            YarnConfiguration.RM_SCHEDULER_ADDRESS,
-            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS));
-    LOG.info("Connecting to ResourceManager at " + rmAddress);
-    return ((AMRMProtocol) rpc.getProxy(AMRMProtocol.class, rmAddress, conf));
-  }
+    ContainerAllocatorRouter(ClientService clientService,
+        AppContext context) {
+      super(ContainerAllocatorRouter.class.getName());
+      this.clientService = clientService;
+      this.context = context;
+    }
 
-  private RegisterApplicationMasterResponse registerToRM()
-      throws YarnRemoteException, UnknownHostException {
-    RegisterApplicationMasterRequest appMasterRequest =
-        Records.newRecord(RegisterApplicationMasterRequest.class);
+    @Override
+    public synchronized void start() {
+      this.containerAllocator =
+          new RMContainerAllocator(this.clientService, this.context);
+      ((Service) this.containerAllocator).init(getConfig());
+      ((Service) this.containerAllocator).start();
+      super.start();
+    }
 
-    appMasterRequest.setApplicationAttemptId(appAttemptID);
-    appMasterRequest.setHost(conf.get("host"));
-    appMasterRequest.setRpcPort(conf.getInt("port", 0));
-    appMasterRequest.setTrackingUrl(conf.get("host") + ":" + conf.getInt("port", 0));
+    @Override
+    public synchronized void stop() {
+      ((Service)this.containerAllocator).stop();
+      super.stop();
+    }
 
-    return resourceManager.registerApplicationMaster(appMasterRequest);
+    @Override
+    public void handle(ContainerAllocatorEvent event) {
+      this.containerAllocator.handle(event);
+    }
   }
 
 }

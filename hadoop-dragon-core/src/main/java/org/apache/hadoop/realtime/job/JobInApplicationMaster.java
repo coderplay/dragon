@@ -29,20 +29,24 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.job.JobInApplicationMaster;
-import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
+import org.apache.hadoop.realtime.job.app.event.JobFinishEvent;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.rm.ContainerRequestEvent;
+import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
 import org.apache.hadoop.yarn.state.SingleArcTransition;
@@ -64,7 +68,7 @@ public class JobInApplicationMaster implements Job,
   private final Lock writeLock;
   private final String jobName;
   private final JobId jobId;
-  private final EventHandler<JobEvent> eventHandler;
+  private final EventHandler eventHandler;
   private final String userName;
   private final String queueName;
   private final long appSubmitTime;
@@ -87,7 +91,7 @@ public class JobInApplicationMaster implements Job,
               JobEventType.JOB_START, new StartTransition())
           // Transitions from RUNNING state
           .addTransition(JobState.RUNNING, JobState.SUCCEEDED,
-              JobEventType.JOB_TASK_COMPLETED, new KillWaitTaskCompletedTransition())
+              JobEventType.JOB_TASK_COMPLETED, new JobSucceededTransition())
           // Transitions from KILL_WAIT state.
           .addTransition(JobState.SUCCEEDED, JobState.KILLED,
               JobEventType.JOB_KILL, new KillTaskTransition())
@@ -96,7 +100,7 @@ public class JobInApplicationMaster implements Job,
 
   public JobInApplicationMaster(JobId jobId,
       ApplicationAttemptId applicationAttemptId, Configuration conf,
-      EventHandler<JobEvent> eventHandler, Credentials fsTokenCredentials,
+      EventHandler eventHandler, Credentials fsTokenCredentials,
       Clock clock, String userName, long appSubmitTime) {
     this.applicationAttemptId = applicationAttemptId;
     this.jobId = jobId;
@@ -123,14 +127,6 @@ public class JobInApplicationMaster implements Job,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to start Job
-      try {
-        Thread.sleep(10000);
-      } catch (InterruptedException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-      job.getEventHandler().handle(
-          new JobEvent(job.getID(), JobEventType.JOB_START));
     }
   }
 
@@ -139,30 +135,22 @@ public class JobInApplicationMaster implements Job,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Running Job
-      try {
-        Thread.sleep(10000);
-      } catch (InterruptedException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
+      TaskId taskId = DragonBuilderUtils.newTaskId(job.getID(), 0);
+      TaskAttemptId attemptId = DragonBuilderUtils.newTaskAttemptId(taskId, 0);
+      Resource resourceCapability =
+          DragonApps.setupResources(new Configuration());
       job.getEventHandler().handle(
-          new JobEvent(job.getID(), JobEventType.JOB_TASK_COMPLETED));
+          new ContainerRequestEvent(attemptId, resourceCapability,
+              new String[] { "h1" }, new String[] { "/default-rack" }));
     }
   }
 
-  public static class KillWaitTaskCompletedTransition implements
+  public static class JobSucceededTransition implements
       SingleArcTransition<JobInApplicationMaster, JobEvent> {
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Kill Job
-      try {
-        Thread.sleep(10000);
-      } catch (InterruptedException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-      job.getEventHandler().handle(
-          new JobEvent(job.getID(), JobEventType.JOB_KILL));
+      job.finished(JobState.SUCCEEDED);
     }
   }
 
@@ -171,12 +159,6 @@ public class JobInApplicationMaster implements Job,
     @Override
     public void transition(JobInApplicationMaster job, JobEvent event) {
       // TODO: do something to Clean the killed Job
-      try {
-        Thread.sleep(10000);
-      } catch (InterruptedException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
       LOG.info("Job " + job.getID() + "is killed");
     }
   }
@@ -223,6 +205,11 @@ public class JobInApplicationMaster implements Job,
       readLock.unlock();
     }
   }
+  JobState finished(JobState finalState) {
+    eventHandler.handle(new JobFinishEvent(jobId));
+    addDiagnostic("Job "+ this.jobId+" is running successfully.");
+    return finalState;
+  }
 
   protected StateMachine<JobState, JobEventType, JobEvent> getStateMachine() {
     return stateMachine;
@@ -236,7 +223,7 @@ public class JobInApplicationMaster implements Job,
     return tasks;
   }
 
-  public EventHandler<JobEvent> getEventHandler() {
+  public EventHandler getEventHandler() {
     return this.eventHandler;
   }
 
@@ -247,6 +234,11 @@ public class JobInApplicationMaster implements Job,
     report.setJobName(jobName);
     report.setUser(userName);
     report.setJobState(getState());
+    StringBuffer sb = new StringBuffer();
+    for (String s : getDiagnostics()) {
+      sb.append(s).append("\n");
+    }
+    report.setDiagnostics(sb.toString());
     readLock.unlock();
     return report;
   }
@@ -267,8 +259,12 @@ public class JobInApplicationMaster implements Job,
   }
 
   public List<String> getDiagnostics() {
-    // TODO Auto-generated method stub
-    return null;
+    readLock.lock();
+    try {
+      return diagnostics;
+    } finally {
+      readLock.unlock();
+    }
   }
 
   public float getProgress() {
