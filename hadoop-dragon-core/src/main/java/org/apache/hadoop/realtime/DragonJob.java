@@ -118,7 +118,7 @@ public class DragonJob implements Job {
   protected final Credentials credentials;
 
   private JobState state = JobState.NEW;
-  private static final long MAX_JOBSTATE_AGE = 1000 * 2;
+  private static final long MAX_JOBSTATE_AGE = 500;
 
   DragonJob(final DragonConfiguration conf) throws IOException {
     this.conf = conf;

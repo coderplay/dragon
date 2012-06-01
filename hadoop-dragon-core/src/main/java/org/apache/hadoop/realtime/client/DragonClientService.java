@@ -148,8 +148,6 @@ public class DragonClientService extends AbstractService
     this.bindAddress =
         NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
             + ":" + server.getPort());
-    conf.set("host", hostNameResolved.getHostAddress());
-    conf.setInt("port", server.getPort());
     LOG.info("Instantiated DragonClientService at " + this.bindAddress);
     try {
       webApp = WebApps.$for("mapreduce", AppContext.class, appContext, "ws").with(conf).
