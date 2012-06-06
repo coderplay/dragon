@@ -100,7 +100,7 @@ public class DragonJob implements Job {
 
   private static final Log LOG = LogFactory.getLog(DragonJob.class);
 
-  private static final long MAX_JOBSTATE_AGE = 1000 * 2;
+  private static final long MAX_JOBSTATE_AGE = 500;
 
   public static final String USED_GENERIC_PARSER = 
       "dragon.client.genericoptionsparser.used";
@@ -118,7 +118,7 @@ public class DragonJob implements Job {
   private DragonJobGraph jobGraph;
 
   protected final Credentials credentials;
-
+  
   private JobState state = JobState.NEW;
 
   DragonJob(final DragonConfiguration conf) throws IOException {

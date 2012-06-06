@@ -186,7 +186,7 @@ public class DragonJobConfig {
       "security.job.task.protocol.acl";
   public static final String DRAGON_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT =
       "security.job.client.protocol.acl";
-  
+
   /**
    * Upper limit on the number of threads user to launch containers in the app
    * master. Expect level config, you shouldn't be needing it in most cases.
@@ -196,4 +196,31 @@ public class DragonJobConfig {
 
   public static final int DEFAULT_DRAGON_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT =
       500;
+
+  /** How often the AM should send heartbeats to the RM. */
+  public static final String DRAGON_AM_TO_RM_HEARTBEAT_INTERVAL_MS =
+      DRAGON_AM_PREFIX + "scheduler.heartbeat.interval-ms";
+  public static final int DEFAULT_DRAGON_AM_TO_RM_HEARTBEAT_INTERVAL_MS = 1000;
+
+  /** Enable blacklisting of nodes in the job. */
+  public static final String DRAGON_AM_JOB_NODE_BLACKLISTING_ENABLE =
+      DRAGON_AM_PREFIX + "job.node-blacklisting.enable";
+
+  public static final String MAX_TASK_FAILURES_PER_TRACKER =
+      "mapreduce.job.maxtaskfailures.per.tracker";
+
+  /** Ignore blacklisting if a certain percentage of nodes have been blacklisted */
+  public static final String DRAGON_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERECENT =
+      DRAGON_AM_PREFIX + "job.node-blacklisting.ignore-threshold-node-percent";
+  public static final int DEFAULT_DRAGON_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERCENT =
+      33;
+  
+  /**
+   * If contact with RM is lost, the AM will wait MR_AM_TO_RM_WAIT_INTERVAL_MS
+   * milliseconds before aborting. During this interval, AM will still try
+   * to contact the RM.
+   */
+  public static final String DRAGON_AM_TO_RM_WAIT_INTERVAL_MS =
+    DRAGON_AM_PREFIX + "scheduler.connection.wait.interval-ms";
+  public static final int DEFAULT_DRAGON_AM_TO_RM_WAIT_INTERVAL_MS = 360000;
 }

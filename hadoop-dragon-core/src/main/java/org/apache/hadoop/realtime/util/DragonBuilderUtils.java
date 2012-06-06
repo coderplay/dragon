@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.realtime.util;
 
+import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.Records;
 
 public class DragonBuilderUtils {
@@ -45,5 +48,18 @@ public class DragonBuilderUtils {
     taskAttemptId.setTaskId(taskId);
     taskAttemptId.setId(attemptId);
     return taskAttemptId;
+  }
+
+  public static AMInfo newAMInfo(ApplicationAttemptId appAttemptId,
+      long startTime, ContainerId containerId, String nmHost, int nmPort,
+      int nmHttpPort) {
+    AMInfo amInfo = Records.newRecord(AMInfo.class);
+    amInfo.setAppAttemptId(appAttemptId);
+    amInfo.setStartTime(startTime);
+    amInfo.setContainerId(containerId);
+    amInfo.setNodeManagerHost(nmHost);
+    amInfo.setNodeManagerPort(nmPort);
+    amInfo.setNodeManagerHttpPort(nmHttpPort);
+    return amInfo;
   }
 }
