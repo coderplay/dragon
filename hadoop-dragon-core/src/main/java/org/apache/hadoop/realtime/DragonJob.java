@@ -18,7 +18,10 @@
 package org.apache.hadoop.realtime;
 
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLDecoder;
 import java.security.PrivilegedExceptionAction;
+import java.util.Enumeration;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -185,6 +188,18 @@ public class DragonJob implements Job {
       ClassNotFoundException {
     ensureState(JobState.NEW);
     connect();
+
+    // If user hasn't define job.jar,
+    // retrieve the path of jar file from the call stack
+    if (conf.get(DragonJobConfig.JOB_JAR) == null) {
+      StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+      String className = null;
+      for (int i = 1; (className = stack[i++].getClassName()) 
+          != DragonJob.class.getName(); i++);
+      String jar = findContainingJar(Class.forName(className));
+      conf.set(DragonJobConfig.JOB_JAR, jar);
+    }
+
     JobReport report = ugi.doAs(new PrivilegedExceptionAction<JobReport>() {
       public JobReport run() throws IOException, InterruptedException,
           ClassNotFoundException {
@@ -217,7 +232,7 @@ public class DragonJob implements Job {
     return jobId;
   }
 
-  public void setJobName(String name) {
+  public void setName(String name) {
     conf.set(DragonJobConfig.JOB_NAME, name);
   }
 
@@ -303,8 +318,34 @@ public class DragonJob implements Job {
    * 
    * @throws IOException
    */
-  public void killJob() throws IOException, InterruptedException {
+  public void kill() throws IOException, InterruptedException {
     ensureState(JobState.RUNNING);
     jobService.killJob(getID());
+  }
+  
+  public void setJar(String jar) {
+    ensureState(JobState.NEW);
+    conf.set(DragonJobConfig.JOB_JAR, jar);
+  }
+  
+  public void setJarByClass(Class<?> clazz) {
+    ensureState(JobState.NEW);
+    String jar = findContainingJar(clazz);
+    conf.set(DragonJobConfig.JOB_JAR, jar);
+  }
+
+  /**
+   * Find a jar that contains a class of the same name, if any. It will return a
+   * jar file, even if that is not the first thing on the class path that has a
+   * class with the same name.
+   * 
+   * @param clazz the class to find.
+   * @return a jar file that contains the class
+   */
+  private static String findContainingJar(Class<?> clazz) {
+    URL location =
+        clazz.getResource('/' + clazz.getName().replace(".", "/") + ".class");
+    String jarPath = location.getPath();
+    return jarPath.substring("file:".length(), jarPath.lastIndexOf("!"));
   }
 }

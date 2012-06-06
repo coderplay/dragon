@@ -203,6 +203,7 @@ public class DragonJobRunner implements DragonJobService {
       populateTokenCache(conf, job.getCredentials());
 
       copyFilesFromLocal(job.getJobGraph(), submitFs, submitJobDir, replication);
+      copyJobJar(job, conf, submitJobDir, submitFs, replication);
 
       // write "queue admins of the queue to which job is being submitted"
       // to job file.
@@ -258,6 +259,22 @@ public class DragonJobRunner implements DragonJobService {
       throw new IOException("Failed to run job : " + diagnostics);
     }
     return clientCache.getClient(jobId).getJobReport(jobId);
+  }
+
+  private void copyJobJar(DragonJob job, Configuration conf, Path submitJobDir,
+      FileSystem submitFs, short replication) throws IOException {
+    String originalJar = conf.get(DragonJobConfig.JOB_JAR);
+    if(originalJar != null) {
+      if ("".equals(job.getName())){
+        job.setName(new Path(originalJar).getName());
+      }
+      Path destJarPath = JobSubmissionFiles.getJobJar(submitJobDir);
+      submitFs.copyFromLocalFile(false, true, new Path(originalJar), destJarPath);
+      submitFs.setReplication(destJarPath, replication);
+    } else {
+      LOG.warn("No job jar file set.  User classes may not be found. "+
+      "See Job or Job#setJar(String).");
+    }
   }
   
   private void configureQueueAdmins(Configuration conf) throws IOException {
@@ -551,7 +568,9 @@ public class DragonJobRunner implements DragonJobService {
         Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
         FileSystem.mkdirs(submitFs, filesDir, sysPerms);
         for (String file : files) {
-          submitFs.copyFromLocalFile(false, true, new Path(file), filesDir);
+          Path newPath = new Path(filesDir, file);
+          submitFs.copyFromLocalFile(false, true, new Path(file), newPath);
+          submitFs.setReplication(newPath, replication);
         }
       }
 
@@ -561,8 +580,10 @@ public class DragonJobRunner implements DragonJobService {
             JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
         FileSystem.mkdirs(submitFs, archivesDir, sysPerms);
         for (String archive : archives) {
+          Path newPath = new Path(archivesDir, archive);
           submitFs.copyFromLocalFile(false, true, new Path(archive),
-              archivesDir);
+              newPath);
+          submitFs.setReplication(newPath, replication);
         }
       }
     }
