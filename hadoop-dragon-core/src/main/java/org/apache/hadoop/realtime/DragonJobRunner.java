@@ -26,10 +26,12 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -58,6 +60,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -73,16 +77,24 @@ import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
+/**
+ * {@link DragonJobRunner} is a yarn based {@link DragonJobService}
+ * implementation.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class DragonJobRunner implements DragonJobService {
   private static final Log LOG = LogFactory.getLog(DragonJobRunner.class);
 
-  private UserGroupInformation ugi;
   private ResourceMgrDelegate resMgrDelegate;
   private ClientCache clientCache;
   private Configuration conf;
-  private final FileContext defaultFileContext;
+
+  /**
+   * For {@link DragonJobServiceFactory}
+   */
+  DragonJobRunner() {
+  }
 
   /**
    * Dragon runner incapsulates the client interface of yarn
@@ -90,23 +102,20 @@ public class DragonJobRunner implements DragonJobService {
    * @param conf the configuration object for the client
    */
   public DragonJobRunner(Configuration conf) {
-    this(conf, new ResourceMgrDelegate(new YarnConfiguration(conf)));
+    setConf(conf);
   }
 
-  /**
-   * Similar to {@link #DragonRunner(Configuration)} but allowing injecting
-   * {@link ResourceMgrDelegate}. Enables mocking and testing.
-   * 
-   * @param conf the configuration object for the client
-   * @param resMgrDelegate the resourcemanager client handle.
-   */
-  public DragonJobRunner(Configuration conf, ResourceMgrDelegate resMgrDelegate) {
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
     this.conf = conf;
     try {
-      this.ugi = UserGroupInformation.getCurrentUser();
-      this.resMgrDelegate = resMgrDelegate;
-      this.defaultFileContext = FileContext.getFileContext(this.conf);
-      this.clientCache= new ClientCache(conf, resMgrDelegate);
+      this.resMgrDelegate = new ResourceMgrDelegate(new YarnConfiguration(conf));
+      this.clientCache = new ClientCache(conf, resMgrDelegate);
     } catch (Exception e) {
       throw new RuntimeException("Error in instantiating YarnClient", e);
     }
@@ -147,14 +156,12 @@ public class DragonJobRunner implements DragonJobService {
    * monitoring it's status.</li>
    * </p>
    * 
-   * @param job the configuration to submit
-   * @param cluster the handle to the Cluster
-   * @throws ClassNotFoundException
+   * @param job the job to submit
    * @throws InterruptedException
    * @throws IOException
    */
   @Override
-  public boolean submitJob(DragonJob job) throws IOException,
+  public JobReport submitJob(DragonJob job) throws IOException,
       InterruptedException {
     Configuration conf = job.getConfiguration();
 
@@ -237,7 +244,7 @@ public class DragonJobRunner implements DragonJobService {
     }
     // Construct necessary information to start the Dragon AM
     ApplicationSubmissionContext appContext =
-        createApplicationSubmissionContext(submitJobDir, ts);
+        createApplicationSubmissionContext(submitFs, submitJobDir, ts);
     // Submit to ResourceManager
     ApplicationId applicationId = resMgrDelegate.submitApplication(appContext);
     ApplicationReport appMaster =
@@ -250,7 +257,7 @@ public class DragonJobRunner implements DragonJobService {
         || appMaster.getYarnApplicationState() == YarnApplicationState.KILLED) {
       throw new IOException("Failed to run job : " + diagnostics);
     }
-    return true;
+    return clientCache.getClient(jobId).getJobReport(jobId);
   }
   
   private void configureQueueAdmins(Configuration conf) throws IOException {
@@ -282,27 +289,32 @@ public class DragonJobRunner implements DragonJobService {
     return resMgrDelegate.getStagingAreaDir();
   }
 
-  public ApplicationSubmissionContext createApplicationSubmissionContext(
-      final Path jobSubmitDir, final Credentials ts) throws IOException {
+  ApplicationSubmissionContext createApplicationSubmissionContext(
+      final FileSystem submitFs, final Path jobSubmitDir, final Credentials ts)
+      throws IOException {
     ApplicationId applicationId = resMgrDelegate.getApplicationId();
 
     // Setup capability
     Resource capability = DragonApps.setupResources(conf);
+    capability.setMemory(conf.getInt(DragonJobConfig.DRAGON_AM_VMEM_MB,
+        DragonJobConfig.DEFAULT_DRAGON_AM_VMEM_MB));
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("DragonAppMaster capability = " + capability);
+    }
 
     // Setup LocalResources
     Map<String, LocalResource> localResources =
         new HashMap<String, LocalResource>();
 
-    // JonConf
-    
+    // Job configuration file
     Path jobConfPath = new Path(jobSubmitDir, DragonJobConfig.JOB_CONF_FILE);
     localResources.put(DragonJobConfig.JOB_CONF_FILE,
-        DragonApps.createApplicationResource(defaultFileContext, jobConfPath));
+        DragonApps.createApplicationResource(submitFs, jobConfPath));
     
     // JobJar
     if (conf.get(DragonJobConfig.JAR) != null) {
       localResources.put(DragonJobConfig.JOB_JAR, DragonApps
-          .createApplicationResource(defaultFileContext, new Path(jobSubmitDir,
+          .createApplicationResource(submitFs, new Path(jobSubmitDir,
               DragonJobConfig.JOB_JAR)));
     } else {
       LOG.info("Job jar is not present. "
@@ -310,7 +322,6 @@ public class DragonJobRunner implements DragonJobService {
     }
 
     // Setup security tokens
-    
     ByteBuffer securityTokens = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       DataOutputBuffer dob = new DataOutputBuffer();
@@ -319,12 +330,12 @@ public class DragonJobRunner implements DragonJobService {
     }
     
     // Setup the command to run the AM
-    List<String> vargs = DragonApps.setupCommands(conf);
-    // Setup environment
-    Map<String, String> environment = new HashMap<String, String>();
+    List<String> vargs = setupAMCommand(conf);
 
     // Setup the CLASSPATH in environment
+    Map<String, String> environment = new HashMap<String, String>();
     DragonApps.setClasspath(environment, conf);
+
     // Setup the ACLs
     Map<ApplicationAccessType, String> acls = DragonApps.setupACLs(conf);
 
@@ -336,6 +347,34 @@ public class DragonJobRunner implements DragonJobService {
 
     return DragonApps.newApplicationSubmissionContext(applicationId, conf,
         amContainer);
+  }
+
+  /**
+   * Setup the commands to run the application master
+   */
+  private List<String> setupAMCommand(Configuration conf) {
+    Vector<CharSequence> vargs = new Vector<CharSequence>(8);
+    vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
+
+    //addLog4jSystemProperties(conf, vargs);
+
+    vargs.add(conf.get(DragonJobConfig.DRAGON_AM_COMMAND_OPTS,
+        DragonJobConfig.DEFAULT_DRAGON_AM_COMMAND_OPTS));
+
+    vargs.add(DragonJobConfig.APPLICATION_MASTER_CLASS);
+    vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+        + Path.SEPARATOR + ApplicationConstants.STDOUT);
+    vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+        + Path.SEPARATOR + ApplicationConstants.STDERR);
+
+    // Final commmand
+    StringBuilder mergedCommand = new StringBuilder();
+    for (CharSequence str : vargs) {
+      mergedCommand.append(str).append(" ");
+    }
+    List<String> vargsFinal = new ArrayList<String>(8);
+    vargsFinal.add(mergedCommand.toString());
+    return vargsFinal;
   }
 
   @Override
@@ -376,7 +415,7 @@ public class DragonJobRunner implements DragonJobService {
         state = clientCache.getClient(jobId).getJobReport(jobId).getJobState();
       }
     } catch (IOException io) {
-      LOG.debug("Error when checking for application status", io);
+      LOG.info("Error when checking for application status", io);
     }
     if (state != JobState.KILLED) {
       resMgrDelegate.killApplication(jobId.getAppId());
@@ -546,4 +585,5 @@ public class DragonJobRunner implements DragonJobService {
   private static final String toFullPropertyName(String queue, String property) {
     return "dragon.queue." + queue + "." + property;
   }
+
 }

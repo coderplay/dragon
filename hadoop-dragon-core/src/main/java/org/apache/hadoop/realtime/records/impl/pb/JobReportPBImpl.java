@@ -125,28 +125,6 @@ public class JobReportPBImpl extends ProtoBase<JobReportProto> implements
     }
     builder.setJobState(convertToProtoFormat(jobState));
   }
-  @Override
-  public synchronized float getCleanupProgress() {
-    JobReportProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getCleanupProgress());
-  }
-
-  @Override
-  public synchronized void setCleanupProgress(float cleanupProgress) {
-    maybeInitBuilder();
-    builder.setCleanupProgress((cleanupProgress));
-  }
-  @Override
-  public synchronized float getSetupProgress() {
-    JobReportProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getSetupProgress());
-  }
-
-  @Override
-  public synchronized void setSetupProgress(float setupProgress) {
-    maybeInitBuilder();
-    builder.setSetupProgress((setupProgress));
-  }
 
   @Override
   public synchronized long getSubmitTime() {

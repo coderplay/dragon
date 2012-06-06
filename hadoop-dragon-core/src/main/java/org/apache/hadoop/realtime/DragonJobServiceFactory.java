@@ -17,11 +17,18 @@
  */
 package org.apache.hadoop.realtime;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
+ * Factory class for creating {@link DragonJobService} instance.
+ * 
+ * @see DragonJobService
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 class DragonJobServiceFactory {
 
   DragonJobService create(Configuration conf) {

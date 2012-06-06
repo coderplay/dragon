@@ -32,6 +32,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.security.Credentials;
@@ -64,7 +65,6 @@ public class TestDragonJobRunner extends TestCase {
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   private DragonJobRunner yarnRunner;
-  private ResourceMgrDelegate resourceMgrDelegate;
   private YarnConfiguration conf;
   private ApplicationId appId;
   private JobId jobId;
@@ -75,9 +75,8 @@ public class TestDragonJobRunner extends TestCase {
 
   @Before
   public void setUp() throws Exception {
-    resourceMgrDelegate = mock(ResourceMgrDelegate.class);
     conf = new YarnConfiguration();
-    yarnRunner = new DragonJobRunner(conf, resourceMgrDelegate);
+    yarnRunner = new DragonJobRunner(conf);
     yarnRunner = spy(yarnRunner);
     submissionContext = mock(ApplicationSubmissionContext.class);
     doAnswer(
@@ -89,6 +88,7 @@ public class TestDragonJobRunner extends TestCase {
           }
         }
         ).when(yarnRunner).createApplicationSubmissionContext(
+            any(FileSystem.class),
             any(Path.class), any(Credentials.class));
 
     appId = recordFactory.newRecordInstance(ApplicationId.class);

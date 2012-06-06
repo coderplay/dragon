@@ -18,6 +18,7 @@
 package org.apache.hadoop.realtime.conf;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 
 /**
  */
@@ -36,5 +37,14 @@ public class DragonConfiguration extends Configuration {
     if (!(conf instanceof DragonConfiguration)) {
       this.reloadConfiguration();
     }
+  }
+
+  public DragonConfiguration(String conf) {
+    this(new Path(conf));
+  }
+  
+  public DragonConfiguration(Path conf) {
+    super();
+    addResource(conf);
   }
 }

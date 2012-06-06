@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,9 +43,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.app.rm.ContainerAllocator;
+import org.apache.hadoop.realtime.app.rm.launcher.ContainerLauncher;
+import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.util.DSConstants;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.Clock;
+import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.AMRMProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ContainerManager;
@@ -74,6 +82,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.exceptions.impl.pb.YarnRemoteExceptionPBImpl;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.hadoop.yarn.service.CompositeService;
+import org.apache.hadoop.yarn.service.Service;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -138,19 +149,30 @@ import org.apache.hadoop.yarn.util.Records;
  * <code>ApplicationMaster</code> has been completed.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Unstable
-public class DragonApplicationMaster {
+@InterfaceStability.Evolving
+public class DragonApplicationMaster extends CompositeService {
 
   private static final Log LOG = LogFactory
       .getLog(DragonApplicationMaster.class);
 
+  private Clock clock;
+  private final long startTime;
+  private final long appSubmitTime;
+  private String appName;
+  private final ApplicationAttemptId appAttemptID;
+  private final ContainerId containerID;
+  private final String nmHost;
+  private final int nmPort;
+  private final int nmHttpPort;
+  
   // Para used to connect ResourceManager
   private Configuration conf;
   private YarnRPC rpc;
   private AMRMProtocol resourceManager;
+  
+  private ContainerAllocator containerAllocator;
+  private ContainerLauncher containerLauncher;
 
-  // Para used to regist ResourceManager
-  private ApplicationAttemptId appAttemptID;
   private String appMasterHostname = "";
   private int appMasterRpcPort = 1;
   private String appMasterTrackingUrl = "";
@@ -179,32 +201,64 @@ public class DragonApplicationMaster {
 
   private final List<Thread> launchThreads = new ArrayList<Thread>();
 
+
+  private static void validateInputParam(String value, String param)
+      throws IOException {
+    if (value == null) {
+      String msg = param + " is null";
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
+  }
+  
   /**
-   * Start AMStream
-   * 
-   * @param args
+   * Main entry of Dragon application master
    */
   public static void main(String[] args) {
-    boolean result = false;
     try {
-      DragonApplicationMaster appMaster = new DragonApplicationMaster();
-      LOG.info("Initializing ApplicationMaster");
-      boolean doRun = appMaster.init(args);
-      if (!doRun) {
-        System.exit(0);
-      }
-      result = appMaster.run();
+      String containerIdStr =
+          System.getenv(ApplicationConstants.AM_CONTAINER_ID_ENV);
+      String nodeHostString = System.getenv(ApplicationConstants.NM_HOST_ENV);
+      String nodePortString = System.getenv(ApplicationConstants.NM_PORT_ENV);
+      String nodeHttpPortString =
+          System.getenv(ApplicationConstants.NM_HTTP_PORT_ENV);
+      String appSubmitTimeStr =
+          System.getenv(ApplicationConstants.APP_SUBMIT_TIME_ENV);
+
+      validateInputParam(containerIdStr,
+          ApplicationConstants.AM_CONTAINER_ID_ENV);
+      validateInputParam(nodeHostString, ApplicationConstants.NM_HOST_ENV);
+      validateInputParam(nodePortString, ApplicationConstants.NM_PORT_ENV);
+      validateInputParam(nodeHttpPortString,
+          ApplicationConstants.NM_HTTP_PORT_ENV);
+      validateInputParam(appSubmitTimeStr,
+          ApplicationConstants.APP_SUBMIT_TIME_ENV);
+      ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
+      ApplicationAttemptId applicationAttemptId =
+          containerId.getApplicationAttemptId();
+      long appSubmitTime = Long.parseLong(appSubmitTimeStr);
+
+      DragonApplicationMaster appMaster =
+          new DragonApplicationMaster(applicationAttemptId, containerId,
+              nodeHostString, Integer.parseInt(nodePortString),
+              Integer.parseInt(nodeHttpPortString), appSubmitTime);
+      Runtime.getRuntime().addShutdownHook(
+          new CompositeServiceShutdownHook(appMaster));
+      YarnConfiguration conf = new YarnConfiguration(new DragonConfiguration());
+      conf.addResource(new Path(DragonJobConfig.JOB_CONF_FILE));
+      String jobUserName =
+          System.getenv(ApplicationConstants.Environment.USER.name());
+      conf.set(DragonJobConfig.USER_NAME, jobUserName);
+      // Do not automatically close FileSystem objects so that in case of
+      // SIGTERM I have a chance to write out the job history. I'll be closing
+      // the objects myself.
+      conf.setBoolean("fs.automatic.close", false);
+      initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
-      LOG.fatal("Error running ApplicationMaster", t);
+      LOG.fatal("Error starting MRAppMaster", t);
       System.exit(1);
     }
-    if (result) {
-      LOG.info("Application Master completed successfully. exiting");
-      System.exit(0);
-    } else {
-      LOG.info("Application Master failed. exiting");
-      System.exit(2);
-    }
+
   }
 
   /**
@@ -229,78 +283,6 @@ public class DragonApplicationMaster {
         "No. of containers on which the shell command needs to be executed");
     opts.addOption("help", false, "Print usage");
     CommandLine cliParser = new GnuParser().parse(opts, args);
-
-    if (args.length == 0) {
-      printUsage(opts);
-      throw new IllegalArgumentException(
-          "No args specified for application master to initialize");
-    }
-
-    Map<String, String> envs = System.getenv();
-    appAttemptID = Records.newRecord(ApplicationAttemptId.class);
-    if (!envs.containsKey(ApplicationConstants.AM_CONTAINER_ID_ENV)) {
-      if (cliParser.hasOption("app_attempt_id")) {
-        String appIdStr = cliParser.getOptionValue("app_attempt_id", "");
-        appAttemptID = ConverterUtils.toApplicationAttemptId(appIdStr);
-      } else {
-        throw new IllegalArgumentException(
-            "Application Attempt Id not set in the environment");
-      }
-    } else {
-      ContainerId containerId =
-          ConverterUtils.toContainerId(envs
-              .get(ApplicationConstants.AM_CONTAINER_ID_ENV));
-      appAttemptID = containerId.getApplicationAttemptId();
-    }
-    LOG.info("Application master for app" + ", appId="
-        + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
-        + appAttemptID.getApplicationId().getClusterTimestamp()
-        + ", attemptId=" + appAttemptID.getAttemptId());
-
-    if (!cliParser.hasOption("child_class")) {
-      System.err
-          .println("No child_class specified to be executed by container");
-      return false;
-    }
-    childClass = cliParser.getOptionValue("child_class");
-    if (cliParser.hasOption("child_args")) {
-      childArgs = cliParser.getOptionValue("child_args");
-    }
-    if (cliParser.hasOption("child_env")) {
-      String childEnvs[] = cliParser.getOptionValues("child_env");
-      for (String env : childEnvs) {
-        env = env.trim();
-        int index = env.indexOf('=');
-        if (index == -1) {
-          childEnv.put(env, "");
-          continue;
-        }
-        String key = env.substring(0, index);
-        String val = "";
-        if (index < (env.length() - 1)) {
-          val = env.substring(index + 1);
-        }
-        childEnv.put(key, val);
-      }
-    }
-    if (envs.containsKey(DSConstants.DISTRIBUTED_CHILDCLASS_LOCATION)) {
-      childJarPath = envs.get(DSConstants.DISTRIBUTED_CHILDCLASS_LOCATION);
-    }
-    if (envs.containsKey(DSConstants.DISTRIBUTED_CHILDCLASS_TIMESTAMP)) {
-      childJarPathTimestamp =
-          Long.valueOf(envs.get(DSConstants.DISTRIBUTED_CHILDCLASS_TIMESTAMP));
-    }
-    if (envs.containsKey(DSConstants.DISTRIBUTED_CHILDCLASS_LEN)) {
-      childJarPathLen =
-          Long.valueOf(envs.get(DSConstants.DISTRIBUTED_CHILDCLASS_LEN));
-    }
-    containerMemory =
-        Integer.parseInt(cliParser.getOptionValue("container_memory", "10"));
-    numTotalContainers =
-        Integer.parseInt(cliParser.getOptionValue("num_containers", "1"));
-    requestPriority =
-        Integer.parseInt(cliParser.getOptionValue("priority", "0"));
-
     return true;
   }
 
@@ -313,9 +295,46 @@ public class DragonApplicationMaster {
     new HelpFormatter().printHelp("AMStream", opts);
   }
 
-  public DragonApplicationMaster() throws Exception {
+  public DragonApplicationMaster(ApplicationAttemptId applicationAttemptId,
+      ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
+      long appSubmitTime) {
+    this(applicationAttemptId, containerId, nmHost, nmPort, nmHttpPort,
+        new SystemClock(), appSubmitTime);
+  }
+
+  public DragonApplicationMaster(ApplicationAttemptId applicationAttemptId,
+      ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
+      Clock clock, long appSubmitTime) {
+    super(DragonApplicationMaster.class.getName());
+    this.clock = clock;
+    this.startTime = clock.getTime();
+    this.appSubmitTime = appSubmitTime;
+    this.appAttemptID = applicationAttemptId;
+    this.containerID = containerId;
+    this.nmHost = nmHost;
+    this.nmPort = nmPort;
+    this.nmHttpPort = nmHttpPort;
+
     conf = new Configuration();
     rpc = YarnRPC.create(conf);
+  }
+  
+  protected static void initAndStartAppMaster(
+      final DragonApplicationMaster appMaster, 
+      final YarnConfiguration conf,
+      String jobUserName) 
+          throws IOException, InterruptedException {
+    UserGroupInformation.setConfiguration(conf);
+    UserGroupInformation appMasterUgi =
+        UserGroupInformation.createRemoteUser(jobUserName);
+    appMasterUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        appMaster.init(conf);
+        appMaster.start();
+        return null;
+      }
+    });
   }
 
   public boolean run() throws Exception {
@@ -662,5 +681,5 @@ public class DragonApplicationMaster {
     else if (containerMemory > maxMem)
       containerMemory = maxMem;
   }
-
+  
 }

@@ -44,11 +44,11 @@ public class ClientCache {
   }
 
   //TODO: evict from the cache on some threshold
-  public synchronized ClientServiceDelegate getClient(JobId JobId) {
-    ClientServiceDelegate client = cache.get(JobId);
+  public synchronized ClientServiceDelegate getClient(JobId jobId) {
+    ClientServiceDelegate client = cache.get(jobId);
     if (client == null) {
-      client = new ClientServiceDelegate(conf, rm, JobId);
-      cache.put(JobId, client);
+      client = new ClientServiceDelegate(conf, rm, jobId);
+      cache.put(jobId, client);
     }
     return client;
   }

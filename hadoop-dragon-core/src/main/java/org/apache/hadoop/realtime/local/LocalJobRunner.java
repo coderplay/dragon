@@ -64,10 +64,15 @@ public class LocalJobRunner implements DragonJobService {
 
   private FileSystem fs;
   final Random rand = new Random();
+  
+  /**
+   * For {@link DragonJobServiceFactory}
+   */
+  LocalJobRunner() {
+  }
 
   public LocalJobRunner(Configuration conf) throws IOException {
-    this.conf = conf;
-    this.fs = FileSystem.getLocal(conf);
+    setConf(conf);
   }
 
   @Override
@@ -292,11 +297,26 @@ public class LocalJobRunner implements DragonJobService {
   }
 
   @Override
-  public boolean submitJob(DragonJob dragonJob) throws IOException,
+  public JobReport submitJob(DragonJob dragonJob) throws IOException,
       InterruptedException {
     job = new LocalJob(conf);
     job.setCredentials(dragonJob.getCredentials());
-    return false;
+    return Records.newRecord(JobReport.class);
+  }
+
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+    try {
+      this.fs = FileSystem.getLocal(conf);
+    } catch (IOException e) {
+      throw new RuntimeException("Error in instantiating local job runner", e);
+    }
   }
 
 }

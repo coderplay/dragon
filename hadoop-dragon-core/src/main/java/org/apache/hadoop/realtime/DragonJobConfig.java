@@ -186,4 +186,14 @@ public class DragonJobConfig {
       "security.job.task.protocol.acl";
   public static final String DRAGON_AM_SECURITY_SERVICE_AUTHORIZATION_CLIENT =
       "security.job.client.protocol.acl";
+  
+  /**
+   * Upper limit on the number of threads user to launch containers in the app
+   * master. Expect level config, you shouldn't be needing it in most cases.
+   */
+  public static final String DRAGON_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT =
+      DRAGON_AM_PREFIX + "containerlauncher.thread-count-limit";
+
+  public static final int DEFAULT_DRAGON_AM_CONTAINERLAUNCHER_THREAD_COUNT_LIMIT =
+      500;
 }

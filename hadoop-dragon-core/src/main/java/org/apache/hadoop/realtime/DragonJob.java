@@ -99,9 +99,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 public class DragonJob implements Job {
 
   private static final Log LOG = LogFactory.getLog(DragonJob.class);
+
+  private static final long MAX_JOBSTATE_AGE = 1000 * 2;
+
   public static final String USED_GENERIC_PARSER = 
       "dragon.client.genericoptionsparser.used";
-  
   /**
    * The UserGroupInformation object that has a reference to the current user
    */
@@ -118,7 +120,6 @@ public class DragonJob implements Job {
   protected final Credentials credentials;
 
   private JobState state = JobState.NEW;
-  private static final long MAX_JOBSTATE_AGE = 1000 * 2;
 
   DragonJob(final DragonConfiguration conf) throws IOException {
     this.conf = conf;
@@ -182,14 +183,29 @@ public class DragonJob implements Job {
    */
   public void submit() throws IOException, InterruptedException,
       ClassNotFoundException {
+    ensureState(JobState.NEW);
     connect();
-    ugi.doAs(new PrivilegedExceptionAction<Boolean>() {
-      public Boolean run() throws IOException, InterruptedException,
+    JobReport report = ugi.doAs(new PrivilegedExceptionAction<JobReport>() {
+      public JobReport run() throws IOException, InterruptedException,
           ClassNotFoundException {
         return jobService.submitJob(DragonJob.this);
       }
     });
-    state = JobState.RUNNING;
+    state = report.getJobState();
+    LOG.info("The url to track the job: " + report.getTrackingUrl());
+  }
+
+  private void ensureState(JobState state) throws IllegalStateException {
+    if (state != this.state) {
+      throw new IllegalStateException("Job in state "+ this.state + 
+                                      " instead of " + state);
+    }
+
+    if ((state == JobState.RUNNING || state == JobState.INITED)
+        && jobService == null) {
+      throw new IllegalStateException("Job in state " + this.state
+          + ", but it isn't attached to any job tracker!");
+    }
   }
 
   void setJobId(JobId jobId) {
@@ -243,21 +259,21 @@ public class DragonJob implements Job {
    * fail.
    * 
    * @return true if the job succeeded
-   * @throws IOException if communication to the JobTracker fails
+   * @throws IOException if communication to the job service fails
    */
   public boolean monitorAndPrintJob() throws IOException, InterruptedException {
     JobId jobId = getID();
     LOG.info("Running job: " + jobId);
-    JobReport report=null;
-    while (state!=JobState.SUCCEEDED) {
+    JobReport report = null;
+    while (state != JobState.SUCCEEDED) {
       Thread.sleep(MAX_JOBSTATE_AGE);
-      if(jobId==null){
-        jobId=getID();
+      if (jobId == null) {
+        jobId = getID();
         continue;
       }
-      LOG.info(jobId+" "+state);
-      report=getJobReport(jobId);
-      state=report.getJobState();
+      LOG.info(jobId + " " + state);
+      report = getJobReport(jobId);
+      state = report.getJobState();
     }
     LOG.info(report.getDiagnostics());
     return true;
@@ -279,5 +295,16 @@ public class DragonJob implements Job {
         return jobService.getJobReport(jobId);
       }
     });
+  }
+
+  /**
+   * Kill the running job.  Blocks until all job tasks have been
+   * killed as well.  If the job is no longer running, it simply returns.
+   * 
+   * @throws IOException
+   */
+  public void killJob() throws IOException, InterruptedException {
+    ensureState(JobState.RUNNING);
+    jobService.killJob(getID());
   }
 }

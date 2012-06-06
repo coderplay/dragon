@@ -129,10 +129,14 @@ public class ClientServiceDelegate {
             .getYarnApplicationState()) {
       try {
         if (application.getHost() == null || "".equals(application.getHost())) {
-          LOG.debug("AM not assigned to Job. Waiting to get the AM ...");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("AM not assigned to Job. Waiting to get the AM ...");
+          }
           Thread.sleep(2000);
-
-          LOG.debug("Application state is " + application.getYarnApplicationState());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Application state is "
+                + application.getYarnApplicationState());
+          }
           application = rm.getApplicationReport(appId);
           continue;
         }
@@ -152,7 +156,9 @@ public class ClientServiceDelegate {
                 + ":" + addr.getPort()));
             newUgi.addToken(clientToken);
           }
-          LOG.debug("Connecting to " + serviceAddr);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Connecting to " + serviceAddr);
+          }
           final String tempStr = serviceAddr;
           realProxy = newUgi.doAs(new PrivilegedExceptionAction<DragonClientProtocol>() {
             @Override
@@ -218,12 +224,16 @@ public class ClientServiceDelegate {
 
   DragonClientProtocol instantiateAMProxy(final String serviceAddr)
       throws IOException {
-    LOG.trace("Connecting to ApplicationMaster at: " + serviceAddr);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connecting to ApplicationMaster at: " + serviceAddr);
+    }
     YarnRPC rpc = YarnRPC.create(conf);
     DragonClientProtocol proxy = 
          (DragonClientProtocol) rpc.getProxy(DragonClientProtocol.class,
             NetUtils.createSocketAddr(serviceAddr), conf);
-    LOG.trace("Connected to ApplicationMaster at: " + serviceAddr);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Connected to ApplicationMaster at: " + serviceAddr);
+    }
     return proxy;
   }
 

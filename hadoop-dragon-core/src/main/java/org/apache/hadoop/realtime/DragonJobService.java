@@ -21,6 +21,7 @@ package org.apache.hadoop.realtime;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
@@ -34,7 +35,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
  * A {@link DragonJobService} is responsible for submitting, monitoring, killing
  * a {@link DragonJob}.
  */
-public interface DragonJobService {
+public interface DragonJobService extends Configurable {
   
   /**
    * Allocate a name for the job.
@@ -46,7 +47,7 @@ public interface DragonJobService {
   /**
    * Submit a Job for execution. Returns the latest profile for that job.
    */
-  public boolean submitJob(DragonJob job) throws IOException,
+  public JobReport submitJob(DragonJob job) throws IOException,
       InterruptedException;
   
   /**

@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.ContainerLogAppender;
@@ -123,12 +124,11 @@ public class DragonApps extends Apps {
 	 * @return
 	 * @throws IOException
 	 */
-	public static LocalResource createApplicationResource(FileContext fs, Path p)
+	public static LocalResource createApplicationResource(FileSystem fs, Path p)
 	    throws IOException {
 		LocalResource rsrc = recordFactory.newRecordInstance(LocalResource.class);
 		FileStatus rsrcStat = fs.getFileStatus(p);
-		rsrc.setResource(ConverterUtils.getYarnUrlFromPath(fs
-		    .getDefaultFileSystem().resolvePath(rsrcStat.getPath())));
+		rsrc.setResource(ConverterUtils.getYarnUrlFromPath(fs.resolvePath(rsrcStat.getPath())));
 		rsrc.setSize(rsrcStat.getLen());
 		rsrc.setTimestamp(rsrcStat.getModificationTime());
 		rsrc.setType(LocalResourceType.FILE);
@@ -149,32 +149,7 @@ public class DragonApps extends Apps {
 		return capability;
 	}
 
-	/**
-	 * Setup the commands run ApplicationMaster
-	 * 
-	 * @param conf
-	 * @return
-	 */
-	public static List<String> setupCommands(Configuration conf) {
-		Vector<CharSequence> vargs = new Vector<CharSequence>(8);
-		vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
-		//addLog4jSystemProperties(conf, vargs);
-		vargs.add(conf.get(DragonJobConfig.DRAGON_AM_COMMAND_OPTS,
-		    DragonJobConfig.DEFAULT_DRAGON_AM_COMMAND_OPTS));
-		vargs.add(DragonJobConfig.APPLICATION_MASTER_CLASS);
-		vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-		    + Path.SEPARATOR + ApplicationConstants.STDOUT);
-		vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
-		    + Path.SEPARATOR + ApplicationConstants.STDERR);
-		// Final commmand
-		StringBuilder mergedCommand = new StringBuilder();
-		for (CharSequence str : vargs) {
-			mergedCommand.append(str).append(" ");
-		}
-		List<String> vargsFinal = new ArrayList<String>(8);
-		vargsFinal.add(mergedCommand.toString());
-		return vargsFinal;
-	}
+
 
 	/**
 	 * Add the JVM system properties necessary to configure
