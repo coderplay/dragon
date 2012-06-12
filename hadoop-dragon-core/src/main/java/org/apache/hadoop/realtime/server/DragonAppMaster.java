@@ -33,8 +33,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
-import org.apache.hadoop.realtime.app.rm.ContainerAllocator;
-import org.apache.hadoop.realtime.app.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.realtime.app.rm.launcher.ContainerLauncher;
+import org.apache.hadoop.realtime.app.rm.launcher.ContainerLauncherEvent;
+import org.apache.hadoop.realtime.app.rm.launcher.ContainerLauncherImpl;
 import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.job.Job;
@@ -50,6 +51,9 @@ import org.apache.hadoop.realtime.job.app.event.TaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskEventType;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.rm.ContainerAllocator;
+import org.apache.hadoop.realtime.rm.ContainerAllocatorEvent;
+import org.apache.hadoop.realtime.rm.RMContainerAllocator;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -95,6 +99,7 @@ public class DragonAppMaster extends CompositeService {
 
   private DragonClientService clientService;
   private ContainerAllocator containerAllocator;
+  private ContainerLauncher containerLauncher;
 
   private Dispatcher dispatcher;
   private UserGroupInformation currentUser;
@@ -158,13 +163,18 @@ public class DragonAppMaster extends CompositeService {
 
     // register the event dispatchers
     dispatcher.register(JobEventType.class, jobEventDispatcher);
-
     dispatcher.register(TaskEventType.class, new TaskEventDispatcher());
     dispatcher.register(TaskAttemptEventType.class, new TaskAttemptEventDispatcher());
     
+    // service to allocate containers from RM (if non-uber) or to fake it (uber)
     containerAllocator = createContainerAllocator(clientService, context);
     addIfService(containerAllocator);
     dispatcher.register(ContainerAllocator.EventType.class, containerAllocator);
+    
+    // corresponding service to launch allocated containers via NodeManager
+    containerLauncher = createContainerLauncher(context);
+    addIfService(containerLauncher);
+    dispatcher.register(ContainerLauncher.EventType.class, containerLauncher);
 
     super.init(conf);
   }
@@ -389,10 +399,18 @@ public class DragonAppMaster extends CompositeService {
       addService((Service) object);
     }
   }
+
   protected ContainerAllocator createContainerAllocator(
       final ClientService clientService, final AppContext context) {
     return new ContainerAllocatorRouter(clientService, context);
   }
+  
+
+  protected ContainerLauncher
+      createContainerLauncher(final AppContext context) {
+    return new ContainerLauncherRouter(context);
+  }
+
   /**
    * create an event handler that handles the job finish event.
    * @return the job finish event handler.
@@ -507,8 +525,8 @@ public class DragonAppMaster extends CompositeService {
 
     @Override
     public synchronized void start() {
-//      this.containerAllocator =
-//          new RMContainerAllocator(this.clientService, this.context);
+      this.containerAllocator =
+          new RMContainerAllocator(this.clientService, this.context);
       ((Service) this.containerAllocator).init(getConfig());
       ((Service) this.containerAllocator).start();
       super.start();
@@ -523,6 +541,40 @@ public class DragonAppMaster extends CompositeService {
     @Override
     public void handle(ContainerAllocatorEvent event) {
       this.containerAllocator.handle(event);
+    }
+  }
+
+  /**
+   * By the time life-cycle of this router starts, job-init would have already
+   * happened.
+   */
+  private final class ContainerLauncherRouter extends AbstractService
+      implements ContainerLauncher {
+    private final AppContext context;
+    private ContainerLauncher containerLauncher;
+
+    ContainerLauncherRouter(AppContext context) {
+      super(ContainerLauncherRouter.class.getName());
+      this.context = context;
+    }
+
+    @Override
+    public synchronized void start() {
+      this.containerLauncher = new ContainerLauncherImpl(context);
+      ((Service) this.containerLauncher).init(getConfig());
+      ((Service) this.containerLauncher).start();
+      super.start();
+    }
+
+    @Override
+    public void handle(ContainerLauncherEvent event) {
+        this.containerLauncher.handle(event);
+    }
+
+    @Override
+    public synchronized void stop() {
+      ((Service)this.containerLauncher).stop();
+      super.stop();
     }
   }
 
