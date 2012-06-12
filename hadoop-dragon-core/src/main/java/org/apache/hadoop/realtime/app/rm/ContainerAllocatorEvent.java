@@ -16,17 +16,23 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.realtime.rm;
+package org.apache.hadoop.realtime.app.rm;
 
-import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.yarn.event.AbstractEvent;
 
-public interface ContainerAllocator extends EventHandler<ContainerAllocatorEvent>{
+public class ContainerAllocatorEvent extends 
+    AbstractEvent<ContainerAllocator.EventType> {
+  
+  private TaskAttemptId attemptID;
 
-  enum EventType {
-
-    CONTAINER_REQ,
-    CONTAINER_DEALLOCATE,
-    CONTAINER_FAILED
+  public ContainerAllocatorEvent(TaskAttemptId attemptID,
+      ContainerAllocator.EventType type) {
+    super(type);
+    this.attemptID = attemptID;
   }
 
+  public TaskAttemptId getAttemptID() {
+    return attemptID;
+  }
 }
