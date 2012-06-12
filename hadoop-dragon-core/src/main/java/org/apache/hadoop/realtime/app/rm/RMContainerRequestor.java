@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.realtime.rm;
+package org.apache.hadoop.realtime.app.rm;
 
 import java.util.ArrayList;
 import java.util.Collections;

@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,6 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-@InterfaceAudience.Private
-package org.apache.hadoop.mapreduce.v2.app.rm;
-import org.apache.hadoop.classification.InterfaceAudience;
+
+package org.apache.hadoop.realtime.app.rm;
+
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+
+public class ContainerFailedEvent extends ContainerAllocatorEvent {
+
+  private final String contMgrAddress;
+  
+  public ContainerFailedEvent(TaskAttemptId attemptID, String contMgrAddr) {
+    super(attemptID, ContainerAllocator.EventType.CONTAINER_FAILED);
+    this.contMgrAddress = contMgrAddr;
+  }
+
+  public String getContMgrAddress() {
+    return contMgrAddress;
+  }
+
+}
