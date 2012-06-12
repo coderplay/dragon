@@ -29,10 +29,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.app.AppContext;
-import org.apache.hadoop.realtime.client.app.ClientService;
-import org.apache.hadoop.realtime.job.JobInApplicationMaster;
+import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.server.ClientService;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -78,7 +78,7 @@ public abstract class RMCommunicator extends AbstractService  {
       RecordFactoryProvider.getRecordFactory(null);
 
   private final AppContext context;
-  private JobInApplicationMaster job;
+  private Job job;
 
   public RMCommunicator(ClientService clientService, AppContext context) {
     super("RMCommunicator");
@@ -114,18 +114,8 @@ public abstract class RMCommunicator extends AbstractService  {
     return context;
   }
 
-  protected JobInApplicationMaster getJob() {
+  protected Job getJob() {
     return job;
-  }
-
-  /**
-   * Get the appProgress. Can be used only after this component is started.
-   * @return the appProgress.
-   */
-  protected float getApplicationProgress() {
-    // For now just a single job. In future when we have a DAG, we need an
-    // aggregate progress.
-    return this.job.getProgress();
   }
 
   protected void register() {
@@ -155,9 +145,7 @@ public abstract class RMCommunicator extends AbstractService  {
   protected void unregister() {
     try {
       FinalApplicationStatus finishState = FinalApplicationStatus.UNDEFINED;
-      if (job.getState() == JobState.SUCCEEDED) {
-        finishState = FinalApplicationStatus.SUCCEEDED;
-      } else if (job.getState() == JobState.KILLED) {
+      if (job.getState() == JobState.KILLED) {
         finishState = FinalApplicationStatus.KILLED;
       } else if (job.getState() == JobState.FAILED
           || job.getState() == JobState.ERROR) {

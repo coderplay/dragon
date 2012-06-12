@@ -16,8 +16,17 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.realtime.records;
+package org.apache.hadoop.realtime.app.rm;
 
-public enum TaskType {
-  MAP, REDUCE
+import org.apache.hadoop.yarn.event.EventHandler;
+
+public interface ContainerAllocator extends EventHandler<ContainerAllocatorEvent>{
+
+  enum EventType {
+
+    CONTAINER_REQ,
+    CONTAINER_DEALLOCATE,
+    CONTAINER_FAILED
+  }
+
 }

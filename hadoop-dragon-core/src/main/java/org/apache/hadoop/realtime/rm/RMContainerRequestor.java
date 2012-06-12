@@ -33,8 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.app.AppContext;
-import org.apache.hadoop.realtime.client.app.ClientService;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.server.ClientService;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -145,7 +145,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
 
   protected AMResponse makeRemoteRequest() throws YarnRemoteException {
     AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
-        applicationAttemptId, lastResponseID, super.getApplicationProgress(),
+        applicationAttemptId, lastResponseID, 0.0f,
         new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
             release));
     AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);

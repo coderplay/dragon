@@ -16,14 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.realtime.records;
+package org.apache.hadoop.realtime.app.rm;
 
-public enum JobState {
-  NEW,
-  INITED,
-  RUNNING,
-  FAILED,
-  KILL_WAIT,
-  KILLED,
-  ERROR
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+
+public class ContainerFailedEvent extends ContainerAllocatorEvent {
+
+  private final String contMgrAddress;
+  
+  public ContainerFailedEvent(TaskAttemptId attemptID, String contMgrAddr) {
+    super(attemptID, ContainerAllocator.EventType.CONTAINER_FAILED);
+    this.contMgrAddress = contMgrAddr;
+  }
+
+  public String getContMgrAddress() {
+    return contMgrAddress;
+  }
+
 }

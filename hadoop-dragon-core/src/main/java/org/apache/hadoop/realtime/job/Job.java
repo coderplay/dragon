@@ -17,8 +17,14 @@
  */
 package org.apache.hadoop.realtime.job;
 
+import java.util.List;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.JobReport;
+import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.security.Credentials;
 
 /**
@@ -39,6 +45,9 @@ public interface Job {
    * @return the job's name, defaulting to "".
    */
   public String getName();
+  
+  
+  public JobState getState();
 
   /**
    * Get the user-specified queue name. This is only used to identify the job to
@@ -68,5 +77,21 @@ public interface Job {
    * @return the username
    */
   public String getUser();
- 
+  
+
+  /**
+   * Get all the tasks for this job.
+   * 
+   * @return the tasks for this job
+   */
+  Map<TaskId,Task> getTasks();
+
+  
+  Map<TaskId,Task> getTasks(String label);
+  
+  Task getTask(TaskId taskID);
+  
+  JobReport getReport();
+
+  List<String> getDiagnostics();
 }

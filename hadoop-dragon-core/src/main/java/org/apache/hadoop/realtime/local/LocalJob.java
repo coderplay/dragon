@@ -18,11 +18,14 @@
 package org.apache.hadoop.realtime.local;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.JobReport;
+import org.apache.hadoop.realtime.records.JobState;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.security.Credentials;
 
@@ -32,53 +35,76 @@ public class LocalJob implements Job {
 
 	}
 
-	@Override
-	public JobId getID() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+  @Override
+  public JobId getID() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
-	@Override
-	public String getName() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+  @Override
+  public String getName() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
-	@Override
-	public String getQueueName() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+  @Override
+  public JobState getState() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
-	@Override
-	public Credentials getCredentials() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+  @Override
+  public String getQueueName() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
-	@Override
-	public Configuration getConfiguration() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+  @Override
+  public Credentials getCredentials() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
-	@Override
-	public String getUser() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+  @Override
+  public Configuration getConfiguration() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
-	public List<Task> getTasks() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+  @Override
+  public String getUser() {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
-	public Task getTask(TaskId taskId) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-	public void setCredentials(Credentials credentials){
-	  
-	}
+  @Override
+  public Map<TaskId, Task> getTasks() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Map<TaskId, Task> getTasks(String label) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public JobReport getReport() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public List<String> getDiagnostics() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Task getTask(TaskId taskID) {
+    // TODO Auto-generated method stub
+    return null;
+  }
 
 }

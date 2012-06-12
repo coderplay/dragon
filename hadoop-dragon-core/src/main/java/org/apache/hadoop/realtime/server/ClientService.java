@@ -16,29 +16,13 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.realtime.job.app.event;
+package org.apache.hadoop.realtime.server;
 
-/**
- * Event types handled by Job.
- */
-public enum JobEventType {
+import java.net.InetSocketAddress;
 
-  //Producer:Client
-  JOB_KILL,
+public interface ClientService {
 
-  //Producer:MRAppMaster
-  JOB_INIT,
-  JOB_START,
+  InetSocketAddress getBindAddress();
 
-  //Producer:Task
-  JOB_TASK_COMPLETED,
-  JOB_TASK_RESCHEDULED,
-
-  //Producer:Job
-  JOB_COMPLETED,
-
-  //Producer:Any component
-  JOB_DIAGNOSTIC_UPDATE,
-  INTERNAL_ERROR,
-  JOB_COUNTER_UPDATE,
+  int getHttpPort();
 }

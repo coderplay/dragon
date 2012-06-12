@@ -9,7 +9,6 @@ import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.records.TaskState;
-import org.apache.hadoop.realtime.records.TaskType;
 
 public class LocalTask implements Task{
 
@@ -60,7 +59,7 @@ public class LocalTask implements Task{
   }
 
   @Override
-  public TaskType getType() {
+  public String getLabel() {
     // TODO Auto-generated method stub
     return null;
   }

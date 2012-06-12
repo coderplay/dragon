@@ -16,11 +16,9 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.realtime.client;
+package org.apache.hadoop.realtime.server;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.Collection;
 
 import org.apache.commons.codec.binary.Base64;
@@ -32,8 +30,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.app.AppContext;
-import org.apache.hadoop.realtime.client.app.ClientService;
-import org.apache.hadoop.realtime.job.JobInApplicationMaster;
+import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.job.TaskAttempt;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
@@ -71,10 +68,8 @@ import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.security.authorize.DragonAMPolicyProvider;
-import org.apache.hadoop.realtime.webapp.DragonWebApp;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -112,13 +107,7 @@ public class DragonClientService extends AbstractService
   public void start() {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
-    InetSocketAddress address = NetUtils.createSocketAddr("0.0.0.0:0");
-    InetAddress hostNameResolved = null;
-    try {
-      hostNameResolved = InetAddress.getLocalHost();
-    } catch (UnknownHostException e) {
-      throw new YarnException(e);
-    }
+    InetSocketAddress address = new InetSocketAddress(0);
 
     ClientToAMSecretManager secretManager = null;
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -145,16 +134,14 @@ public class DragonClientService extends AbstractService
     }
 
     server.start();
-    this.bindAddress =
-        NetUtils.createSocketAddr(hostNameResolved.getHostAddress()
-            + ":" + server.getPort());
-    LOG.info("Instantiated DragonClientService at " + this.bindAddress);
-    try {
-      webApp = WebApps.$for("mapreduce", AppContext.class, appContext, "ws").with(conf).
-          start(new DragonWebApp());
-    } catch (Exception e) {
-      LOG.error("Webapps failed to start. Ignoring for now:", e);
-    }
+    this.bindAddress = NetUtils.getConnectAddress(server);
+    LOG.info("Instantiated DRAGONClientService at " + this.bindAddress);
+//    try {
+//      webApp = WebApps.$for("mapreduce", AppContext.class, appContext, "ws").with(conf).
+//          start(new AMWebApp());
+//    } catch (Exception e) {
+//      LOG.error("Webapps failed to start. Ignoring for now:", e);
+//    }
     super.start();
   }
 
@@ -186,12 +173,9 @@ public class DragonClientService extends AbstractService
     private RecordFactory recordFactory = 
       RecordFactoryProvider.getRecordFactory(null);
 
-    private JobInApplicationMaster verifyAndGetJob(JobId jobID, 
+    private Job verifyAndGetJob(JobId jobID, 
         boolean modifyAccess) throws YarnRemoteException {
-      JobInApplicationMaster job = appContext.getJob(jobID);
-      if (job == null) {
-        throw RPCUtil.getRemoteException("Unknown job " + jobID);
-      }
+      Job job = appContext.getJob(jobID);
       return job;
     }
  
@@ -219,10 +203,10 @@ public class DragonClientService extends AbstractService
     public GetCountersResponse getCounters(GetCountersRequest request) 
       throws YarnRemoteException {
       JobId jobId = request.getJobId();
-      JobInApplicationMaster job = verifyAndGetJob(jobId, false);
+      Job job = verifyAndGetJob(jobId, false);
       GetCountersResponse response =
         recordFactory.newRecordInstance(GetCountersResponse.class);
-      response.setCounters(job.getAllCounters());
+//      response.setCounters(TypeConverter.toYarn(job.getAllCounters()));
       return response;
     }
     
@@ -230,10 +214,15 @@ public class DragonClientService extends AbstractService
     public GetJobReportResponse getJobReport(GetJobReportRequest request) 
       throws YarnRemoteException {
       JobId jobId = request.getJobId();
-      JobInApplicationMaster job = verifyAndGetJob(jobId, false);
+      Job job = verifyAndGetJob(jobId, false);
       GetJobReportResponse response = 
         recordFactory.newRecordInstance(GetJobReportResponse.class);
-      response.setJobReport(job.getReport());
+      if (job != null) {
+        response.setJobReport(job.getReport());
+      }
+      else {
+        response.setJobReport(null);
+      }
       return response;
     }
 
@@ -348,9 +337,9 @@ public class DragonClientService extends AbstractService
       GetTaskReportsResponse response = 
         recordFactory.newRecordInstance(GetTaskReportsResponse.class);
       
-      JobInApplicationMaster job = verifyAndGetJob(jobId, false);
+      Job job = verifyAndGetJob(jobId, false);
       Collection<Task> tasks = job.getTasks().values();
-      LOG.info("Getting task report for " + "   " + jobId
+      LOG.info("Getting task report for  " + jobId
           + ". Report-size will be " + tasks.size());
 
       // Take lock to allow only one call, otherwise heap will blow up because
@@ -367,7 +356,7 @@ public class DragonClientService extends AbstractService
     @Override
     public GetDelegationTokenResponse getDelegationToken(
         GetDelegationTokenRequest request) throws YarnRemoteException {
-      throw RPCUtil.getRemoteException("Dragon AM not authorized to issue delegation" +
+      throw RPCUtil.getRemoteException("DRAGON AM not authorized to issue delegation" +
       		" token");
     }
   }

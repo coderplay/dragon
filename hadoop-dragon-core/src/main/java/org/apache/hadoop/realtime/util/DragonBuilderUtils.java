@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.realtime.util;
 
+import java.util.List;
+
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.JobReport;
+import org.apache.hadoop.realtime.records.JobState;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -48,6 +52,24 @@ public class DragonBuilderUtils {
     taskAttemptId.setTaskId(taskId);
     taskAttemptId.setId(attemptId);
     return taskAttemptId;
+  }
+
+  
+  public static JobReport newJobReport(JobId jobId, String jobName,
+      String userName, JobState state, long submitTime, long startTime,
+      long finishTime, String jobFile, List<AMInfo> amInfos, boolean isUber) {
+    JobReport report = Records.newRecord(JobReport.class);
+    report.setJobId(jobId);
+    report.setJobName(jobName);
+    report.setUser(userName);
+    report.setJobState(state);
+    report.setSubmitTime(submitTime);
+    report.setStartTime(startTime);
+    report.setFinishTime(finishTime);
+    report.setJobFile(jobFile);
+    report.setAMInfos(amInfos);
+    report.setIsUber(isUber);
+    return report;
   }
 
   public static AMInfo newAMInfo(ApplicationAttemptId appAttemptId,

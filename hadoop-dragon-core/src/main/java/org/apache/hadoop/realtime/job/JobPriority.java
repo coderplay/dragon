@@ -15,15 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.realtime.job;
 
-package org.apache.hadoop.realtime.records;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-public enum JobState {
-  NEW,
-  INITED,
-  RUNNING,
-  FAILED,
-  KILL_WAIT,
-  KILLED,
-  ERROR
+/**
+ * Used to describe the priority of the running job. 
+ *
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public enum JobPriority {
+  VERY_HIGH,
+  HIGH,
+  NORMAL,
+  LOW,
+  VERY_LOW;
 }

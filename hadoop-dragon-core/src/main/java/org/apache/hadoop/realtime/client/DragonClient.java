@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.realtime.server.DragonApplicationMaster;
+import org.apache.hadoop.realtime.server.DragonAppMaster;
 import org.apache.hadoop.realtime.util.DSConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
@@ -193,7 +193,7 @@ public class DragonClient {
     appMasterJar = cliParser.getOptionValue("jar");
     appMasterMainClass =
         cliParser.getOptionValue("class",
-            DragonApplicationMaster.class.getName());
+            DragonAppMaster.class.getName());
     childJar = cliParser.getOptionValue("child_jar", appMasterJar);
     if (!cliParser.hasOption("child_class")) {
       System.err
