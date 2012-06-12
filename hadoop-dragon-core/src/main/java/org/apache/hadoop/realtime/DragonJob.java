@@ -99,7 +99,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class DragonJob implements Job {
+public class DragonJob {
 
   private static final Log LOG = LogFactory.getLog(DragonJob.class);
 
@@ -227,7 +227,6 @@ public class DragonJob implements Job {
     this.jobId = jobId;
   }
 
-  @Override
   public JobId getID() {
     return jobId;
   }
@@ -236,27 +235,22 @@ public class DragonJob implements Job {
     conf.set(DragonJobConfig.JOB_NAME, name);
   }
 
-  @Override
   public String getName() {
     return null;
   }
 
-  @Override
   public Credentials getCredentials() {
     return credentials;
   }
 
-  @Override
   public Configuration getConfiguration() {
     return conf;
   }
 
-  @Override
   public String getUser() {
     return ugi.getUserName();
   }
 
-  @Override
   public String getQueueName() {
     return null;
   }
@@ -280,7 +274,7 @@ public class DragonJob implements Job {
     JobId jobId = getID();
     LOG.info("Running job: " + jobId);
     JobReport report = null;
-    while (state != JobState.SUCCEEDED) {
+    while (state != JobState.FAILED) {
       Thread.sleep(MAX_JOBSTATE_AGE);
       if (jobId == null) {
         jobId = getID();
@@ -347,5 +341,16 @@ public class DragonJob implements Job {
         clazz.getResource('/' + clazz.getName().replace(".", "/") + ".class");
     String jarPath = location.getPath();
     return jarPath.substring("file:".length(), jarPath.lastIndexOf("!"));
+  }
+
+  public JobState getState() {
+    ensureState(JobState.RUNNING);
+    try {
+      JobReport report = getJobReport(jobId);
+      state = report.getJobState();
+    } catch (Exception e) {
+      LOG.warn("Got an exception wheng getting state of a job", e);
+    }
+    return null;
   }
 }

@@ -169,4 +169,11 @@ public class DragonApps extends Apps {
 		vargs.add("-D" + DragonJobConfig.TASK_LOG_SIZE + "=" + logSize);
 		vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA");
 	}
+
+  private static final String STAGING_CONSTANT = ".staging";
+  public static Path getStagingAreaDir(Configuration conf, String user) {
+    return new Path(
+        conf.get(DragonJobConfig.DRAGON_AM_STAGING_DIR) + 
+        Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
+  }
 }

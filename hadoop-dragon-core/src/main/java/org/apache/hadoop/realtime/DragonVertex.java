@@ -75,7 +75,7 @@ public class DragonVertex implements Serializable {
     return childOpts;
   }
   
-  int getTasks() {
+  public int getTasks() {
     return tasks;
   }
 

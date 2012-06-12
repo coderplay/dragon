@@ -16,33 +16,23 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.realtime.job.app.event;
-
-import java.util.List;
+package org.apache.hadoop.realtime.app.rm;
 
 import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.yarn.event.AbstractEvent;
 
+public class ContainerAllocatorEvent extends 
+    AbstractEvent<ContainerAllocator.EventType> {
+  
+  private TaskAttemptId attemptID;
 
-
-public class JobTaskAttemptFetchFailureEvent extends JobEvent {
-
-  private final TaskAttemptId reduce;
-  private final List<TaskAttemptId> maps;
-
-  public JobTaskAttemptFetchFailureEvent(TaskAttemptId reduce, 
-      List<TaskAttemptId> maps) {
-    super(reduce.getTaskId().getJobId(), 
-        JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE);
-    this.reduce = reduce;
-    this.maps = maps;
+  public ContainerAllocatorEvent(TaskAttemptId attemptID,
+      ContainerAllocator.EventType type) {
+    super(type);
+    this.attemptID = attemptID;
   }
 
-  public List<TaskAttemptId> getMaps() {
-    return maps;
+  public TaskAttemptId getAttemptID() {
+    return attemptID;
   }
-
-  public TaskAttemptId getReduce() {
-    return reduce;
-  }
-
 }

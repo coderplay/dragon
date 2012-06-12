@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.client.app;
+package org.apache.hadoop.realtime.server;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,6 +23,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,12 +33,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.client.DragonClientService;
-import org.apache.hadoop.realtime.job.JobInApplicationMaster;
+import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
+import org.apache.hadoop.realtime.client.app.AppContext;
+import org.apache.hadoop.realtime.conf.DragonConfiguration;
+import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.job.JobInAppMaster;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
+import org.apache.hadoop.realtime.job.app.event.JobFinishEvent;
+import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
@@ -78,14 +86,16 @@ public class DragonAppMaster extends CompositeService {
   private final String nmHost;
   private final int nmPort;
   private final int nmHttpPort;
-
+  protected final DragonAppMetrics metrics;
+  private List<AMInfo> amInfos;
+  private AppContext context;
+  private TaskAttemptListener taskAttemptListener;
   private JobId jobId;
-  private JobInApplicationMaster job;
+  private Job job;
   private JobEventDispatcher jobEventDispatcher;
 
   private DragonClientService clientService;
 
-  private AppContext context;
   private Dispatcher dispatcher;
   private UserGroupInformation currentUser;
   private Credentials fsTokens = new Credentials(); // Filled during init
@@ -120,6 +130,7 @@ public class DragonAppMaster extends CompositeService {
     this.nmHost = nmHost;
     this.nmPort = nmPort;
     this.nmHttpPort = nmHttpPort;
+    this.metrics = DragonAppMetrics.create();
     LOG.info("Created DragonAppMaster for application " + applicationAttemptId);
   }
 
@@ -176,42 +187,37 @@ public class DragonAppMaster extends CompositeService {
      * containerLauncher);
      */
 
-    // Mock something about ResourceManager
-    rpc = YarnRPC.create(conf);
-    Map<String, String> envs = System.getenv();
-    appAttemptID = Records.newRecord(ApplicationAttemptId.class);
-    ContainerId containerId =
-        ConverterUtils.toContainerId(envs
-            .get(ApplicationConstants.AM_CONTAINER_ID_ENV));
-    appAttemptID = containerId.getApplicationAttemptId();
     super.init(conf);
   } // end of init()
 
   @Override
   public void start() {
-    job = createJob(getConfig());
-    JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
-    super.start();
-    resourceManager = connectToRM(conf);
-    while(conf.get("host")==null || "".equals(conf.get("host"))){
-      try {
-        Thread.sleep(10000);
-      } catch (InterruptedException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
+    // / Create the AMInfo for the current AppMaster
+    if (amInfos == null) {
+      amInfos = new LinkedList<AMInfo>();
     }
-    try {
-      RegisterApplicationMasterResponse response = registerToRM();
+    AMInfo amInfo =
+        DragonBuilderUtils.newAMInfo(appAttemptID, startTime, containerID, nmHost,
+            nmPort, nmHttpPort);
+    amInfos.add(amInfo);
 
-    } catch (YarnRemoteException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    } catch (UnknownHostException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
+    job = createJob(getConfig());
+    
+    // metrics system init is really init & start.
+    // It's more test friendly to put it here.
+    DefaultMetricsSystem.initialize("DragonAppMaster");
+    
+    // create a job event for job intialization
+    JobEvent initJobEvent = new JobEvent(job.getID(), JobEventType.JOB_INIT);
+    // Send init to the job (this does NOT trigger job execution)
+    // This is a synchronous call, not an event through dispatcher. We want
+    // job-init to be done completely here.
     jobEventDispatcher.handle(initJobEvent);
+
+    super.start();
+    
+    // All components have started, start the job.
+    startJobs();
   }
 
   /**
@@ -230,7 +236,7 @@ public class DragonAppMaster extends CompositeService {
           System.getenv(ApplicationConstants.NM_HTTP_PORT_ENV);
       String appSubmitTimeStr =
           System.getenv(ApplicationConstants.APP_SUBMIT_TIME_ENV);
-
+  
       validateInputParam(containerIdStr,
           ApplicationConstants.AM_CONTAINER_ID_ENV);
       validateInputParam(nodeHostString, ApplicationConstants.NM_HOST_ENV);
@@ -239,28 +245,29 @@ public class DragonAppMaster extends CompositeService {
           ApplicationConstants.NM_HTTP_PORT_ENV);
       validateInputParam(appSubmitTimeStr,
           ApplicationConstants.APP_SUBMIT_TIME_ENV);
-
       ContainerId containerId = ConverterUtils.toContainerId(containerIdStr);
       ApplicationAttemptId applicationAttemptId =
           containerId.getApplicationAttemptId();
       long appSubmitTime = Long.parseLong(appSubmitTimeStr);
-
+  
       DragonAppMaster appMaster =
           new DragonAppMaster(applicationAttemptId, containerId,
               nodeHostString, Integer.parseInt(nodePortString),
               Integer.parseInt(nodeHttpPortString), appSubmitTime);
       Runtime.getRuntime().addShutdownHook(
           new CompositeServiceShutdownHook(appMaster));
-      YarnConfiguration conf = new YarnConfiguration();
+      YarnConfiguration conf = new YarnConfiguration(new DragonConfiguration());
       conf.addResource(new Path(DragonJobConfig.JOB_CONF_FILE));
       String jobUserName =
           System.getenv(ApplicationConstants.Environment.USER.name());
       conf.set(DragonJobConfig.USER_NAME, jobUserName);
-      appMaster.conf=conf;
-      initAndStartAppMaster(appMaster, appMaster.conf, jobUserName);
-
+      // Do not automatically close FileSystem objects so that in case of
+      // SIGTERM I have a chance to write out the job history. I'll be closing
+      // the objects myself.
+      conf.setBoolean("fs.automatic.close", false);
+      initAndStartAppMaster(appMaster, conf, jobUserName);
     } catch (Throwable t) {
-      LOG.error("Error starting DragonAppMaster", t);
+      LOG.fatal("Error starting MRAppMaster", t);
       System.exit(1);
     }
   }
@@ -291,14 +298,62 @@ public class DragonAppMaster extends CompositeService {
   }
 
   /** Create and initialize (but don't start) a single job. */
-  protected JobInApplicationMaster createJob(Configuration conf) {
+  protected Job createJob(Configuration conf) {
     // create single job
-    JobInApplicationMaster newJob =
-        new JobInApplicationMaster(jobId, appAttemptId, conf,
-            dispatcher.getEventHandler(), fsTokens, clock,
-            currentUser.getUserName(), appSubmitTime);
+    Job newJob =
+        new JobInAppMaster(jobId, appAttemptId, conf,
+            dispatcher.getEventHandler(), taskAttemptListener, fsTokens, clock,
+            metrics, currentUser.getUserName(), appSubmitTime, amInfos, context);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
+
+    dispatcher.register(JobFinishEvent.Type.class,
+        createJobFinishEventHandler());     
     return newJob;
+  }
+
+  private class JobFinishEventHandler implements EventHandler<JobFinishEvent> {
+    @Override
+    public void handle(JobFinishEvent event) {
+        // TODO: handle job finish event
+
+      // TODO:currently just wait for some time so clients can know the
+      // final states. Will be removed once RM come on.
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+
+      try {
+        // Stop all services
+        // This will also send the final report to the ResourceManager
+        LOG.info("Calling stop for all the services");
+        stop();
+
+      } catch (Throwable t) {
+        LOG.warn("Graceful stop failed ", t);
+      }
+
+      //Bring the process down by force.
+      //Not needed after HADOOP-7140
+      LOG.info("Exiting MR AppMaster..GoodBye!");
+      sysexit();
+    }
+  }
+
+  /**
+   * Exit call. Just in a function call to enable testing.
+   */
+  protected void sysexit() {
+    System.exit(0);
+  }
+
+  /**
+   * create an event handler that handles the job finish event.
+   * @return the job finish event handler.
+   */
+  protected EventHandler<JobFinishEvent> createJobFinishEventHandler() {
+    return new JobFinishEventHandler();
   }
 
   protected Dispatcher createDispatcher() {
@@ -307,8 +362,8 @@ public class DragonAppMaster extends CompositeService {
 
   private class RunningAppContext implements AppContext {
 
-    private final Map<JobId, JobInApplicationMaster> jobs =
-        new ConcurrentHashMap<JobId, JobInApplicationMaster>();
+    private final Map<JobId, Job> jobs =
+        new ConcurrentHashMap<JobId, Job>();
     private final Configuration conf;
 
     public RunningAppContext(Configuration config) {
@@ -336,12 +391,12 @@ public class DragonAppMaster extends CompositeService {
     }
 
     @Override
-    public JobInApplicationMaster getJob(JobId jobID) {
+    public Job getJob(JobId jobID) {
       return jobs.get(jobID);
     }
 
     @Override
-    public Map<JobId, JobInApplicationMaster> getAllJobs() {
+    public Map<JobId, Job> getAllJobs() {
       return jobs;
     }
 
@@ -399,6 +454,24 @@ public class DragonAppMaster extends CompositeService {
       addService((Service) object);
     }
   }
+
+  /**
+   * This can be overridden to instantiate multiple jobs and create a 
+   * workflow.
+   *
+   * TODO:  Rework the design to actually support this.  Currently much of the
+   * job stuff has been moved to init() above to support uberization (MR-1220).
+   * In a typical workflow, one presumably would want to uberize only a subset
+   * of the jobs (the "small" ones), which is awkward with the current design.
+   */
+  @SuppressWarnings("unchecked")
+  protected void startJobs() {
+    /** create a job-start event to get this ball rolling */
+    JobEvent startJobEvent = new JobEvent(job.getID(), JobEventType.JOB_START);
+    /** send the job-start event. this triggers the job execution. */
+    dispatcher.getEventHandler().handle(startJobEvent);
+  }
+
 
   private class JobEventDispatcher implements EventHandler<JobEvent> {
     @SuppressWarnings("unchecked")

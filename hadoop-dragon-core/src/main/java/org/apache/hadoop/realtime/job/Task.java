@@ -25,7 +25,6 @@ import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.records.TaskState;
-import org.apache.hadoop.realtime.records.TaskType;
 
 /**
  * Read only view of Task.
@@ -36,7 +35,7 @@ public interface Task {
   TaskState getState();
   Counters getCounters();
   float getProgress();
-  TaskType getType();
+  String getLabel();
   Map<TaskAttemptId, TaskAttempt> getAttempts();
   TaskAttempt getAttempt(TaskAttemptId attemptID);
 

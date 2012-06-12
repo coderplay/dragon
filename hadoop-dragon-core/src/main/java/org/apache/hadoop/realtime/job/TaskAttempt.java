@@ -35,7 +35,6 @@ public interface TaskAttempt {
   TaskAttemptReport getReport();
   List<String> getDiagnostics();
   Counters getCounters();
-  float getProgress();
   TaskAttemptState getState();
 
   /** 

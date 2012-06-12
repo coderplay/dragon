@@ -18,10 +18,17 @@
 
 package org.apache.hadoop.realtime.util;
 
+import java.util.List;
+
+import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.JobReport;
+import org.apache.hadoop.realtime.records.JobState;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.Records;
 
 public class DragonBuilderUtils {
@@ -45,5 +52,35 @@ public class DragonBuilderUtils {
     taskAttemptId.setTaskId(taskId);
     taskAttemptId.setId(attemptId);
     return taskAttemptId;
+  }
+  
+  public static JobReport newJobReport(JobId jobId, String jobName,
+      String userName, JobState state, long submitTime, long startTime,
+      long finishTime, String jobFile, List<AMInfo> amInfos, boolean isUber) {
+    JobReport report = Records.newRecord(JobReport.class);
+    report.setJobId(jobId);
+    report.setJobName(jobName);
+    report.setUser(userName);
+    report.setJobState(state);
+    report.setSubmitTime(submitTime);
+    report.setStartTime(startTime);
+    report.setFinishTime(finishTime);
+    report.setJobFile(jobFile);
+    report.setAMInfos(amInfos);
+    report.setIsUber(isUber);
+    return report;
+  }
+
+  public static AMInfo newAMInfo(ApplicationAttemptId appAttemptId,
+      long startTime, ContainerId containerId, String nmHost, int nmPort,
+      int nmHttpPort) {
+    AMInfo amInfo = Records.newRecord(AMInfo.class);
+    amInfo.setAppAttemptId(appAttemptId);
+    amInfo.setStartTime(startTime);
+    amInfo.setContainerId(containerId);
+    amInfo.setNodeManagerHost(nmHost);
+    amInfo.setNodeManagerPort(nmPort);
+    amInfo.setNodeManagerHttpPort(nmHttpPort);
+    return amInfo;
   }
 }

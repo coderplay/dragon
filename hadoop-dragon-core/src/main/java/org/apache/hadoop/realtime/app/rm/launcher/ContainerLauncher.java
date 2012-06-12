@@ -16,13 +16,17 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.realtime.client.app;
+package org.apache.hadoop.realtime.app.rm.launcher;
 
-import java.net.InetSocketAddress;
 
-public interface ClientService {
+import org.apache.hadoop.yarn.event.EventHandler;
 
-  InetSocketAddress getBindAddress();
+public interface ContainerLauncher 
+    extends EventHandler<ContainerLauncherEvent> {
 
-  int getHttpPort();
+  enum EventType {
+    CONTAINER_REMOTE_LAUNCH,
+    CONTAINER_REMOTE_CLEANUP
+  }
+
 }

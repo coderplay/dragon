@@ -167,7 +167,7 @@ public class LocalJobRunner implements DragonJobService {
     int numTasks = 0;
     ArrayList<TaskRunnable> list = new ArrayList<TaskRunnable>();
     
-    for (Task task : job.getTasks()) {
+    for (Task task : job.getTasks().values()) {
       TaskId taskId=Records.newRecord(TaskId.class);
       taskId.setId(numTasks++);
       taskId.setJobId(jobId);
@@ -300,7 +300,6 @@ public class LocalJobRunner implements DragonJobService {
   public JobReport submitJob(DragonJob dragonJob) throws IOException,
       InterruptedException {
     job = new LocalJob(conf);
-    job.setCredentials(dragonJob.getCredentials());
     return Records.newRecord(JobReport.class);
   }
 
