@@ -16,7 +16,7 @@
 * limitations under the License.
 */
 
-package org.apache.hadoop.realtime.rm;
+package org.apache.hadoop.realtime.app.rm;
 
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.yarn.api.records.Resource;
