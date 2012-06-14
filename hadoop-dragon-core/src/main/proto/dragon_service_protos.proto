@@ -97,3 +97,29 @@ message FailTaskAttemptRequestProto {
 }
 message FailTaskAttemptResponseProto {
 }
+
+message GetShuffleAddressRequestProto {
+}
+message GetShuffleAddressResponseProto {
+}
+
+message GetTaskRequestProto {
+  optional ContainerIdProto container_id = 1;
+}
+message GetTaskResponseProto {
+}
+
+message PingRequestProto {
+  optional TaskAttemptIdProto task_attempt_id = 1;
+}
+message PingResponseProto {
+  optional bool result = 1;
+}
+
+message StatusUpdateRequestProto {
+  optional TaskAttemptIdProto task_attempt_id = 1;
+  optional TaskReportProto task_report = 2;
+}
+message StatusUpdateResponseProto {
+  optional bool result = 1;
+}

@@ -396,7 +396,7 @@ public class DragonJobRunner implements DragonJobService {
 
   @Override
   public AccessControlList getQueueAdmins(String queueName) throws IOException {
-    return null;
+    return new AccessControlList("*");
   }
 
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)

@@ -223,4 +223,15 @@ public class DragonJobConfig {
   public static final String DRAGON_AM_TO_RM_WAIT_INTERVAL_MS =
     DRAGON_AM_PREFIX + "scheduler.connection.wait.interval-ms";
   public static final int DEFAULT_DRAGON_AM_TO_RM_WAIT_INTERVAL_MS = 360000;
+  
+  public static final String TASK_TIMEOUT = "dragon.task.timeout";
+
+  public static final String TASK_TIMEOUT_CHECK_INTERVAL_MS =
+      "dragon.task.timeout.check-interval-ms";
+  
+  /** The number of threads used to handle task RPC calls.*/
+  public static final String DRAGON_AM_TASK_LISTENER_THREAD_COUNT =
+    DRAGON_AM_PREFIX + "job.task.listener.thread-count";
+  
+  public static final int DEFAULT_DRAGON_AM_TASK_LISTENER_THREAD_COUNT = 30;
 }

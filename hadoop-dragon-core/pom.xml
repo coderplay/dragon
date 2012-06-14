@@ -98,6 +98,7 @@
                 <argument>src/main/proto/dragon_protos.proto</argument>
                 <argument>src/main/proto/dragon_service_protos.proto</argument>
                 <argument>src/main/proto/DragonClientProtocol.proto</argument>
+                <argument>src/main/proto/DragonChildProtocol.proto</argument>
               </arguments>
             </configuration>
             <goals>
