@@ -48,12 +48,7 @@ public class TaskAttemptStatusUpdateEvent extends TaskAttemptEvent {
     public float progress;
     public Counters counters;
     public String stateString;
-    public Phase phase;
     public long outputSize;
-    public List<TaskAttemptId> fetchFailedMaps;
-    public long mapFinishTime;
-    public long shuffleFinishTime;
-    public long sortFinishTime;
     public TaskAttemptState taskState;
   }
 }

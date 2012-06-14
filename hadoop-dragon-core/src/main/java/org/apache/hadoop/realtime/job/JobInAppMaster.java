@@ -679,7 +679,7 @@ public class JobInAppMaster implements Job,
   implements SingleArcTransition<JobInAppMaster, JobEvent> {
     /**
      * This transition executes in the event-dispatcher thread, though it's
-     * triggered in MRAppMaster's startJobs() method.
+     * triggered in DragonAppMaster's startJobs() method.
      */
     @Override
     public void transition(JobInAppMaster job, JobEvent event) {
