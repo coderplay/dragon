@@ -54,6 +54,7 @@ import org.apache.hadoop.realtime.job.app.event.TaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskEventType;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -93,6 +94,8 @@ public class DragonAppMaster extends CompositeService {
   private List<AMInfo> amInfos;
   private AppContext context;
   private TaskAttemptListener taskAttemptListener;
+  private JobTokenSecretManager jobTokenSecretManager =
+      new JobTokenSecretManager();
   private JobId jobId;
   private Job job;
   private JobEventDispatcher jobEventDispatcher;
@@ -149,10 +152,10 @@ public class DragonAppMaster extends CompositeService {
     addIfService(dispatcher);
 
     // service to handle requests to TaskUmbilicalProtocol
-    /*
-     * taskAttemptListener = createTaskAttemptListener(context);
-     * addIfService(taskAttemptListener);
-     */
+    
+    taskAttemptListener = createTaskAttemptListener(context);
+    addIfService(taskAttemptListener);
+    
 
     // service to handle requests from JobClient
     clientService = createClientService(context);
@@ -399,6 +402,12 @@ public class DragonAppMaster extends CompositeService {
       addService((Service) object);
     }
   }
+  
+  protected TaskAttemptListener createTaskAttemptListener(AppContext context) {
+    TaskAttemptListener lis =
+        new DragonChildService(context, jobTokenSecretManager);
+    return lis;
+  } 
 
   protected ContainerAllocator createContainerAllocator(
       final ClientService clientService, final AppContext context) {
