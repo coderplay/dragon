@@ -271,6 +271,7 @@ public class DragonJobRunner implements DragonJobService {
       Path destJarPath = JobSubmissionFiles.getJobJar(submitJobDir);
       submitFs.copyFromLocalFile(false, true, new Path(originalJar), destJarPath);
       submitFs.setReplication(destJarPath, replication);
+      conf.set(DragonJobConfig.JOB_JAR, destJarPath.toString());
     } else {
       LOG.warn("No job jar file set.  User classes may not be found. "+
       "See Job or Job#setJar(String).");
@@ -333,7 +334,7 @@ public class DragonJobRunner implements DragonJobService {
       localResources.put(
           DragonJobConfig.JOB_JAR,
           DragonApps.createApplicationResource(submitFs,
-              JobSubmissionFiles.getJobJar(jobSubmitDir)));
+              new Path(conf.get(DragonJobConfig.JOB_JAR))));
     } else {
       LOG.info("Job jar is not present. "
           + "Not adding any jar to the list of resources.");

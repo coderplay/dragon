@@ -73,7 +73,7 @@ public class DragonChildJVM {
     // properties.
     long logSize = TaskLog.getTaskLogLength(conf);
     Vector<CharSequence> logProps = new Vector<CharSequence>(4);
-    setupLog4jProperties(conf, logProps, logSize);
+    //setupLog4jProperties(conf, logProps, logSize);
     Iterator<CharSequence> it = logProps.iterator();
     StringBuffer buffer = new StringBuffer();
     while (it.hasNext()) {
@@ -133,7 +133,7 @@ public class DragonChildJVM {
 
     // Setup the log4j prop
     long logSize = TaskLog.getTaskLogLength(conf);
-    setupLog4jProperties(conf, vargs,logSize);
+    //setupLog4jProperties(conf, vargs,logSize);
 
     // Add main class and its arguments
     vargs.add(YarnChild.class.getName()); // main of Child

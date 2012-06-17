@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.realtime.protocol.records.impl.pb;
 
-import java.util.List;
-
-import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.protocol.records.GetTaskResponse;
 import org.apache.hadoop.realtime.records.TaskInChild;
+import org.apache.hadoop.realtime.records.impl.pb.TaskInChildPBImpl;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.proto.DragonProtos.TaskInChildProto;
 import org.apache.hadoop.yarn.proto.DragonServiceProtos.GetTaskResponseProto;
+import org.apache.hadoop.yarn.proto.DragonServiceProtos.GetTaskResponseProtoOrBuilder;
 
 public class GetTaskResponsePBImpl extends ProtoBase<GetTaskResponseProto>
     implements GetTaskResponse {
@@ -32,7 +32,7 @@ public class GetTaskResponsePBImpl extends ProtoBase<GetTaskResponseProto>
   GetTaskResponseProto.Builder builder = null;
   boolean viaProto = false;
   
-  private List<Task> task = null;
+  private TaskInChild task = null;
   
   
   public GetTaskResponsePBImpl() {
@@ -43,7 +43,20 @@ public class GetTaskResponsePBImpl extends ProtoBase<GetTaskResponseProto>
     this.proto = proto;
     viaProto = true;
   }
- 
+  
+  private void mergeLocalToBuilder() {
+    if (this.task != null) {
+      builder.setTask(convertToProtoFormat(this.task));
+    }
+  }
+
+  private void mergeLocalToProto() {
+    if (viaProto) 
+      maybeInitBuilder();
+    mergeLocalToBuilder();
+    proto = builder.build();
+    viaProto = true;
+  }
 
   private void maybeInitBuilder() {
     if (viaProto || builder == null) {
@@ -54,19 +67,38 @@ public class GetTaskResponsePBImpl extends ProtoBase<GetTaskResponseProto>
 
   @Override
   public TaskInChild getTask() {
-    // TODO Auto-generated method stub
-    return null;
+    GetTaskResponseProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.task != null) {
+      return this.task;
+    }
+    if (!p.hasTask()) {
+      return null;
+    }
+    this.task =  convertFromProtoFormat(p.getTask());
+    return this.task;
   }
 
   @Override
   public void setTask(TaskInChild task) {
-    // TODO Auto-generated method stub
-    
+    maybeInitBuilder();
+    if (task == null) 
+      builder.clearTask();
+    this.task = task;
   }
 
   @Override
   public GetTaskResponseProto getProto() {
-    // TODO Auto-generated method stub
-    return null;
+    mergeLocalToProto();
+    proto = viaProto ? proto : builder.build();
+    viaProto = true;
+    return proto;
+  }
+  
+  private TaskInChildPBImpl convertFromProtoFormat(TaskInChildProto p) {
+    return new TaskInChildPBImpl(p);
+  }
+
+  private TaskInChildProto convertToProtoFormat(TaskInChild t) {
+    return ((TaskInChildPBImpl)t).getProto();
   }
 }

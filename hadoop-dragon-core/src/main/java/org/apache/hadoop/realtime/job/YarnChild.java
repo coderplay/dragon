@@ -88,12 +88,12 @@ class YarnChild {
     // initialize metrics
     DefaultMetricsSystem.initialize(StringUtils.camelize("Task"));
 
-    Token<JobTokenIdentifier> jt = loadCredentials(defaultConf, address);
+    // TODO:Token<JobTokenIdentifier> jt = loadCredentials(defaultConf, address);
 
     // Create DragonChildProtocol as actual task owner.
     UserGroupInformation taskOwner =
         UserGroupInformation.createRemoteUser(jobIdString);
-    taskOwner.addToken(jt);
+    //taskOwner.addToken(jt);
     amConnector =
         taskOwner.doAs(new PrivilegedExceptionAction<DragonChildProtocol>() {
           @Override
@@ -119,7 +119,7 @@ class YarnChild {
         MILLISECONDS.sleep(sleepTimeMilliSecs);
         myTask =
             ((GetTaskResponse) invoke(amConnector, "getTask",
-                GetTaskResponse.class, request)).getTask();
+                GetTaskRequest.class, request)).getTask();
       }
       YarnChild.taskid = myTask.getID();
 
@@ -235,13 +235,16 @@ class YarnChild {
         if (e.getTargetException() instanceof YarnRemoteException) {
           LOG.warn("Error from remote end: "
               + e.getTargetException().getLocalizedMessage());
-          LOG.debug("Tracing remote error ", e.getTargetException());
+          if(LOG.isDebugEnabled())
+            LOG.debug("Tracing remote error ", e.getTargetException());
           throw (YarnRemoteException) e.getTargetException();
         }
-        LOG.debug("Failed to contact AM for job " + taskid + " retrying..",
-            e.getTargetException());
+        if(LOG.isDebugEnabled())
+          LOG.debug("Failed to contact AM for job " + taskid + " retrying..",
+              e.getTargetException());
       } catch (Exception e) {
-        LOG.debug("Failed to contact AM for job " + taskid + "  Will retry..", e);
+        if(LOG.isDebugEnabled())
+          LOG.debug("Failed to contact AM for job " + taskid + "  Will retry..", e);
       }
     }
   }

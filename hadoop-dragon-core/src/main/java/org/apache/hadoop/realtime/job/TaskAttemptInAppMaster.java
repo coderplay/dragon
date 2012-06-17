@@ -655,7 +655,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       FileSystem remoteFS = FileSystem.get(conf);
 
       // //////////// Set up JobJar to be localized properly on the remote NM.
-      String jobJar = conf.get(DragonJobConfig.JAR);
+      String jobJar = conf.get(DragonJobConfig.JOB_JAR);
       if (jobJar != null) {
         Path remoteJobJar =
             (new Path(jobJar)).makeQualified(remoteFS.getUri(),

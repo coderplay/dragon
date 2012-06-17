@@ -20,7 +20,7 @@ public class TaskInChildImpl extends TaskInChild {
       .getLog(TaskInChildImpl.class);
   private Path workingPath;
   
-  public TaskInChildImpl(){
+  public TaskInChildImpl(TaskInChild child){
     
   }
   @Override
