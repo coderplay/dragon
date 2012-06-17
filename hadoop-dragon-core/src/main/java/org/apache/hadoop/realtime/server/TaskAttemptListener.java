@@ -22,7 +22,6 @@ import java.net.InetSocketAddress;
 
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 
 /**
  * This class listens for changes to the state of a Task.
@@ -37,7 +36,7 @@ public interface TaskAttemptListener {
    * @param task the task itself for this JVM.
    * @param jvmID The ID of the JVM .
    */
-  void registerPendingTask(Task task,ContainerId containerId);
+  void registerPendingTask(Task task,String containerId);
   
   /**
    * Register task attempt. This should be called when the JVM has been
@@ -47,7 +46,7 @@ public interface TaskAttemptListener {
    *          the id of the attempt for this JVM.
    * @param jvmID the ID of the JVM.
    */
-  void registerLaunchedTask(TaskAttemptId attemptID,ContainerId containerId);
+  void registerLaunchedTask(TaskAttemptId attemptID,String containerId);
 
   /**
    * Unregister the JVM and the attempt associated with it.  This should be 
@@ -55,6 +54,6 @@ public interface TaskAttemptListener {
    * @param attemptID the ID of the attempt.
    * @param jvmID the ID of the JVM for that attempt.
    */
-  void unregister(TaskAttemptId attemptID,int containerId);
+  void unregister(TaskAttemptId attemptID,String containerId);
 
 }

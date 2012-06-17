@@ -26,6 +26,7 @@ import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskInChild;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -83,5 +84,11 @@ public class DragonBuilderUtils {
     amInfo.setNodeManagerPort(nmPort);
     amInfo.setNodeManagerHttpPort(nmHttpPort);
     return amInfo;
+  }
+  
+  public static TaskInChild newTaskInChild(TaskId taskId) {
+    TaskInChild task = Records.newRecord(TaskInChild.class);
+    task.setID(taskId);
+    return task;
   }
 }

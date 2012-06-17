@@ -152,3 +152,7 @@ message StringCounterGroupMapProto {
   optional string key = 1;
   optional CounterGroupProto value = 2;
 }
+
+message TaskInChildProto{
+  optional TaskIdProto task_id = 1;
+}

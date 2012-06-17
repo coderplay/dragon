@@ -20,7 +20,6 @@ package org.apache.hadoop.realtime.job;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -35,12 +34,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.DragonJobGraph;
@@ -49,11 +48,11 @@ import org.apache.hadoop.realtime.JobSubmissionFiles;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.conf.DragonConfiguration;
-import org.apache.hadoop.realtime.job.app.event.JobCounterUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
 import org.apache.hadoop.realtime.job.app.event.JobFinishEvent;
+import org.apache.hadoop.realtime.job.app.event.JobTaskAttemptFetchFailureEvent;
 import org.apache.hadoop.realtime.job.app.event.JobTaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptEventType;
@@ -68,12 +67,13 @@ import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskState;
 import org.apache.hadoop.realtime.security.TokenCache;
+import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
+import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.realtime.serialize.HessianSerializer;
 import org.apache.hadoop.realtime.server.TaskAttemptListener;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Clock;
@@ -134,11 +134,13 @@ public class JobInAppMaster implements Job,
     // of uber-AM attempts (probably sent from MRAppMaster).
   public DragonConfiguration conf;
 
-  //fields initialized in init
+  // fields initialized in init
   private FileSystem fs;
   private Path remoteJobSubmitDir;
   public Path remoteJobConfFile;
   private int allowedFailuresPercent = 0;
+  private Token<JobTokenIdentifier> jobToken;
+  private JobTokenSecretManager jobTokenSecretManager;
   private final List<String> diagnostics = new ArrayList<String>();
   
   //task/attempt related datastructures
@@ -280,7 +282,7 @@ public class JobInAppMaster implements Job,
  
   private final StateMachine<JobState, JobEventType, JobEvent> stateMachine;
 
-  //changing fields while the job is running
+  // changing fields while the job is running
   private int numTasks;
   private int completedTaskCount = 0;
   private int failedTaskCount = 0;
@@ -293,9 +295,11 @@ public class JobInAppMaster implements Job,
 
   public JobInAppMaster(JobId jobId, ApplicationAttemptId applicationAttemptId,
       Configuration conf, EventHandler eventHandler,
-      TaskAttemptListener taskAttemptListener, Credentials fsTokenCredentials,
-      Clock clock, DragonAppMetrics metrics, String userName,
-      long appSubmitTime, List<AMInfo> amInfos, AppContext appContext) {
+      TaskAttemptListener taskAttemptListener,
+      JobTokenSecretManager jobTokenSecretManager,
+      Credentials fsTokenCredentials, Clock clock, DragonAppMetrics metrics,
+      String userName, long appSubmitTime, List<AMInfo> amInfos,
+      AppContext appContext) {
     this.applicationAttemptId = applicationAttemptId;
     this.jobId = jobId;
     this.jobName = conf.get(DragonJobConfig.JOB_NAME, "<missing job name>");
@@ -315,9 +319,10 @@ public class JobInAppMaster implements Job,
     this.writeLock = readWriteLock.writeLock();
 
     this.fsTokens = fsTokenCredentials;
+    this.jobTokenSecretManager = jobTokenSecretManager;
     this.username = System.getProperty("user.name");
     // This "this leak" is okay because the retained pointer is in an
-    //  instance variable.
+    // instance variable.
     stateMachine = stateMachineFactory.make(this);
   }
 
@@ -484,6 +489,7 @@ public class JobInAppMaster implements Job,
   
   /**
    * Create the default file System for this job.
+   * 
    * @param conf the conf object
    * @return the default filesystem for this job
    * @throws IOException
@@ -599,7 +605,7 @@ public class JobInAppMaster implements Job,
       String user = 
         UserGroupInformation.getCurrentUser().getShortUserName();
       Path path = DragonApps.getStagingAreaDir(job.conf, user);
-      if(LOG.isDebugEnabled()) {
+      if (LOG.isDebugEnabled()) {
         LOG.debug("startJobs: parent=" + path + " child=" + jodIdString);
       }
 
@@ -631,7 +637,6 @@ public class JobInAppMaster implements Job,
       }
     }
 
-
     private int getTaskCount(DragonJobGraph graph) {
       int count = 0;
       for (DragonVertex vertex : graph.vertexSet()) {
@@ -642,9 +647,17 @@ public class JobInAppMaster implements Job,
 
     private void createTasks(JobInAppMaster job, long inputLength,
                                 DragonJobGraph graph) {
+      // Test
+      Task testTask =
+          new TaskInAppMaster(job.jobId, job.eventHandler,
+              job.remoteJobConfFile, job.conf, job.allowedFailuresPercent,
+              job.taskAttemptListener, job.jobToken,
+              job.fsTokens.getAllTokens(), job.clock,
+              job.allowedFailuresPercent, job.metrics);
+      job.addTask(testTask);
       for (DragonVertex vertex : graph.vertexSet()) {
-        for(int i = 0; i < vertex.getTasks(); i++) {
-          //TODO: implement it!
+        for (int i = 0; i < vertex.getTasks(); i++) {
+          // TODO: implement it!
           Task task = null;
           job.addTask(task);
         }
@@ -659,8 +672,9 @@ public class JobInAppMaster implements Job,
         FSDataInputStream in = job.fs.open(descFile);
         HessianSerializer<DragonJobGraph> serializer =
             new HessianSerializer<DragonJobGraph>();
+        DragonJobGraph djg = serializer.deserialize(in);
         in.close();
-        return serializer.deserialize(in);
+        return djg;
       } catch (IOException ioe) {
         throw new YarnException(ioe);
       }
@@ -790,6 +804,36 @@ public class JobInAppMaster implements Job,
     }
   }
 
+  private static class TaskAttemptFetchFailureTransition implements
+      SingleArcTransition<JobInAppMaster, JobEvent> {
+    @Override
+    public void transition(JobInAppMaster job, JobEvent event) {
+      JobTaskAttemptFetchFailureEvent fetchfailureEvent =
+          (JobTaskAttemptFetchFailureEvent) event;
+      for (TaskAttemptId attemptId : fetchfailureEvent.getMaps()) {
+        Integer fetchFailures = job.fetchFailuresMapping.get(attemptId);
+        fetchFailures = (fetchFailures == null) ? 1 : (fetchFailures + 1);
+        job.fetchFailuresMapping.put(attemptId, fetchFailures);
+
+        // get parallelism of respect task
+        int runningTasks = 0;
+        // TODO:
+        // runnintTask = DragonJobGraph.getVertxt(attemptId).parallelism();
+
+        float failureRate = (float) fetchFailures / runningTasks;
+        // declare faulty if fetch-failures >= max-allowed-failures
+        boolean isFaulty = (failureRate >= MAX_ALLOWED_FETCH_FAILURES_FRACTION);
+        if (fetchFailures >= MAX_FETCH_FAILURES_NOTIFICATIONS && isFaulty) {
+          LOG.info("Too many fetch-failures for output of task attempt: "
+              + attemptId + " ... raising fetch failure to map");
+          job.eventHandler.handle(new TaskAttemptEvent(attemptId,
+              TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE));
+          job.fetchFailuresMapping.remove(attemptId);
+        }
+      }
+    }
+  }
+
   private static class TaskCompletedTransition implements
       MultipleArcTransition<JobInAppMaster, JobEvent, JobState> {
 
@@ -822,7 +866,7 @@ public class JobInAppMaster implements Job,
         return job.finished(JobState.FAILED);
       }
 
-      //return the current state, Job not finished yet
+      // return the current state, Job not finished yet
       return job.getState();
     }
   
@@ -842,12 +886,12 @@ public class JobInAppMaster implements Job,
       SingleArcTransition<JobInAppMaster, JobEvent> {
     @Override
     public void transition(JobInAppMaster job, JobEvent event) {
-      //succeeded map task is restarted back
+      // succeeded map task is restarted back
       job.completedTaskCount--;
     }
   }
 
-  private static class KillWaitTaskCompletedTransition extends  
+  private static class KillWaitTaskCompletedTransition extends
       TaskCompletedTransition {
     @Override
     protected JobState checkJobForCompletion(JobInAppMaster job) {
@@ -856,7 +900,7 @@ public class JobInAppMaster implements Job,
         job.abortJob(JobState.KILLED);
         return job.finished(JobState.KILLED);
       }
-      //return the current state, Job not finished yet
+      // return the current state, Job not finished yet
       return job.getState();
     }
   }

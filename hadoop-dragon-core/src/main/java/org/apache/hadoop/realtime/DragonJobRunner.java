@@ -329,10 +329,11 @@ public class DragonJobRunner implements DragonJobService {
         DragonApps.createApplicationResource(submitFs, jobConfPath));
     
     // JobJar
-    if (conf.get(DragonJobConfig.JAR) != null) {
-      localResources.put(DragonJobConfig.JOB_JAR, DragonApps
-          .createApplicationResource(submitFs, new Path(jobSubmitDir,
-              DragonJobConfig.JOB_JAR)));
+    if (conf.get(DragonJobConfig.JOB_JAR) != null) {
+      localResources.put(
+          DragonJobConfig.JOB_JAR,
+          DragonApps.createApplicationResource(submitFs,
+              JobSubmissionFiles.getJobJar(jobSubmitDir)));
     } else {
       LOG.info("Job jar is not present. "
           + "Not adding any jar to the list of resources.");
