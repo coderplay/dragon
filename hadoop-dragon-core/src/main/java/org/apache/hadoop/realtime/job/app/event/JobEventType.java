@@ -33,7 +33,6 @@ public enum JobEventType {
   //Producer:Task
   JOB_TASK_COMPLETED,
   JOB_TASK_RESCHEDULED,
-  JOB_TASK_ATTEMPT_COMPLETED,
 
   //Producer:Job
   JOB_COMPLETED,
@@ -42,7 +41,4 @@ public enum JobEventType {
   JOB_DIAGNOSTIC_UPDATE,
   INTERNAL_ERROR,
   JOB_COUNTER_UPDATE,
-  
-  //Producer:TaskAttemptListener
-  JOB_TASK_ATTEMPT_FETCH_FAILURE
 }

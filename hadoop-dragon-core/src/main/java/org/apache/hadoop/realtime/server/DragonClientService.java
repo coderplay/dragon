@@ -68,7 +68,6 @@ import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.security.authorize.DragonAMPolicyProvider;
-import org.apache.hadoop.realtime.webapp.DragonWebApp;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -82,9 +81,7 @@ import org.apache.hadoop.yarn.security.client.ClientTokenIdentifier;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebApps;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import org.apache.hadoop.yarn.YarnException;
+
 /**
  * This module is responsible for talking to the 
  * jobclient (user facing).
@@ -110,13 +107,8 @@ public class DragonClientService extends AbstractService
   public void start() {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
-    InetSocketAddress address = NetUtils.createSocketAddr("0.0.0.0:0");
-    InetAddress hostNameResolved = null;
-    try {
-      hostNameResolved = InetAddress.getLocalHost();
-    } catch (UnknownHostException e) {
-      throw new YarnException(e);
-    }
+    InetSocketAddress address = new InetSocketAddress(0);
+
     ClientToAMSecretManager secretManager = null;
     if (UserGroupInformation.isSecurityEnabled()) {
       secretManager = new ClientToAMSecretManager();
@@ -142,17 +134,14 @@ public class DragonClientService extends AbstractService
     }
 
     server.start();
-    this.bindAddress =
-        NetUtils.createSocketAddr(hostNameResolved.getHostAddress() + ":"
-            + server.getPort());
+    this.bindAddress = NetUtils.getConnectAddress(server);
     LOG.info("Instantiated DRAGONClientService at " + this.bindAddress);
-    try {
-      webApp =
-          WebApps.$for("mapreduce", AppContext.class, appContext, "ws")
-              .with(conf).start(new DragonWebApp());
-    } catch (Exception e) {
-      LOG.error("Webapps failed to start. Ignoring for now:", e);
-    }
+//    try {
+//      webApp = WebApps.$for("mapreduce", AppContext.class, appContext, "ws").with(conf).
+//          start(new AMWebApp());
+//    } catch (Exception e) {
+//      LOG.error("Webapps failed to start. Ignoring for now:", e);
+//    }
     super.start();
   }
 

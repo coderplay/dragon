@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
 import org.apache.hadoop.realtime.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -166,7 +165,7 @@ public class TokenCache {
    * conf setting for job tokens cache file name
    */
   @InterfaceAudience.Private
-  public static final String JOB_TOKENS_FILENAME = "dragon.job.jobTokenFile";
+  public static final String JOB_TOKENS_FILENAME = "mapreduce.job.jobTokenFile";
   private static final Text JOB_TOKEN = new Text("ShuffleAndJobToken");
   
   /**
@@ -195,35 +194,5 @@ public class TokenCache {
       Credentials credentials) {
     credentials.addToken(JOB_TOKEN, t);
   }
-  
-  /**
-   * load job token from a file
-   * @param conf
-   * @throws IOException
-   */
-  @InterfaceAudience.Private
-  public static Credentials loadTokens(String jobTokenFile, Configuration conf) 
-  throws IOException {
-    Path localJobTokenFile = new Path ("file:///" + jobTokenFile);
 
-    Credentials ts = Credentials.readTokenStorageFile(localJobTokenFile, conf);
-
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("Task: Loaded jobTokenFile from: "+
-          localJobTokenFile.toUri().getPath() 
-          +"; num of sec keys  = " + ts.numberOfSecretKeys() +
-          " Number of tokens " +  ts.numberOfTokens());
-    }
-    return ts;
-  }
-
-  /**
-   * 
-   * @return job token
-   */
-  @SuppressWarnings("unchecked")
-  @InterfaceAudience.Private
-  public static Token<JobTokenIdentifier> getJobToken(Credentials credentials) {
-    return (Token<JobTokenIdentifier>) credentials.getToken(JOB_TOKEN);
-  }
 }

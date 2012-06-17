@@ -1,10 +1,10 @@
 package org.apache.hadoop.realtime.protocol.records;
 
-import org.apache.hadoop.realtime.records.TaskInChild;
+import org.apache.hadoop.realtime.job.Task;
 
 public interface GetTaskResponse {
 
-  public abstract TaskInChild getTask();
+  public abstract Task getTask();
   
-  public abstract void setTask(TaskInChild task);
+  public abstract void setTask(Task task);
 }

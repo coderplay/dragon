@@ -295,9 +295,8 @@ public class DragonAppMaster extends CompositeService {
     // create single job
     Job newJob =
         new JobInAppMaster(jobId, appAttemptId, conf,
-            dispatcher.getEventHandler(), taskAttemptListener,
-            jobTokenSecretManager, fsTokens, clock, metrics,
-            currentUser.getUserName(), appSubmitTime, amInfos, context);
+            dispatcher.getEventHandler(), taskAttemptListener, fsTokens, clock,
+            metrics, currentUser.getUserName(), appSubmitTime, amInfos, context);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
 
     dispatcher.register(JobFinishEvent.Type.class,

@@ -34,7 +34,13 @@ public interface Task {
   TaskReport getReport();
   TaskState getState();
   Counters getCounters();
+  float getProgress();
   String getLabel();
   Map<TaskAttemptId, TaskAttempt> getAttempts();
   TaskAttempt getAttempt(TaskAttemptId attemptID);
+
+  /** Has Task reached the final state or not.
+   */
+  boolean isFinished();
+  
 }

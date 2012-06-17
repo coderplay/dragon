@@ -49,6 +49,7 @@ import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.security.authorize.DragonAMPolicyProvider;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -69,10 +70,10 @@ public class DragonChildService extends CompositeService implements
   private Server server;
   private InetSocketAddress bindAddress;
   
-  private ConcurrentMap<String, Task> containerIDToActiveAttemptMap =
-      new ConcurrentHashMap<String, Task>();
-  private Set<String> launchedJVMs = Collections
-      .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+  private ConcurrentMap<ContainerId, Task> containerIDToActiveAttemptMap =
+      new ConcurrentHashMap<ContainerId, Task>();
+  private Set<ContainerId> launchedJVMs = Collections
+      .newSetFromMap(new ConcurrentHashMap<ContainerId, Boolean>());
   
   private AppContext context;
 
@@ -80,7 +81,7 @@ public class DragonChildService extends CompositeService implements
 
   public DragonChildService(AppContext appContext,
       JobTokenSecretManager jobTokenSecretManager) {
-    super("DragonChildService");
+    super("DragonClientService");
     this.context = appContext;
     this.jobTokenSecretManager = jobTokenSecretManager;
     this.protocolHandler = new DragonChildProtocolHandler();
@@ -142,11 +143,11 @@ public class DragonChildService extends CompositeService implements
     @Override
     public GetTaskResponse getTask(GetTaskRequest request)
         throws YarnRemoteException {
-      String containerId = request.getContainerId();
-      LOG.info("Container with ID : " + containerId + " asked for a task");
+      ContainerId containerId = request.getContainerId();
+      LOG.info("Container with ID : " + containerId.getId() + " asked for a task");
       
       if (!containerIDToActiveAttemptMap.containsKey(containerId)) {
-        LOG.info("Container with ID: " + containerId + " is invalid and will be killed.");
+        LOG.info("Container with ID: " + containerId.getId() + " is invalid and will be killed.");
         //jvmTask = TASK_FOR_INVALID_JVM;
       } else {
         if (!launchedJVMs.contains(containerId)) {
@@ -217,20 +218,20 @@ public class DragonChildService extends CompositeService implements
   }
 
   @Override
-  public void registerPendingTask(Task task, String containerId) {
+  public void registerPendingTask(Task task, ContainerId containerId) {
     containerIDToActiveAttemptMap.put(containerId, task);
 
   }
 
   @Override
-  public void registerLaunchedTask(TaskAttemptId attemptID, String containerId) {
+  public void registerLaunchedTask(TaskAttemptId attemptID, ContainerId containerId) {
     launchedJVMs.add(containerId);
     taskHeartbeatHandler.register(attemptID);
 
   }
 
   @Override
-  public void unregister(TaskAttemptId attemptID, String containerId) {
+  public void unregister(TaskAttemptId attemptID, int containerId) {
     launchedJVMs.remove(containerId);
     containerIDToActiveAttemptMap.remove(containerId);
 
