@@ -131,9 +131,9 @@ public class RMContainerAllocator extends RMContainerRequestor implements
 
   @Override
   protected synchronized void heartbeat() throws Exception {
-    LOG.info("Before Scheduling: " + getStat());
+    // LOG.info("Before Scheduling: " + getStat());
     List<Container> allocatedContainers = getResources();
-    LOG.info("After Scheduling: " + getStat());
+    // LOG.info("After Scheduling: " + getStat());
     if (allocatedContainers.size() > 0) {
       LOG.info("Before Assign: " + getStat());
       scheduledRequests.assign(allocatedContainers);
@@ -364,12 +364,8 @@ public class RMContainerAllocator extends RMContainerRequestor implements
               decContainerReq(assigned);
 
               // send the container-assigned event to task attempt
-              /*
               eventHandler.handle(new TaskAttemptContainerAssignedEvent(
                   assigned.attemptID, allocated, applicationACLs));
-              */
-              eventHandler.handle(new JobEvent(getJob().getID(),
-                  JobEventType.JOB_TASK_COMPLETED));
               assignedRequests.add(allocatedContainerId, assigned.attemptID);
 
               if (LOG.isDebugEnabled()) {

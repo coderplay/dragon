@@ -53,21 +53,9 @@ public class LocalTask implements Task{
   }
 
   @Override
-  public float getProgress() {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
-  @Override
   public String getLabel() {
     // TODO Auto-generated method stub
     return null;
-  }
-
-  @Override
-  public boolean isFinished() {
-    // TODO Auto-generated method stub
-    return false;
   }
 
 }
