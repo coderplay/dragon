@@ -18,20 +18,31 @@
 
 package org.apache.hadoop.realtime.job.app.event;
 
-/**
- * Event types handled by Task.
- */
-public enum TaskEventType {
+import java.util.List;
 
-  //Producer:Client, Job
-  T_KILL,
+import org.apache.hadoop.realtime.records.TaskAttemptId;
 
-  //Producer:Job
-  T_SCHEDULE,
 
-  //Producer:TaskAttempt
-  T_ATTEMPT_LAUNCHED,
-  T_ATTEMPT_FAILED,
-  T_ATTEMPT_SUCCEEDED,
-  T_ATTEMPT_KILLED
+
+public class JobTaskAttemptFetchFailureEvent extends JobEvent {
+
+  private final TaskAttemptId reduce;
+  private final List<TaskAttemptId> maps;
+
+  public JobTaskAttemptFetchFailureEvent(TaskAttemptId reduce, 
+      List<TaskAttemptId> maps) {
+    super(reduce.getTaskId().getJobId(), 
+        JobEventType.JOB_TASK_ATTEMPT_FETCH_FAILURE);
+    this.reduce = reduce;
+    this.maps = maps;
+  }
+
+  public List<TaskAttemptId> getMaps() {
+    return maps;
+  }
+
+  public TaskAttemptId getReduce() {
+    return reduce;
+  }
+
 }

@@ -21,7 +21,6 @@ package org.apache.hadoop.realtime.job.app.event;
 import java.util.List;
 
 import org.apache.hadoop.realtime.records.Counters;
-import org.apache.hadoop.realtime.records.Phase;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskAttemptState;
 
@@ -50,5 +49,6 @@ public class TaskAttemptStatusUpdateEvent extends TaskAttemptEvent {
     public String stateString;
     public long outputSize;
     public TaskAttemptState taskState;
+    public List<TaskAttemptId> sendFailedTasks;
   }
 }

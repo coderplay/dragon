@@ -18,20 +18,20 @@
 
 package org.apache.hadoop.realtime.job.app.event;
 
-/**
- * Event types handled by Task.
- */
-public enum TaskEventType {
+import org.apache.hadoop.realtime.records.TaskAttemptCompletionEvent;
 
-  //Producer:Client, Job
-  T_KILL,
 
-  //Producer:Job
-  T_SCHEDULE,
+public class JobTaskAttemptCompletedEvent extends JobEvent {
 
-  //Producer:TaskAttempt
-  T_ATTEMPT_LAUNCHED,
-  T_ATTEMPT_FAILED,
-  T_ATTEMPT_SUCCEEDED,
-  T_ATTEMPT_KILLED
+  private TaskAttemptCompletionEvent completionEvent;
+
+  public JobTaskAttemptCompletedEvent(TaskAttemptCompletionEvent completionEvent) {
+    super(completionEvent.getAttemptId().getTaskId().getJobId(), 
+        JobEventType.JOB_TASK_ATTEMPT_COMPLETED);
+    this.completionEvent = completionEvent;
+  }
+
+  public TaskAttemptCompletionEvent getCompletionEvent() {
+    return completionEvent;
+  }
 }
