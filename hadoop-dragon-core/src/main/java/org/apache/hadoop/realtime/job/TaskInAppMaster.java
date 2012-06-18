@@ -125,10 +125,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
               TaskEventType.T_ATTEMPT_FAILED, new AttemptFailedTransition())
           .addTransition(TaskState.RUNNING, TaskState.KILL_WAIT,
               TaskEventType.T_KILL, KILL_TRANSITION)
-          .addTransition(TaskState.RUNNING,
-              EnumSet.of(TaskState.RUNNING, TaskState.FAILED),
-              TaskEventType.T_ATTEMPT_FAILED,
-              new TaskRetroactiveFailureTransition())
 
           // Transitions from KILL_WAIT state
           .addTransition(TaskState.KILL_WAIT,
@@ -349,9 +345,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       TaskAttemptCompletionEvent tce =
           recordFactory.newRecordInstance(TaskAttemptCompletionEvent.class);
       tce.setEventId(-1);
-      tce.setMapOutputServerAddress("http://"
-          + attempt.getNodeHttpAddress().split(":")[0] + ":"
-          + attempt.getShufflePort());
       tce.setStatus(status);
       tce.setAttemptId(attempt.getID());
       int runTime = 0;
@@ -433,6 +426,8 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
         task.handleTaskAttemptCompletion(
             ((TaskTAttemptEvent) event).getTaskAttemptID(),
             TaskAttemptCompletionEventStatus.FAILED);
+        task.eventHandler
+          .handle(new JobTaskRescheduledEvent(task.taskId));
         // we don't need a new event if we already have a spare
         if (--task.numberUncompletedAttempts == 0) {
           task.addAndScheduleAttempt();
@@ -465,29 +460,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       metrics.endRunningTask(this);
     }
     return finalState;
-  }
-
-  private static class TaskRetroactiveFailureTransition extends
-      AttemptFailedTransition {
-
-    @Override
-    public TaskState transition(TaskInAppMaster task, TaskEvent event) {
-      // verify that this occurs only for map task
-
-      // tell the job about the rescheduling
-      task.eventHandler.handle(new JobTaskRescheduledEvent(task.taskId));
-      // super.transition is mostly coded for the case where an
-      // UNcompleted task failed. When a COMPLETED task retroactively
-      // fails, we have to let AttemptFailedTransition.transition
-      // believe that there's no redundancy.
-      unSucceed(task);
-      return super.transition(task, event);
-    }
-
-    @Override
-    protected TaskState getDefaultState(Task task) {
-      return TaskState.SCHEDULED;
-    }
   }
 
   private static class KillWaitAttemptKilledTransition implements

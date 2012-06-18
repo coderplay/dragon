@@ -902,6 +902,8 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     public void transition(TaskAttemptInAppMaster taskAttempt,
         TaskAttemptEvent event) {
       // TODO: Cleanup the task
+      taskAttempt.eventHandler.handle(new TaskAttemptEvent(
+          taskAttempt.attemptId, TaskAttemptEventType.TA_CLEANUP_DONE));
       /*
        * TaskAttemptContext taskContext = new
        * TaskAttemptContextImpl(taskAttempt.conf, taskAttempt.attemptId);

@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.DragonJobGraph;
@@ -52,6 +51,7 @@ import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
 import org.apache.hadoop.realtime.job.app.event.JobFinishEvent;
+import org.apache.hadoop.realtime.job.app.event.JobTaskAttemptCompletedEvent;
 import org.apache.hadoop.realtime.job.app.event.JobTaskAttemptFetchFailureEvent;
 import org.apache.hadoop.realtime.job.app.event.JobTaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
@@ -63,10 +63,11 @@ import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskAttemptCompletionEvent;
+import org.apache.hadoop.realtime.records.TaskAttemptCompletionEventStatus;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskState;
-import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.realtime.serialize.HessianSerializer;
@@ -144,8 +145,7 @@ public class JobInAppMaster implements Job,
   private final List<String> diagnostics = new ArrayList<String>();
   
   //task/attempt related datastructures
-  private final Map<TaskId, Integer> successAttemptCompletionEventNoMap = 
-    new HashMap<TaskId, Integer>();
+  private List<TaskAttemptCompletionEvent> taskAttemptCompletionEvents;
   private final Map<TaskAttemptId, Integer> fetchFailuresMapping = 
     new HashMap<TaskAttemptId, Integer>();
 
@@ -153,6 +153,8 @@ public class JobInAppMaster implements Job,
       DIAGNOSTIC_UPDATE_TRANSITION = new DiagnosticsUpdateTransition();
   private static final InternalErrorTransition
       INTERNAL_ERROR_TRANSITION = new InternalErrorTransition();
+  private static final TaskAttemptCompletedEventTransition TASK_ATTEMPT_COMPLETED_EVENT_TRANSITION =
+      new TaskAttemptCompletedEventTransition();
   private static final CounterUpdateTransition COUNTER_UPDATE_TRANSITION =
       new CounterUpdateTransition();
 
@@ -197,6 +199,9 @@ public class JobInAppMaster implements Job,
               INTERNAL_ERROR_TRANSITION)
 
           // Transitions from RUNNING state
+          .addTransition(JobState.RUNNING, JobState.RUNNING,
+              JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
+              TASK_ATTEMPT_COMPLETED_EVENT_TRANSITION)
           .addTransition
               (JobState.RUNNING,
               EnumSet.of(JobState.RUNNING, JobState.FAILED),
@@ -581,7 +586,9 @@ public class JobInAppMaster implements Job,
         }
 
         checkTaskLimits();
-        
+        job.taskAttemptCompletionEvents =
+            new ArrayList<TaskAttemptCompletionEvent>(
+                job.numTasks + 10);
         long inputLength = 0;
 //        for (int i = 0; i < job.numTasks; ++i) {
 //          inputLength += taskSplitMetaInfo[i].getInputDataLength();
@@ -720,7 +727,7 @@ public class JobInAppMaster implements Job,
 //  // JobFinishedEvent triggers the move of the history file out of the staging
 //  // area. May need to create a new event type for this if JobFinished should 
 //  // not be generated for KilledJobs, etc.
-//  private static JobFinishedEvent createJobFinishedEvent(JobImpl job) {
+//  private static JobFinishedEvent createJobFinishedEvent(JobInAppMaster job) {
 //
 //    job.mayBeConstructFinalFullCounters();
 //
@@ -931,6 +938,18 @@ public class JobInAppMaster implements Job,
     }
   }
 
+  private static class TaskAttemptCompletedEventTransition implements
+      SingleArcTransition<JobInAppMaster, JobEvent> {
+    @Override
+    public void transition(JobInAppMaster job, JobEvent event) {
+      TaskAttemptCompletionEvent tce =
+          ((JobTaskAttemptCompletedEvent) event).getCompletionEvent();
+      // Add the TaskAttemptCompletionEvent
+      // eventId is equal to index in the arraylist
+      tce.setEventId(job.taskAttemptCompletionEvents.size());
+      job.taskAttemptCompletionEvents.add(tce);
+    }
+  }
   private static class InternalErrorTransition implements
       SingleArcTransition<JobInAppMaster, JobEvent> {
     @Override

@@ -52,7 +52,7 @@ public class TaskHeartbeatHandler extends AbstractService {
   private Thread lostTaskCheckerThread;
   private volatile boolean stopped;
   private int taskTimeOut = 5 * 60 * 1000;// 5 mins
-  private int taskTimeOutCheckInterval = 30 * 1000; // 30 seconds.
+  private int taskTimeOutCheckInterval = 10 * 1000; // 30 seconds.
 
   private final EventHandler eventHandler;
   private final Clock clock;
@@ -71,9 +71,9 @@ public class TaskHeartbeatHandler extends AbstractService {
   @Override
   public void init(Configuration conf) {
     super.init(conf);
-    taskTimeOut = conf.getInt(DragonJobConfig.TASK_TIMEOUT, 5 * 60 * 1000);
+    taskTimeOut = conf.getInt(DragonJobConfig.TASK_TIMEOUT, 30 * 1000);
     taskTimeOutCheckInterval =
-        conf.getInt(DragonJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 30 * 1000);
+        conf.getInt(DragonJobConfig.TASK_TIMEOUT_CHECK_INTERVAL_MS, 10 * 1000);
   }
 
   @Override
