@@ -295,7 +295,7 @@ public class DragonAppMaster extends CompositeService {
     // create single job
     Job newJob =
         new JobInAppMaster(jobId, appAttemptId, conf,
-            dispatcher.getEventHandler(), taskAttemptListener,
+            context.getEventHandler(), taskAttemptListener,
             jobTokenSecretManager, fsTokens, clock, metrics,
             currentUser.getUserName(), appSubmitTime, amInfos, context);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
@@ -479,7 +479,7 @@ public class DragonAppMaster extends CompositeService {
     /** create a job-start event to get this ball rolling */
     JobEvent startJobEvent = new JobEvent(job.getID(), JobEventType.JOB_START);
     /** send the job-start event. this triggers the job execution. */
-    dispatcher.getEventHandler().handle(startJobEvent);
+    context.getEventHandler().handle(startJobEvent);
   }
 
   private class JobEventDispatcher implements EventHandler<JobEvent> {

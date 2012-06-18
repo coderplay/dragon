@@ -136,7 +136,7 @@ class YarnChild {
       }
 
       // Create a final reference to the task for the doAs block
-      final TaskInChildImpl taskFinal = (TaskInChildImpl)myTask;
+      final TaskInChildImpl taskFinal = new TaskInChildImpl(myTask);
       childUGI.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
