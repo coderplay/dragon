@@ -234,4 +234,6 @@ public class DragonJobConfig {
     DRAGON_AM_PREFIX + "job.task.listener.thread-count";
   
   public static final int DEFAULT_DRAGON_AM_TASK_LISTENER_THREAD_COUNT = 30;
+  
+  public static final String TASK_MAX_ATTEMPTS = "dragon.task.maxattempts";
 }
