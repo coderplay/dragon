@@ -152,3 +152,20 @@ message StringCounterGroupMapProto {
   optional string key = 1;
   optional CounterGroupProto value = 2;
 }
+
+enum TaskAttemptCompletionEventStatusProto {
+  TACE_FAILED = 1;
+  TACE_KILLED = 2;
+  TACE_OBSOLETE = 3;
+  TACE_TIPFAILED = 4;
+}
+
+message TaskAttemptCompletionEventProto {
+  optional TaskAttemptIdProto attempt_id = 1;
+  optional TaskAttemptCompletionEventStatusProto status = 2;
+  optional int32 attempt_run_time = 3;
+  optional int32 event_id = 4;
+}
+message TaskInChildProto{
+  optional TaskIdProto task_id = 1;
+}

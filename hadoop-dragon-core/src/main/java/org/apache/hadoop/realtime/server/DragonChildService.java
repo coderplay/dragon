@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.realtime.server;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,11 +47,12 @@ import org.apache.hadoop.realtime.protocol.records.PingResponse;
 import org.apache.hadoop.realtime.protocol.records.StatusUpdateRequest;
 import org.apache.hadoop.realtime.protocol.records.StatusUpdateResponse;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskInChild;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.security.authorize.DragonAMPolicyProvider;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.security.authorize.PolicyProvider;
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -70,10 +73,10 @@ public class DragonChildService extends CompositeService implements
   private Server server;
   private InetSocketAddress bindAddress;
   
-  private ConcurrentMap<ContainerId, Task> containerIDToActiveAttemptMap =
-      new ConcurrentHashMap<ContainerId, Task>();
-  private Set<ContainerId> launchedJVMs = Collections
-      .newSetFromMap(new ConcurrentHashMap<ContainerId, Boolean>());
+  private ConcurrentMap<String, Task> containerIDToActiveAttemptMap =
+      new ConcurrentHashMap<String, Task>();
+  private Set<String> launchedJVMs = Collections
+      .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
   
   private AppContext context;
 
@@ -81,7 +84,7 @@ public class DragonChildService extends CompositeService implements
 
   public DragonChildService(AppContext appContext,
       JobTokenSecretManager jobTokenSecretManager) {
-    super("DragonClientService");
+    super("DragonChildService");
     this.context = appContext;
     this.jobTokenSecretManager = jobTokenSecretManager;
     this.protocolHandler = new DragonChildProtocolHandler();
@@ -104,7 +107,13 @@ public class DragonChildService extends CompositeService implements
   public void start() {
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
-    InetSocketAddress address = new InetSocketAddress(0);
+    InetSocketAddress address = NetUtils.createSocketAddr("0.0.0.0:0");
+    InetAddress hostNameResolved = null;
+    try {
+      hostNameResolved = InetAddress.getLocalHost();
+    } catch (UnknownHostException e) {
+      throw new YarnException(e);
+    }
 
     server =
         rpc.getServer(DragonChildProtocol.class, protocolHandler, address,
@@ -119,7 +128,9 @@ public class DragonChildService extends CompositeService implements
     }
 
     server.start();
-    this.bindAddress = NetUtils.getConnectAddress(server);
+    this.bindAddress =
+        NetUtils.createSocketAddr(hostNameResolved.getHostAddress() + ":"
+            + server.getPort());
     LOG.info("Instantiated DRAGONClientService at " + this.bindAddress);
     super.start();
   }
@@ -143,11 +154,11 @@ public class DragonChildService extends CompositeService implements
     @Override
     public GetTaskResponse getTask(GetTaskRequest request)
         throws YarnRemoteException {
-      ContainerId containerId = request.getContainerId();
-      LOG.info("Container with ID : " + containerId.getId() + " asked for a task");
-      
+      String containerId = request.getContainerId();
+      LOG.info("Container with ID : " + containerId + " asked for a task");
+      TaskInChild task = null;
       if (!containerIDToActiveAttemptMap.containsKey(containerId)) {
-        LOG.info("Container with ID: " + containerId.getId() + " is invalid and will be killed.");
+        LOG.info("Container with ID: " + containerId + " is invalid and will be killed.");
         //jvmTask = TASK_FOR_INVALID_JVM;
       } else {
         if (!launchedJVMs.contains(containerId)) {
@@ -155,13 +166,14 @@ public class DragonChildService extends CompositeService implements
               + " asking for task before AM launch registered. Given null task");
         } else {
 
-          Task task =containerIDToActiveAttemptMap.remove(containerId);
+          task =(TaskInChild) containerIDToActiveAttemptMap.remove(containerId);
           launchedJVMs.remove(containerId);
           LOG.info("Container with ID: " + containerId + " given task: " + task.getID());
         }
       }
-      // TODO: return the real word child need to run.
-      return null;
+      GetTaskResponse response = recordFactory.newRecordInstance(GetTaskResponse.class);
+      response.setTask(task);
+      return response;
     }
 
     @SuppressWarnings("unchecked")
@@ -218,20 +230,20 @@ public class DragonChildService extends CompositeService implements
   }
 
   @Override
-  public void registerPendingTask(Task task, ContainerId containerId) {
+  public void registerPendingTask(Task task, String containerId) {
     containerIDToActiveAttemptMap.put(containerId, task);
 
   }
 
   @Override
-  public void registerLaunchedTask(TaskAttemptId attemptID, ContainerId containerId) {
+  public void registerLaunchedTask(TaskAttemptId attemptID, String containerId) {
     launchedJVMs.add(containerId);
     taskHeartbeatHandler.register(attemptID);
 
   }
 
   @Override
-  public void unregister(TaskAttemptId attemptID, int containerId) {
+  public void unregister(TaskAttemptId attemptID, String containerId) {
     launchedJVMs.remove(containerId);
     containerIDToActiveAttemptMap.remove(containerId);
 
