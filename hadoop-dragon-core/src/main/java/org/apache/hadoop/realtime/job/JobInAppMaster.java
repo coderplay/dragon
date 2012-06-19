@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.DragonJobGraph;
@@ -65,6 +66,7 @@ import org.apache.hadoop.realtime.records.JobState;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskState;
+import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.realtime.serialize.HessianSerializer;
@@ -245,7 +247,8 @@ public class JobInAppMaster implements Job,
               INTERNAL_ERROR_TRANSITION)
           // Ignore-able events
           .addTransition(JobState.FAILED, JobState.FAILED,
-              JobEventType.JOB_KILL)
+              EnumSet.of(JobEventType.JOB_TASK_COMPLETED,
+                  JobEventType.JOB_KILL))
 
           // Transitions from KILLED state
           .addTransition(JobState.KILLED, JobState.KILLED,
@@ -611,21 +614,21 @@ public class JobInAppMaster implements Job,
 
       // Prepare the TaskAttemptListener server for authentication of Containers
       // TaskAttemptListener gets the information via jobTokenSecretManager.
-//      JobTokenIdentifier identifier =
-//          new JobTokenIdentifier(new Text(oldJobIDString));
-//      job.jobToken =
-//          new Token<JobTokenIdentifier>(identifier, job.jobTokenSecretManager);
-//      job.jobToken.setService(identifier.getJobId());
-//      // Add it to the jobTokenSecretManager so that TaskAttemptListener server
-//      // can authenticate containers(tasks)
-//      job.jobTokenSecretManager.addTokenForJob(oldJobIDString, job.jobToken);
-//      LOG.info("Adding job token for " + oldJobIDString
-//          + " to jobTokenSecretManager");
+      JobTokenIdentifier identifier =
+          new JobTokenIdentifier(new Text(jodIdString));
+      job.jobToken =
+          new Token<JobTokenIdentifier>(identifier, job.jobTokenSecretManager);
+      job.jobToken.setService(identifier.getJobId());
+      // Add it to the jobTokenSecretManager so that TaskAttemptListener server
+      // can authenticate containers(tasks)
+      job.jobTokenSecretManager.addTokenForJob(jodIdString, job.jobToken);
+      LOG.info("Adding job token for " + jodIdString
+          + " to jobTokenSecretManager");
 
       // Upload the jobTokens onto the remote FS so that ContainerManager can
       // localize it to be used by the Containers(tasks)
       Credentials tokenStorage = new Credentials();
-//      TokenCache.setJobToken(job.jobToken, tokenStorage);
+      TokenCache.setJobToken(job.jobToken, tokenStorage);
 
       if (UserGroupInformation.isSecurityEnabled()) {
         tokenStorage.addAll(job.fsTokens);
