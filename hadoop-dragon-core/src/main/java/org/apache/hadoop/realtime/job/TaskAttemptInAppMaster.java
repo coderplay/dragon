@@ -256,9 +256,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
               EnumSet.of(TaskAttemptEventType.TA_KILL,
                   TaskAttemptEventType.TA_CONTAINER_COMPLETED,
                   TaskAttemptEventType.TA_UPDATE,
-                  TaskAttemptEventType.TA_COMMIT_PENDING,
                   TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-                  TaskAttemptEventType.TA_DONE,
                   TaskAttemptEventType.TA_FAILMSG,
                   TaskAttemptEventType.TA_TIMED_OUT))
 
@@ -278,9 +276,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
               EnumSet.of(TaskAttemptEventType.TA_KILL,
                   TaskAttemptEventType.TA_CONTAINER_COMPLETED,
                   TaskAttemptEventType.TA_UPDATE,
-                  TaskAttemptEventType.TA_COMMIT_PENDING,
                   TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-                  TaskAttemptEventType.TA_DONE,
                   TaskAttemptEventType.TA_FAILMSG,
                   TaskAttemptEventType.TA_TIMED_OUT))
 
@@ -301,8 +297,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
                   .of(TaskAttemptEventType.TA_KILL,
                       TaskAttemptEventType.TA_CONTAINER_COMPLETED,
                       TaskAttemptEventType.TA_UPDATE,
-                      TaskAttemptEventType.TA_COMMIT_PENDING,
-                      TaskAttemptEventType.TA_DONE,
                       TaskAttemptEventType.TA_FAILMSG))
 
           // Transitions from KILL_TASK_CLEANUP
@@ -321,8 +315,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
                   .of(TaskAttemptEventType.TA_KILL,
                       TaskAttemptEventType.TA_CONTAINER_COMPLETED,
                       TaskAttemptEventType.TA_UPDATE,
-                      TaskAttemptEventType.TA_COMMIT_PENDING,
-                      TaskAttemptEventType.TA_DONE,
                       TaskAttemptEventType.TA_FAILMSG))
 
           // Transitions from FAILED state
@@ -339,8 +331,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
                       TaskAttemptEventType.TA_CONTAINER_COMPLETED,
                       TaskAttemptEventType.TA_UPDATE,
                       TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-                      TaskAttemptEventType.TA_COMMIT_PENDING,
-                      TaskAttemptEventType.TA_DONE,
                       TaskAttemptEventType.TA_FAILMSG))
 
           // Transitions from KILLED state
@@ -357,8 +347,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
                       TaskAttemptEventType.TA_CONTAINER_COMPLETED,
                       TaskAttemptEventType.TA_UPDATE,
                       TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-                      TaskAttemptEventType.TA_COMMIT_PENDING,
-                      TaskAttemptEventType.TA_DONE,
                       TaskAttemptEventType.TA_FAILMSG))
 
           // create the topology tables

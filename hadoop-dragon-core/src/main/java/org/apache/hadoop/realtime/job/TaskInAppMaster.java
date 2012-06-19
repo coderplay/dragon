@@ -1,3 +1,21 @@
+/**
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 package org.apache.hadoop.realtime.job;
 
 import java.util.Collection;
@@ -11,11 +29,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.app.rm.ContainerFailedEvent;
+import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
@@ -39,6 +57,7 @@ import org.apache.hadoop.realtime.records.TaskState;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
 import org.apache.hadoop.realtime.server.TaskAttemptListener;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
@@ -51,11 +70,17 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 
+import sun.awt.AppContext;
+
+/**
+ * Implementation of Task interface.
+ */
+@SuppressWarnings({ "rawtypes", "unchecked" })
 public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
 
   private static final Log LOG = LogFactory.getLog(TaskInAppMaster.class);
 
-  protected final Configuration conf;
+  protected final DragonConfiguration conf;
   protected final Path jobFile;
   protected final TaskAttemptListener taskAttemptListener;
   protected final EventHandler eventHandler;
@@ -137,8 +162,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
               TaskState.KILL_WAIT,
               EnumSet.of(TaskEventType.T_KILL,
                   TaskEventType.T_ATTEMPT_LAUNCHED,
-                  TaskEventType.T_ATTEMPT_FAILED,
-                  TaskEventType.T_ATTEMPT_SUCCEEDED))
+                  TaskEventType.T_ATTEMPT_FAILED))
 
           // Transitions from SUCCEEDED state
 
@@ -154,7 +178,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
           .installTopology();
 
   public TaskInAppMaster(JobId jobId, EventHandler eventHandler,
-      Path remoteJobConfFile, Configuration conf, int id,
+      Path remoteJobConfFile, DragonConfiguration conf, int id,
       TaskAttemptListener taskAttemptListener,
       Token<JobTokenIdentifier> jobToken,
       Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock,

@@ -41,8 +41,6 @@ public enum TaskAttemptEventType {
 
   //Producer:TaskAttemptListener
   TA_DIAGNOSTICS_UPDATE,
-  TA_COMMIT_PENDING, 
-  TA_DONE,
   TA_FAILMSG,
   TA_UPDATE,
   TA_TIMED_OUT,
@@ -51,5 +49,6 @@ public enum TaskAttemptEventType {
   TA_CLEANUP_DONE,
 
   //Producer:Job
+  // FIXME: Dragon should produce TA_TOO_MANY_SEND_FAILURE ^_^
   TA_TOO_MANY_FETCH_FAILURE,
 }
