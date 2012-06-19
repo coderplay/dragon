@@ -29,11 +29,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.app.rm.ContainerFailedEvent;
-import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
@@ -80,7 +80,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
 
   private static final Log LOG = LogFactory.getLog(TaskInAppMaster.class);
 
-  protected final DragonConfiguration conf;
+  protected final Configuration conf;
   protected final Path jobFile;
   protected final TaskAttemptListener taskAttemptListener;
   protected final EventHandler eventHandler;
@@ -177,8 +177,8 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
           // create the topology tables
           .installTopology();
 
-  public TaskInAppMaster(JobId jobId, EventHandler eventHandler,
-      Path remoteJobConfFile, DragonConfiguration conf, int id,
+  public TaskInAppMaster(JobId jobId, int partition, EventHandler eventHandler,
+      Path remoteJobConfFile, Configuration conf,
       TaskAttemptListener taskAttemptListener,
       Token<JobTokenIdentifier> jobToken,
       Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock,
@@ -194,7 +194,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
     // have a convention that none of the overrides depends on any
     // fields that need initialization.
     maxAttempts = getMaxAttempts();
-    taskId = DragonBuilderUtils.newTaskId(jobId, id);
+    taskId = DragonBuilderUtils.newTaskId(jobId, partition);
     this.taskAttemptListener = taskAttemptListener;
     this.eventHandler = eventHandler;
     this.metrics = metrics;
