@@ -47,7 +47,6 @@ import org.apache.hadoop.realtime.DragonVertex;
 import org.apache.hadoop.realtime.JobSubmissionFiles;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.client.app.AppContext;
-import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
@@ -130,7 +129,7 @@ public class JobInAppMaster implements Job,
     // Can then replace task-level uber counters (MR-2424) with job-level ones
     // sent from LocalContainerLauncher, and eventually including a count of
     // of uber-AM attempts (probably sent from MRAppMaster).
-  public DragonConfiguration conf;
+  public Configuration conf;
 
   // fields initialized in init
   private FileSystem fs;
@@ -198,6 +197,11 @@ public class JobInAppMaster implements Job,
               EnumSet.of(JobState.RUNNING, JobState.FAILED),
               JobEventType.JOB_TASK_COMPLETED,
               new TaskCompletedTransition())
+          .addTransition
+              (JobState.RUNNING,
+              EnumSet.of(JobState.RUNNING, JobState.FAILED),
+              JobEventType.JOB_COMPLETED,
+              new JobNoTasksCompletedTransition())
           .addTransition(JobState.RUNNING, JobState.KILL_WAIT,
               JobEventType.JOB_KILL, new KillTasksTransition())
           .addTransition(JobState.RUNNING, JobState.RUNNING,
@@ -282,7 +286,7 @@ public class JobInAppMaster implements Job,
   // changing fields while the job is running
   private int numTasks;
   private int completedTaskCount = 0;
-  private int failedTaskCount = 0;
+  private boolean hasTaskFailure = false;
   private int killedTaskCount = 0;
   private long startTime;
   private long finishTime;
@@ -300,7 +304,7 @@ public class JobInAppMaster implements Job,
     this.applicationAttemptId = applicationAttemptId;
     this.jobId = jobId;
     this.jobName = conf.get(DragonJobConfig.JOB_NAME, "<missing job name>");
-    this.conf = new DragonConfiguration(conf);
+    this.conf = new Configuration(conf);
     this.metrics = metrics;
     this.clock = clock;
     this.amInfos = amInfos;
@@ -574,7 +578,7 @@ public class JobInAppMaster implements Job,
         DragonJobGraph graph = createJobGraph(job);
         job.numTasks = getTaskCount(graph);
         if (job.numTasks == 0) {
-          job.addDiagnostic("No of maps and reduces are 0 " + job.jobId);
+          job.addDiagnostic("No of tasks are 0 " + job.jobId);
         }
 
         checkTaskLimits();
@@ -643,16 +647,13 @@ public class JobInAppMaster implements Job,
 
     private void createTasks(JobInAppMaster job, long inputLength,
                                 DragonJobGraph graph) {
-      // Test
       for (DragonVertex vertex : graph.vertexSet()) {
         for (int i = 0; i < vertex.getTasks(); i++) {
-          // TODO: implement it!
-          Task task =
-              new TaskInAppMaster(job.jobId, job.eventHandler,
-                  job.remoteJobConfFile, job.conf, job.taskNumber++,
-                  job.taskAttemptListener, job.jobToken,
-                  job.fsTokens.getAllTokens(), job.clock,
-                  job.applicationAttemptId.getAttemptId(), job.metrics);
+          Task task = new TaskInAppMaster(job.jobId, i,  job.eventHandler,
+              job.remoteJobConfFile, job.conf,
+              job.taskAttemptListener, job.jobToken,
+              job.fsTokens.getAllTokens(), job.clock,
+              job.applicationAttemptId.getAttemptId(), job.metrics);
           job.addTask(task);
         }
       }
@@ -697,6 +698,12 @@ public class JobInAppMaster implements Job,
 //          job.appSubmitTime, job.startTime);
 //      job.eventHandler.handle(new JobHistoryEvent(job.jobId, jice));
       job.metrics.runningJob(job);
+      
+      // If we have no tasks, just transition to job completed
+      if (job.numTasks == 0) {
+        job.eventHandler.handle(new JobEvent(job.jobId,
+            JobEventType.JOB_COMPLETED));
+      }
     }
   }
 
@@ -848,19 +855,24 @@ public class JobInAppMaster implements Job,
 
     protected JobState checkJobForCompletion(JobInAppMaster job) {
       // check for Job failure
-      job.setFinishTime();
+      if (job.hasTaskFailure) {
+        job.setFinishTime();
 
-      String diagnosticMsg =
-          "Job failed as tasks failed. " + "failedMaps:" + job.failedTaskCount
-              + " failedReduces:" + job.failedTaskCount;
-      LOG.info(diagnosticMsg);
-      job.addDiagnostic(diagnosticMsg);
-      job.abortJob(JobState.FAILED);
-      return job.finished(JobState.FAILED);
+        String diagnosticMsg = "Job failed as tasks failed. " +
+            "failedMaps:" + job.hasTaskFailure + 
+            " failedReduces:" + job.hasTaskFailure;
+        LOG.info(diagnosticMsg);
+        job.addDiagnostic(diagnosticMsg);
+        job.abortJob(JobState.FAILED);
+        return job.finished(JobState.FAILED);
+      }
+
+      // return the current state, Job not finished yet
+      return job.getState();
     }
   
     private void taskFailed(JobInAppMaster job, Task task) {
-      job.failedTaskCount++;
+      job.hasTaskFailure = true;
       job.addDiagnostic("Task failed " + task.getID());
       job.metrics.failedTask(task);
     }
@@ -868,6 +880,18 @@ public class JobInAppMaster implements Job,
     private void taskKilled(JobInAppMaster job, Task task) {
       job.killedTaskCount++;
       job.metrics.killedTask(task);
+    }
+  }
+ 
+  // Transition class for handling jobs with no tasks
+  private static class JobNoTasksCompletedTransition implements
+      MultipleArcTransition<JobInAppMaster, JobEvent, JobState> {
+
+    @Override
+    public JobState transition(JobInAppMaster job, JobEvent event) {
+      job.setFinishTime();
+      job.abortJob(JobState.FAILED);
+      return job.finished(JobState.FAILED);
     }
   }
 
