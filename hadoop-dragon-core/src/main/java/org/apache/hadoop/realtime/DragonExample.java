@@ -15,7 +15,14 @@ public class DragonExample {
     setJarByClass(conf,DragonJob.class);
     DragonJob job = DragonJob.getInstance(conf);
     job.setName("First Graph Job");
+    DragonVertex source = new DragonVertex.Builder("source")
+                                             .tasks(2)
+                                             .build();
+    DragonVertex m1 = new DragonVertex.Builder("intermediate1")
+                                         .tasks(2)
+                                         .build();
     DragonJobGraph g = new DragonJobGraph();
+    g.addEdge(source, m1);
     job.setJobGraph(g);
     // check all source vertex hold event producers when submitting
     job.submit();
