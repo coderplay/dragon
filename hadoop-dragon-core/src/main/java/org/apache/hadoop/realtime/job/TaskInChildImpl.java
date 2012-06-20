@@ -6,7 +6,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.realtime.protocol.DragonChildProtocol;
+import org.apache.hadoop.realtime.child.ChildServiceDelegate;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
@@ -33,7 +33,7 @@ public class TaskInChildImpl extends TaskInChild {
     this.workingPath=path;
   }
   
-  public void run(Configuration conf , DragonChildProtocol childProtocol){
+  public void run(Configuration conf , ChildServiceDelegate delegate){
       LOG.error("Task is start!");
     try {
       while (true) {

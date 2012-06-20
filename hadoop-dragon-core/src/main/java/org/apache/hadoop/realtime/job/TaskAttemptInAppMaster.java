@@ -54,6 +54,7 @@ import org.apache.hadoop.realtime.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.realtime.app.rm.launcher.ContainerLauncher;
 import org.apache.hadoop.realtime.app.rm.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.realtime.app.rm.launcher.ContainerRemoteLaunchEvent;
+import org.apache.hadoop.realtime.child.DragonChildJVM;
 import org.apache.hadoop.realtime.job.app.event.JobCounterUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;

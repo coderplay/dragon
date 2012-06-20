@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.realtime.job;
+package org.apache.hadoop.realtime.child;
 
 import java.net.InetSocketAddress;
 import java.util.Iterator;
@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.job.TaskLog;
 import org.apache.hadoop.realtime.job.TaskLog.LogName;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
