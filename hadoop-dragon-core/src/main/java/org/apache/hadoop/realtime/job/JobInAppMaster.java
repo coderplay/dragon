@@ -238,8 +238,6 @@ public class JobInAppMaster implements Job,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
           .addTransition(JobState.FAILED, JobState.FAILED,
-              JobEventType.JOB_TASK_COMPLETED)
-          .addTransition(JobState.FAILED, JobState.FAILED,
               JobEventType.JOB_COUNTER_UPDATE, COUNTER_UPDATE_TRANSITION)
           .addTransition(
               JobState.FAILED,
@@ -271,7 +269,7 @@ public class JobInAppMaster implements Job,
               EnumSet.of(JobEventType.JOB_INIT,
                   JobEventType.JOB_KILL,
                   JobEventType.JOB_TASK_COMPLETED,
-                  JobEventType.JOB_TASK_RESCHEDULED,
+                  JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
                   JobEventType.JOB_DIAGNOSTIC_UPDATE,
                   JobEventType.INTERNAL_ERROR))
           .addTransition(JobState.ERROR, JobState.ERROR,
