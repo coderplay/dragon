@@ -44,4 +44,6 @@ public interface DragonConfig {
 	public static final String SYSTEM_DIR = null;
 	public static final String STAGING_AREA_ROOT = null;
   
+  public static final String RESOURCE_CALCULATOR_PLUGIN = 
+      "dragon.job.resourcecalculatorplugin";
 }

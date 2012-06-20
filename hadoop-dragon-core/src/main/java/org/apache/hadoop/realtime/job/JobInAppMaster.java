@@ -51,7 +51,6 @@ import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
 import org.apache.hadoop.realtime.job.app.event.JobFinishEvent;
-import org.apache.hadoop.realtime.job.app.event.JobTaskAttemptCompletedEvent;
 import org.apache.hadoop.realtime.job.app.event.JobTaskAttemptFetchFailureEvent;
 import org.apache.hadoop.realtime.job.app.event.JobTaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
@@ -63,8 +62,6 @@ import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
-import org.apache.hadoop.realtime.records.TaskAttemptCompletionEvent;
-import org.apache.hadoop.realtime.records.TaskAttemptCompletionEventStatus;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskState;
@@ -127,8 +124,6 @@ public class JobInAppMaster implements Job,
   volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
   private Object fullCountersLock = new Object();
   private Counters fullCounters = null;
-  private Counters finalMapCounters = null;
-  private Counters finalReduceCounters = null;
     // FIXME:  
     //
     // Can then replace task-level uber counters (MR-2424) with job-level ones
@@ -140,12 +135,12 @@ public class JobInAppMaster implements Job,
   private FileSystem fs;
   private Path remoteJobSubmitDir;
   public Path remoteJobConfFile;
+  private volatile int taskNumber = 0;
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
   private final List<String> diagnostics = new ArrayList<String>();
   
   //task/attempt related datastructures
-  private List<TaskAttemptCompletionEvent> taskAttemptCompletionEvents;
   private final Map<TaskAttemptId, Integer> fetchFailuresMapping = 
     new HashMap<TaskAttemptId, Integer>();
 
@@ -153,8 +148,6 @@ public class JobInAppMaster implements Job,
       DIAGNOSTIC_UPDATE_TRANSITION = new DiagnosticsUpdateTransition();
   private static final InternalErrorTransition
       INTERNAL_ERROR_TRANSITION = new InternalErrorTransition();
-  private static final TaskAttemptCompletedEventTransition TASK_ATTEMPT_COMPLETED_EVENT_TRANSITION =
-      new TaskAttemptCompletedEventTransition();
   private static final CounterUpdateTransition COUNTER_UPDATE_TRANSITION =
       new CounterUpdateTransition();
 
@@ -199,9 +192,6 @@ public class JobInAppMaster implements Job,
               INTERNAL_ERROR_TRANSITION)
 
           // Transitions from RUNNING state
-          .addTransition(JobState.RUNNING, JobState.RUNNING,
-              JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
-              TASK_ATTEMPT_COMPLETED_EVENT_TRANSITION)
           .addTransition
               (JobState.RUNNING,
               EnumSet.of(JobState.RUNNING, JobState.FAILED),
@@ -283,7 +273,6 @@ public class JobInAppMaster implements Job,
               EnumSet.of(JobEventType.JOB_INIT,
                   JobEventType.JOB_KILL,
                   JobEventType.JOB_TASK_COMPLETED,
-                  JobEventType.JOB_TASK_RESCHEDULED,
                   JobEventType.JOB_DIAGNOSTIC_UPDATE,
                   JobEventType.INTERNAL_ERROR))
           .addTransition(JobState.ERROR, JobState.ERROR,
@@ -592,9 +581,6 @@ public class JobInAppMaster implements Job,
         }
 
         checkTaskLimits();
-        job.taskAttemptCompletionEvents =
-            new ArrayList<TaskAttemptCompletionEvent>(
-                job.numTasks + 10);
         long inputLength = 0;
 //        for (int i = 0; i < job.numTasks; ++i) {
 //          inputLength += taskSplitMetaInfo[i].getInputDataLength();
@@ -956,19 +942,7 @@ public class JobInAppMaster implements Job,
 //      }
     }
   }
-
-  private static class TaskAttemptCompletedEventTransition implements
-      SingleArcTransition<JobInAppMaster, JobEvent> {
-    @Override
-    public void transition(JobInAppMaster job, JobEvent event) {
-      TaskAttemptCompletionEvent tce =
-          ((JobTaskAttemptCompletedEvent) event).getCompletionEvent();
-      // Add the TaskAttemptCompletionEvent
-      // eventId is equal to index in the arraylist
-      tce.setEventId(job.taskAttemptCompletionEvents.size());
-      job.taskAttemptCompletionEvents.add(tce);
-    }
-  }
+  
   private static class InternalErrorTransition implements
       SingleArcTransition<JobInAppMaster, JobEvent> {
     @Override
