@@ -273,7 +273,6 @@ public class JobInAppMaster implements Job,
               EnumSet.of(JobEventType.JOB_INIT,
                   JobEventType.JOB_KILL,
                   JobEventType.JOB_TASK_COMPLETED,
-                  JobEventType.JOB_TASK_ATTEMPT_COMPLETED,
                   JobEventType.JOB_DIAGNOSTIC_UPDATE,
                   JobEventType.INTERNAL_ERROR))
           .addTransition(JobState.ERROR, JobState.ERROR,
