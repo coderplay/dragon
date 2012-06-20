@@ -124,3 +124,19 @@ message StatusUpdateRequestProto {
 message StatusUpdateResponseProto {
   optional bool result = 1;
 }
+
+message FsErrorRequestProto{
+  optional TaskAttemptIdProto task_attempt_id = 1;
+  optional string message = 2;
+}
+
+message FatalErrorRequestProto{
+  optional TaskAttemptIdProto task_attempt_id = 1;
+  optional string message = 2;
+}
+
+message FsErrorResponseProto{
+}
+
+message FatalErrorResponseProto{
+}

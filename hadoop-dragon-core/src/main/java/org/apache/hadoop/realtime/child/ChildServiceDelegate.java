@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.protocol.DragonChildProtocol;
+import org.apache.hadoop.realtime.protocol.records.FatalErrorRequest;
+import org.apache.hadoop.realtime.protocol.records.FsErrorRequest;
 import org.apache.hadoop.realtime.protocol.records.GetTaskRequest;
 import org.apache.hadoop.realtime.protocol.records.GetTaskResponse;
 import org.apache.hadoop.realtime.protocol.records.PingRequest;
@@ -77,6 +79,7 @@ public class ChildServiceDelegate {
       throws YarnRemoteException {
     GetTaskRequest request =
         recordFactory.newRecordInstance(GetTaskRequest.class);
+    request.setContainerId(containerIdString);
     TaskInChild task =
         ((GetTaskResponse) invoke("getTask", GetTaskRequest.class, request))
             .getTask();
@@ -103,8 +106,16 @@ public class ChildServiceDelegate {
     return result;
   }
 
-  public void fatalError(TaskAttemptId attemptId, String msg) {
-
+  public void fatalError(TaskAttemptId attemptId, String msg) throws YarnRemoteException {
+    FatalErrorRequest request = recordFactory.newRecordInstance(FatalErrorRequest.class);
+    request.setTaskAttemptId(attemptId);
+    invoke("fatalError", FatalErrorRequest.class, request);
+  }
+  
+  public void fsError(TaskAttemptId attemptId, String msg) throws YarnRemoteException{
+    FsErrorRequest request = recordFactory.newRecordInstance(FsErrorRequest.class);
+    request.setTaskAttemptId(attemptId);
+    invoke("fatalError", FsErrorRequest.class, request);
   }
 
   private DragonChildProtocol getProxy() throws YarnException {

@@ -28,4 +28,6 @@ service DragonChildProtocolService {
   rpc getTask (GetTaskRequestProto) returns (GetTaskResponseProto);
   rpc ping (PingRequestProto) returns (PingResponseProto);
   rpc statusUpdate (StatusUpdateRequestProto) returns (StatusUpdateResponseProto);
+  rpc fsError (FsErrorRequestProto) returns (FsErrorResponseProto);
+  rpc fatalError (FatalErrorRequestProto) returns (FatalErrorResponseProto);
 }

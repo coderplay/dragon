@@ -108,7 +108,7 @@ class YarnChild {
       });
     } catch (FSError e) {
       LOG.fatal("FSError from child", e);
-      // delegate.fsError(attemptId, e.getMessage());
+      delegate.fsError(attemptId, e.getMessage());
     } catch (Exception exception) {
       LOG.warn("Exception running child : "
           + StringUtils.stringifyException(exception));
