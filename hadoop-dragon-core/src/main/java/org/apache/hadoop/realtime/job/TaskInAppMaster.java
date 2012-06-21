@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.app.rm.ContainerFailedEvent;
+import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
@@ -55,7 +56,7 @@ import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.records.TaskState;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
-import org.apache.hadoop.realtime.server.TaskAttemptListener;
+import org.apache.hadoop.realtime.server.ChildService;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
@@ -70,8 +71,6 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 
-import sun.awt.AppContext;
-
 /**
  * Implementation of Task interface.
  */
@@ -82,7 +81,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
 
   protected final Configuration conf;
   protected final Path jobFile;
-  protected final TaskAttemptListener taskAttemptListener;
+  protected final int partition;
   protected final EventHandler eventHandler;
   private final TaskId taskId;
   private Map<TaskAttemptId, TaskAttempt> attempts;
@@ -91,18 +90,20 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   private final Lock readLock;
   private final Lock writeLock;
   private long scheduledTime;
+  protected final AppContext appContext;
   private final DragonAppMetrics metrics;
 
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
+  
+
+  protected Credentials credentials;
+  protected Token<JobTokenIdentifier> jobToken;
 
   // By default, the next TaskAttempt number is zero. Changes during recovery
   protected int nextAttemptNumber = 0;
   private int finishedAttempts;// finish are total of failed and killed
   private int failedAttempts;
-
-  protected Collection<Token<? extends TokenIdentifier>> fsTokens;
-  protected Token<JobTokenIdentifier> jobToken;
 
   private final StateMachine<TaskState, TaskEventType, TaskEvent> stateMachine;
 
@@ -177,12 +178,10 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
           // create the topology tables
           .installTopology();
 
-  public TaskInAppMaster(JobId jobId, int partition, EventHandler eventHandler,
-      Path remoteJobConfFile, Configuration conf,
-      TaskAttemptListener taskAttemptListener,
-      Token<JobTokenIdentifier> jobToken,
-      Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock,
-      int startCount, DragonAppMetrics metrics) {
+  public TaskInAppMaster(JobId jobId, int taskIndex, int partition,
+      EventHandler eventHandler, Path remoteJobConfFile, Configuration conf,
+      Token<JobTokenIdentifier> jobToken, Credentials credentials, Clock clock,
+      int startCount, DragonAppMetrics metrics, AppContext appContext) {
     this.conf = conf;
     this.clock = clock;
     this.jobFile = remoteJobConfFile;
@@ -194,13 +193,14 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
     // have a convention that none of the overrides depends on any
     // fields that need initialization.
     maxAttempts = getMaxAttempts();
-    taskId = DragonBuilderUtils.newTaskId(jobId, partition);
-    this.taskAttemptListener = taskAttemptListener;
+    taskId = DragonBuilderUtils.newTaskId(jobId, taskIndex, partition);
+    this.partition = partition;
     this.eventHandler = eventHandler;
-    this.metrics = metrics;
-
-    this.fsTokens = fsTokens;
+    this.credentials = credentials;
     this.jobToken = jobToken;
+    this.metrics = metrics;
+    this.appContext = appContext;
+
     // All the new TaskAttemptIDs are generated based on MR
     // ApplicationAttemptID so that attempts from previous lives don't
     // over-step the current one. This assumes that a task won't have more
@@ -316,9 +316,8 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
 
   // TODO: createAttempt
   protected TaskAttempt createAttempt() {
-    return new TaskAttemptInAppMaster(taskId, failedAttempts, eventHandler,
-        taskAttemptListener, taskId.getJobId(), conf, jobToken, null, fsTokens,
-        clock);
+    return new TaskAttemptInAppMaster(taskId, nextAttemptNumber, eventHandler,
+        jobFile, partition, conf, jobToken, credentials, clock, appContext);
   }
 
   // This is always called in the Write Lock

@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -72,7 +73,8 @@ import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.realtime.serialize.HessianSerializer;
-import org.apache.hadoop.realtime.server.TaskAttemptListener;
+import org.apache.hadoop.realtime.server.DragonChildService;
+import org.apache.hadoop.realtime.server.ChildService;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -113,7 +115,6 @@ public class JobInAppMaster implements Job,
   private final Lock writeLock;
   private final JobId jobId;
   private final String jobName;
-  private final TaskAttemptListener taskAttemptListener;
   private final Object tasksSyncHandle = new Object();
   private final Set<TaskId> taskIds = new LinkedHashSet<TaskId>();
   private final EventHandler eventHandler;
@@ -306,7 +307,6 @@ public class JobInAppMaster implements Job,
 
   public JobInAppMaster(JobId jobId, ApplicationAttemptId applicationAttemptId,
       Configuration conf, EventHandler eventHandler,
-      TaskAttemptListener taskAttemptListener,
       JobTokenSecretManager jobTokenSecretManager,
       Credentials fsTokenCredentials, Clock clock, DragonAppMetrics metrics,
       String userName, long appSubmitTime, List<AMInfo> amInfos,
@@ -323,7 +323,6 @@ public class JobInAppMaster implements Job,
     this.queueName = conf.get(DragonJobConfig.QUEUE_NAME, "default");
     this.appSubmitTime = appSubmitTime;
 
-    this.taskAttemptListener = taskAttemptListener;
     this.eventHandler = eventHandler;
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     this.readLock = readWriteLock.readLock();
@@ -659,16 +658,18 @@ public class JobInAppMaster implements Job,
     }
 
     private void createTasks(JobInAppMaster job, long inputLength,
-                                DragonJobGraph graph) {
+        DragonJobGraph graph) {
+      int index = 0;
       for (DragonVertex vertex : graph.vertexSet()) {
         for (int i = 0; i < vertex.getTasks(); i++) {
-          Task task = new TaskInAppMaster(job.jobId, i,  job.eventHandler,
-              job.remoteJobConfFile, job.conf,
-              job.taskAttemptListener, job.jobToken,
-              job.fsTokens.getAllTokens(), job.clock,
-              job.applicationAttemptId.getAttemptId(), job.metrics);
+          Task task =
+              new TaskInAppMaster(job.jobId, index, i, job.eventHandler,
+                  job.remoteJobConfFile, job.conf, job.jobToken, job.fsTokens,
+                  job.clock, job.applicationAttemptId.getAttemptId(),
+                  job.metrics, job.appContext);
           job.addTask(task);
         }
+        index++;
       }
       LOG.info("Tasks number for job " + job.jobId + " = " + job.numTasks);
     }

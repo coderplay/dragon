@@ -23,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,6 +53,10 @@ import org.apache.hadoop.realtime.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.realtime.app.rm.launcher.ContainerLauncher;
 import org.apache.hadoop.realtime.app.rm.launcher.ContainerLauncherEvent;
 import org.apache.hadoop.realtime.app.rm.launcher.ContainerRemoteLaunchEvent;
+import org.apache.hadoop.realtime.child.DragonChildJVM;
+import org.apache.hadoop.realtime.client.app.AppContext;
+import org.apache.hadoop.realtime.job.app.event.ChildExecutionEvent;
+import org.apache.hadoop.realtime.job.app.event.ChildExecutionEventType;
 import org.apache.hadoop.realtime.job.app.event.JobCounterUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
@@ -68,21 +71,19 @@ import org.apache.hadoop.realtime.job.app.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.realtime.job.app.event.TaskEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskTAttemptEvent;
+import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskAttemptReport;
 import org.apache.hadoop.realtime.records.TaskAttemptState;
 import org.apache.hadoop.realtime.records.TaskId;
-import org.apache.hadoop.realtime.records.TaskInChild;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
-import org.apache.hadoop.realtime.server.TaskAttemptListener;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.YarnException;
@@ -120,22 +121,23 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   private static final String LINE_SEPARATOR = System
       .getProperty("line.separator");
 
+  private final int partition;
   private final TaskAttemptId attemptId;
-  private final JobId jobId;
   private final Configuration conf;
+  private final Path jobFile;
   private Token<JobTokenIdentifier> jobToken;
-  private Collection<Token<? extends TokenIdentifier>> fsTokens;
 
   private final List<String> diagnostics = new ArrayList<String>();
-  protected EventHandler eventHandler;
+  private EventHandler eventHandler;
   private final Clock clock;
+  private final JobId jobId;
   private long launchTime;
   private long finishTime;
   private final Resource resourceCapability;
-  private final String[] dataLocalHosts;
-  private final TaskAttemptListener taskAttemptListener;
   private final Lock readLock;
   private final Lock writeLock;
+  private final AppContext appContext;
+  private Credentials credentials;
   private static Object commonContainerSpecLock = new Object();
   private static final Object classpathLock = new Object();
   private static ContainerLaunchContext commonContainerSpec = null;
@@ -156,7 +158,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   private ContainerToken containerToken;
   private Resource assignedCapability;
 
-  private TaskInChild remoteTask;
+  private ChildExecutionContext remoteTask;
 
   private final static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -354,28 +356,30 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
 
   private final StateMachine<TaskAttemptState, TaskAttemptEventType, TaskAttemptEvent> stateMachine;
 
-  TaskAttemptInAppMaster(TaskId taskId, int i, EventHandler eventHandler,
-      TaskAttemptListener taskAttemptListener, JobId jobId, Configuration conf,
-      Token<JobTokenIdentifier> jobToken, String[] dataLocalHosts,
-      Collection<Token<? extends TokenIdentifier>> fsTokens, Clock clock) {
+  TaskAttemptInAppMaster(TaskId taskId, int attempt, EventHandler eventHandler,
+      Path jobFile, int partition, Configuration conf,
+      Token<JobTokenIdentifier> jobToken, Credentials credentials, Clock clock,
+      AppContext appContext) {
     this.attemptId = recordFactory.newRecordInstance(TaskAttemptId.class);
-    attemptId.setTaskId(taskId);
-    attemptId.setId(i);
-    this.jobId = jobId;
+    this.attemptId.setTaskId(taskId);
+    this.attemptId.setId(attempt);
+    this.jobId = taskId.getJobId();
     this.conf = conf;
-    this.jobToken = jobToken;
-    this.fsTokens = fsTokens;
-    this.clock = clock;
-    this.eventHandler = eventHandler;
-    this.taskAttemptListener = taskAttemptListener;
+    this.jobFile = jobFile;
+    this.partition = partition;
+    this.appContext = appContext;
 
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     readLock = readWriteLock.readLock();
     writeLock = readWriteLock.writeLock();
+    
+    this.credentials = credentials;
+    this.jobToken = jobToken;
+    this.eventHandler = eventHandler;
+    this.clock = clock;
 
     this.resourceCapability = recordFactory.newRecordInstance(Resource.class);
     this.resourceCapability.setMemory(getMemoryRequired(conf));
-    this.dataLocalHosts = dataLocalHosts;
     RackResolver.init(conf);
     stateMachine = stateMachineFactory.make(this);
   }
@@ -527,8 +531,10 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     }
   }
 
-  protected TaskInChild createRemoteTask() {
-    return DragonBuilderUtils.newTaskInChild(attemptId.getTaskId());
+  protected ChildExecutionContext createRemoteTask() {
+    String user = conf.get(DragonJobConfig.USER_NAME);
+    return DragonBuilderUtils.newTaskAttemptExecutionContext(
+        TaskAttemptInAppMaster.this, user);
   }
 
   private static class ContainerAssignedTransition implements
@@ -550,8 +556,9 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       taskAttempt.assignedCapability = cEvent.getContainer().getResource();
       // TODO:this is a _real_ Task (classic Hadoop DRAGON flavor):
       taskAttempt.remoteTask = taskAttempt.createRemoteTask();
-      taskAttempt.taskAttemptListener.registerPendingTask(
-          taskAttempt.remoteTask, taskAttempt.containerID.toString());
+      taskAttempt.eventHandler.handle(new ChildExecutionEvent(
+          ChildExecutionEventType.CHILDTASK_ASSIGNED, taskAttempt.attemptId,
+          taskAttempt.containerID, taskAttempt.remoteTask));
 
       // launch the container
       // create the container object to be launched for a given Task attempt
@@ -559,8 +566,9 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
           createContainerLaunchContext(cEvent.getApplicationACLs(),
               taskAttempt.containerID, taskAttempt.conf, taskAttempt.jobToken,
               taskAttempt.attemptId, taskAttempt.jobId,
-              taskAttempt.assignedCapability, taskAttempt.taskAttemptListener,
-              taskAttempt.fsTokens);
+              taskAttempt.assignedCapability,
+              taskAttempt.credentials,
+              taskAttempt.appContext);
       taskAttempt.eventHandler.handle(new ContainerRemoteLaunchEvent(
           taskAttempt.attemptId, taskAttempt.containerID,
           taskAttempt.containerMgrAddress, taskAttempt.containerToken,
@@ -573,14 +581,14 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       ContainerId containerId, Configuration conf,
       Token<JobTokenIdentifier> jobToken, TaskAttemptId attemptId,
       final JobId jobId, Resource assignedCapability,
-      TaskAttemptListener taskAttemptListener,
-      Collection<Token<? extends TokenIdentifier>> fsTokens) {
+      Credentials credentials,
+      AppContext context) {
 
     synchronized (commonContainerSpecLock) {
       if (commonContainerSpec == null) {
         commonContainerSpec =
             createCommonContainerLaunchContext(applicationACLs, conf, jobToken,
-                jobId, fsTokens);
+                jobId, credentials);
       }
     }
 
@@ -595,7 +603,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
 
     // Set up the launch command
     List<String> commands =
-        DragonChildJVM.getVMCommand(taskAttemptListener.getAddress(),
+        DragonChildJVM.getVMCommand(context.getChildServiceAddress(),
             attemptId, conf, containerId);
 
     // Duplicate the ByteBuffers for access by multiple containers.
@@ -625,7 +633,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   private static ContainerLaunchContext createCommonContainerLaunchContext(
       Map<ApplicationAccessType, String> applicationACLs, Configuration conf,
       Token<JobTokenIdentifier> jobToken, final JobId jobId,
-      Collection<Token<? extends TokenIdentifier>> fsTokens) {
+      Credentials credentials) {
 
     // Application resources
     Map<String, LocalResource> localResources =
@@ -681,12 +689,10 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       Credentials taskCredentials = new Credentials();
 
       if (UserGroupInformation.isSecurityEnabled()) {
-        // Add file-system tokens
-        for (Token<? extends TokenIdentifier> token : fsTokens) {
-          LOG.info("Putting fs-token for NM use for launching container : "
-              + token.toString());
-          taskCredentials.addToken(token.getService(), token);
-        }
+        LOG.info("Adding #" + credentials.numberOfTokens()
+            + " tokens and #" + credentials.numberOfSecretKeys()
+            + " secret keys for NM use for launching container");
+        taskCredentials.addAll(credentials);
       }
 
       // LocalStorageToken is needed irrespective of whether security is enabled
@@ -856,8 +862,10 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       taskAttempt.shufflePort = event.getShufflePort();
 
       // register it to TaskAttemptListener so that it can start monitoring it.
-      taskAttempt.taskAttemptListener.registerLaunchedTask(
-          taskAttempt.attemptId, taskAttempt.containerID.toString());
+      taskAttempt.eventHandler.handle(new ChildExecutionEvent(
+          ChildExecutionEventType.CHILDTASK_LAUNCHED, taskAttempt.attemptId,
+          taskAttempt.containerID, taskAttempt.remoteTask));
+
       // TODO Resolve to host / IP in case of a local address.
       InetSocketAddress nodeHttpInetAddr =
           NetUtils.createSocketAddr(taskAttempt.nodeHttpAddress); // TODO:
@@ -938,8 +946,9 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
         TaskAttemptEvent event) {
       // unregister it to TaskAttemptListener so that it stops listening
       // for it
-      taskAttempt.taskAttemptListener.unregister(taskAttempt.attemptId,
-          taskAttempt.containerID.toString());
+      taskAttempt.eventHandler.handle(new ChildExecutionEvent(
+          ChildExecutionEventType.CHILDTASK_FINISHED, taskAttempt.attemptId,
+          taskAttempt.containerID, taskAttempt.remoteTask));
       // send the cleanup event to containerLauncher
       taskAttempt.eventHandler.handle(new ContainerLauncherEvent(
           taskAttempt.attemptId, taskAttempt.containerID,
@@ -1063,6 +1072,11 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     } finally {
       writeLock.unlock();
     }
+  }
+
+  @Override
+  public int getPartition() {
+    return partition;
   }
 
 }

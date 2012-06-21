@@ -19,10 +19,9 @@
 package org.apache.hadoop.realtime.protocol.records.impl.pb;
 
 import org.apache.hadoop.realtime.protocol.records.GetTaskResponse;
-import org.apache.hadoop.realtime.records.TaskInChild;
-import org.apache.hadoop.realtime.records.impl.pb.TaskInChildPBImpl;
+import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
-import org.apache.hadoop.yarn.proto.DragonProtos.TaskInChildProto;
+import org.apache.hadoop.yarn.proto.DragonProtos.ChildExecutionContextProto;
 import org.apache.hadoop.yarn.proto.DragonServiceProtos.GetTaskResponseProto;
 import org.apache.hadoop.yarn.proto.DragonServiceProtos.GetTaskResponseProtoOrBuilder;
 
@@ -32,7 +31,7 @@ public class GetTaskResponsePBImpl extends ProtoBase<GetTaskResponseProto>
   GetTaskResponseProto.Builder builder = null;
   boolean viaProto = false;
   
-  private TaskInChild task = null;
+  private ChildExecutionContext context = null;
   
   
   public GetTaskResponsePBImpl() {
@@ -45,8 +44,8 @@ public class GetTaskResponsePBImpl extends ProtoBase<GetTaskResponseProto>
   }
   
   private void mergeLocalToBuilder() {
-    if (this.task != null) {
-      builder.setTask(convertToProtoFormat(this.task));
+    if (this.context != null) {
+      builder.setContext(convertToProtoFormat(this.context));
     }
   }
 
@@ -66,24 +65,24 @@ public class GetTaskResponsePBImpl extends ProtoBase<GetTaskResponseProto>
   }
 
   @Override
-  public TaskInChild getTask() {
+  public ChildExecutionContext getTask() {
     GetTaskResponseProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.task != null) {
-      return this.task;
+    if (this.context != null) {
+      return this.context;
     }
-    if (!p.hasTask()) {
+    if (!p.hasContext()) {
       return null;
     }
-    this.task =  convertFromProtoFormat(p.getTask());
-    return this.task;
+    this.context = convertFromProtoFormat(p.getContext());
+    return this.context;
   }
 
   @Override
-  public void setTask(TaskInChild task) {
+  public void setTask(ChildExecutionContext context) {
     maybeInitBuilder();
-    if (task == null) 
-      builder.clearTask();
-    this.task = task;
+    if (context == null) 
+      builder.clearContext();
+    this.context = context;
   }
 
   @Override
@@ -94,11 +93,13 @@ public class GetTaskResponsePBImpl extends ProtoBase<GetTaskResponseProto>
     return proto;
   }
   
-  private TaskInChildPBImpl convertFromProtoFormat(TaskInChildProto p) {
-    return new TaskInChildPBImpl(p);
+  private ChildExecutionContextPBImpl convertFromProtoFormat(
+      ChildExecutionContextProto p) {
+    return new ChildExecutionContextPBImpl(p);
   }
 
-  private TaskInChildProto convertToProtoFormat(TaskInChild t) {
-    return ((TaskInChildPBImpl)t).getProto();
+  private ChildExecutionContextProto convertToProtoFormat(
+      ChildExecutionContext t) {
+    return ((ChildExecutionContextPBImpl) t).getProto();
   }
 }

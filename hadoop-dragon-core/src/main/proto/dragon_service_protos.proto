@@ -104,10 +104,10 @@ message GetShuffleAddressResponseProto {
 }
 
 message GetTaskRequestProto {
-  optional string container_id = 1;
+  optional ContainerIdProto container_id = 1;
 }
 message GetTaskResponseProto {
-  optional TaskInChildProto task = 1;
+  optional ChildExecutionContextProto context = 1;
 }
 
 message PingRequestProto {

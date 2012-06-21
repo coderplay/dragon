@@ -19,6 +19,7 @@ package org.apache.hadoop.realtime.server;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.LinkedList;
 import java.util.List;
@@ -45,6 +46,7 @@ import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.JobInAppMaster;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.job.TaskAttempt;
+import org.apache.hadoop.realtime.job.app.event.ChildExecutionEventType;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
 import org.apache.hadoop.realtime.job.app.event.JobFinishEvent;
@@ -93,14 +95,14 @@ public class DragonAppMaster extends CompositeService {
   protected final DragonAppMetrics metrics;
   private List<AMInfo> amInfos;
   private AppContext context;
-  private TaskAttemptListener taskAttemptListener;
   private JobTokenSecretManager jobTokenSecretManager =
       new JobTokenSecretManager();
   private JobId jobId;
   private Job job;
   private JobEventDispatcher jobEventDispatcher;
 
-  private DragonClientService clientService;
+  private ClientService clientService;
+  private ChildService childService;
   private ContainerAllocator containerAllocator;
   private ContainerLauncher containerLauncher;
 
@@ -151,12 +153,6 @@ public class DragonAppMaster extends CompositeService {
     dispatcher = createDispatcher();
     addIfService(dispatcher);
 
-    // service to handle requests to TaskUmbilicalProtocol
-    
-    taskAttemptListener = createTaskAttemptListener(context);
-    addIfService(taskAttemptListener);
-    
-
     // service to handle requests from JobClient
     clientService = createClientService(context);
     addIfService(clientService);
@@ -168,7 +164,12 @@ public class DragonAppMaster extends CompositeService {
     dispatcher.register(JobEventType.class, jobEventDispatcher);
     dispatcher.register(TaskEventType.class, new TaskEventDispatcher());
     dispatcher.register(TaskAttemptEventType.class, new TaskAttemptEventDispatcher());
-    
+
+    // service to handle requests to TaskUmbilicalProtocol
+    childService = createChildService(context);
+    addIfService(childService);
+    dispatcher.register(ChildExecutionEventType.class, childService);
+
     // service to allocate containers from RM (if non-uber) or to fake it (uber)
     containerAllocator = createContainerAllocator(clientService, context);
     addIfService(containerAllocator);
@@ -295,7 +296,7 @@ public class DragonAppMaster extends CompositeService {
     // create single job
     Job newJob =
         new JobInAppMaster(jobId, appAttemptId, conf,
-            dispatcher.getEventHandler(), taskAttemptListener,
+            dispatcher.getEventHandler(),
             jobTokenSecretManager, fsTokens, clock, metrics,
             currentUser.getUserName(), appSubmitTime, amInfos, context);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
@@ -363,6 +364,21 @@ public class DragonAppMaster extends CompositeService {
     public Clock getClock() {
       return clock;
     }
+
+    @Override
+    public InetSocketAddress getClientServiceAddress() {
+      return clientService.getBindAddress();
+    }
+
+    @Override
+    public int getClientServiceHttpPort() {
+      return clientService.getHttpPort();
+    }
+
+    @Override
+    public InetSocketAddress getChildServiceAddress() {
+      return childService.getBindAddress();
+    }
   }
 
   /**
@@ -404,11 +420,11 @@ public class DragonAppMaster extends CompositeService {
     }
   }
   
-  protected TaskAttemptListener createTaskAttemptListener(AppContext context) {
-    TaskAttemptListener lis =
+  protected ChildService createChildService(AppContext context) {
+    ChildService lis =
         new DragonChildService(context, jobTokenSecretManager);
     return lis;
-  } 
+  }
 
   protected ContainerAllocator createContainerAllocator(
       final ClientService clientService, final AppContext context) {
@@ -513,7 +529,7 @@ public class DragonAppMaster extends CompositeService {
     }
   }
 
-  protected DragonClientService createClientService(AppContext context) {
+  protected ClientService createClientService(AppContext context) {
     return new DragonClientService(context);
   }
   /**
@@ -536,7 +552,7 @@ public class DragonAppMaster extends CompositeService {
     @Override
     public synchronized void start() {
       this.containerAllocator =
-          new RMContainerAllocator(this.clientService, this.context);
+          new RMContainerAllocator(this.context);
       ((Service) this.containerAllocator).init(getConfig());
       ((Service) this.containerAllocator).start();
       super.start();

@@ -86,8 +86,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   private final Set<String> blacklistedNodes = Collections
       .newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
-  public RMContainerRequestor(ClientService clientService, AppContext context) {
-    super(clientService, context);
+  public RMContainerRequestor(AppContext context) {
+    super(context);
   }
 
   static class ContainerRequest {

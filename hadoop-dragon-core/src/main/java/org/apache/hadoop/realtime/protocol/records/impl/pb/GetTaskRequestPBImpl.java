@@ -19,9 +19,12 @@
 package org.apache.hadoop.realtime.protocol.records.impl.pb;
 
 import org.apache.hadoop.realtime.protocol.records.GetTaskRequest;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
+import org.apache.hadoop.yarn.api.records.impl.pb.ContainerIdPBImpl;
 import org.apache.hadoop.yarn.proto.DragonServiceProtos.GetTaskRequestProto;
 import org.apache.hadoop.yarn.proto.DragonServiceProtos.GetTaskRequestProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.YarnProtos.ContainerIdProto;
 
 public class GetTaskRequestPBImpl extends ProtoBase<GetTaskRequestProto>
     implements GetTaskRequest {
@@ -30,7 +33,7 @@ public class GetTaskRequestPBImpl extends ProtoBase<GetTaskRequestProto>
   GetTaskRequestProto.Builder builder = null;
   boolean viaProto = false;
 
-  private String containerId = null;
+  private ContainerId containerId = null;
 
   public GetTaskRequestPBImpl() {
     builder = GetTaskRequestProto.newBuilder();
@@ -50,8 +53,10 @@ public class GetTaskRequestPBImpl extends ProtoBase<GetTaskRequestProto>
   }
 
   private void mergeLocalToBuilder() {
-    if (this.containerId != null) {
-     builder.setContainerId(this.containerId);
+    if (this.containerId != null
+        && !((ContainerIdPBImpl) this.containerId).getProto().equals(
+            builder.getContainerId())) {
+      builder.setContainerId(convertToProtoFormat(this.containerId));
     }
   }
 
@@ -71,7 +76,7 @@ public class GetTaskRequestPBImpl extends ProtoBase<GetTaskRequestProto>
   }
 
   @Override
-  public String getContainerId() {
+  public ContainerId getContainerId() {
     GetTaskRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.containerId != null) {
       return this.containerId;
@@ -79,17 +84,23 @@ public class GetTaskRequestPBImpl extends ProtoBase<GetTaskRequestProto>
     if (!p.hasContainerId()) {
       return null;
     }
-    this.containerId = p.getContainerId().toString();
-    return this.containerId;
+    this.containerId = convertFromProtoFormat(p.getContainerId());
+    return containerId;
   }
 
   @Override
-  public void setContainerId(String containerId) {
+  public void setContainerId(ContainerId containerId) {
     maybeInitBuilder();
     if (containerId == null)
       builder.clearContainerId();
     this.containerId = containerId;
-
   }
 
+  private ContainerIdPBImpl convertFromProtoFormat(ContainerIdProto p) {
+    return new ContainerIdPBImpl(p);
+  }
+
+  private ContainerIdProto convertToProtoFormat(ContainerId t) {
+    return ((ContainerIdPBImpl) t).getProto();
+  }
 }

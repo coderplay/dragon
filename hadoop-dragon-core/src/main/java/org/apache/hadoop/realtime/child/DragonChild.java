@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.realtime.job;
+package org.apache.hadoop.realtime.child;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -35,17 +35,20 @@ import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.protocol.DragonChildProtocol;
 import org.apache.hadoop.realtime.protocol.records.GetTaskRequest;
 import org.apache.hadoop.realtime.protocol.records.GetTaskResponse;
+import org.apache.hadoop.realtime.records.ChildExecutionContext;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
-import org.apache.hadoop.realtime.records.TaskInChild;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
+import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -57,16 +60,17 @@ import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.LogManager;
 
 /**
- * The main() for MapReduce task processes.
+ * The main() for Dragon task processes.
  */
-class YarnChild {
+class DragonChild {
 
-  private static final Log LOG = LogFactory.getLog(YarnChild.class);
+  private static final Log LOG = LogFactory.getLog(DragonChild.class);
 
-  static volatile TaskId taskid = null;
+  static volatile TaskAttemptId taskid = null;
 
   public static void main(String[] args) throws Throwable {
     LOG.debug("Child starting");
@@ -74,10 +78,6 @@ class YarnChild {
     final Configuration defaultConf = new Configuration();
     defaultConf.addResource(DragonJobConfig.JOB_CONF_FILE);
     UserGroupInformation.setConfiguration(defaultConf);
-
-    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-    final YarnRPC rpc = YarnRPC.create(defaultConf);
-    final DragonChildProtocol amConnector;
 
     String host = args[0];
     int port = Integer.parseInt(args[1]);
@@ -88,40 +88,42 @@ class YarnChild {
     // initialize metrics
     DefaultMetricsSystem.initialize(StringUtils.camelize("Task"));
 
-    // TODO:Token<JobTokenIdentifier> jt = loadCredentials(defaultConf, address);
+    // TODO:Token<JobTokenIdentifier> jt = loadCredentials(defaultConf,
+    // address);
 
     // Create DragonChildProtocol as actual task owner.
     UserGroupInformation taskOwner =
         UserGroupInformation.createRemoteUser(jobIdString);
-    //taskOwner.addToken(jt);
-    amConnector =
+    // taskOwner.addToken(jt);
+    final DragonChildProtocol amProxy =
         taskOwner.doAs(new PrivilegedExceptionAction<DragonChildProtocol>() {
           @Override
           public DragonChildProtocol run() throws Exception {
-            return instantiateAMProxy(address, rpc,defaultConf);
+            return instantiateAMProxy(defaultConf, address);
           }
         });
 
     // report non-pid to application master
-    GetTaskRequest request =
-        recordFactory.newRecordInstance(GetTaskRequest.class);
-    request.setContainerId(containerIdString);
+    GetTaskRequest request = Records.newRecord(GetTaskRequest.class);
+    request
+        .setContainerId(DragonBuilderUtils.newContainerId(containerIdString));
+    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
     TaskReport report = recordFactory.newRecordInstance(TaskReport.class);
-    TaskInChild myTask = null;
+    ChildExecutionContext myContext = null;
     UserGroupInformation childUGI = null;
     try {
       int idleLoopCount = 0;
       // poll for new task
-      for (int idle = 0; null == myTask; ++idle) {
+      for (int idle = 0; null == myContext; ++idle) {
         long sleepTimeMilliSecs = Math.min(idle * 500, 1500);
         LOG.info("Sleeping for " + sleepTimeMilliSecs
             + "ms before retrying again. Got null now.");
         MILLISECONDS.sleep(sleepTimeMilliSecs);
-        myTask =
-            ((GetTaskResponse) invoke(amConnector, "getTask",
-                GetTaskRequest.class, request)).getTask();
+        myContext =
+            ((GetTaskResponse) invoke(amProxy, "getTask", GetTaskRequest.class,
+                request)).getTask();
       }
-      YarnChild.taskid = myTask.getID();
+      DragonChild.taskid = myContext.getTaskAttemptId();
 
       // TODO:Create the job-conf and set credentials
 
@@ -136,34 +138,35 @@ class YarnChild {
       }
 
       // Create a final reference to the task for the doAs block
-      final TaskInChildImpl taskFinal = (TaskInChildImpl)myTask;
+      final ChildExecutionContext context = (ChildExecutionContext) myContext;
       childUGI.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
           // use job-specified working directory
-          String workDir = defaultConf.get(DragonJobConfig.WORKING_DIR,"");
-          if("".equals(workDir)){
-            workDir=FileSystem.get(defaultConf).getWorkingDirectory().toString();
-            defaultConf.set(DragonJobConfig.WORKING_DIR, workDir);        
+          String workDir = defaultConf.get(DragonJobConfig.WORKING_DIR, "");
+          if ("".equals(workDir)) {
+            workDir =
+                FileSystem.get(defaultConf).getWorkingDirectory().toString();
+            defaultConf.set(DragonJobConfig.WORKING_DIR, workDir);
           }
           Path workPath = new Path(workDir);
-          taskFinal.run(defaultConf, amConnector); // run the task
+          ChildExecutor.run(defaultConf, amProxy, context); // run the task
           return null;
         }
       });
     } catch (FSError e) {
       LOG.fatal("FSError from child", e);
-      //amConnector.fsError(taskid, e.getMessage());
+      // amConnector.fsError(taskid, e.getMessage());
     } catch (Exception exception) {
       LOG.warn("Exception running child : "
           + StringUtils.stringifyException(exception));
       try {
-        if (myTask != null) {
+        if (myContext != null) {
           // do cleanup for the task
           if (childUGI == null) { // no need to job into doAs block
             // TODO: myTask.taskCleanup(amConnector);
           } else {
-            final TaskInChild taskFinal = myTask;
+            final ChildExecutionContext taskFinal = myContext;
             childUGI.doAs(new PrivilegedExceptionAction<Object>() {
               @Override
               public Object run() throws Exception {
@@ -193,7 +196,7 @@ class YarnChild {
         // TODO:umbilical.fatalError(taskid, cause);
       }
     } finally {
-      rpc.stopProxy(amConnector, defaultConf);
+      RPC.stopProxy(amProxy);
       DefaultMetricsSystem.shutdown();
       // Shutting down log4j of the child-vm...
       // This assumes that on return from Task.run()
@@ -202,19 +205,19 @@ class YarnChild {
     }
   }
 
-  static DragonChildProtocol instantiateAMProxy(
-      final InetSocketAddress serviceAddr, YarnRPC rpc,Configuration conf)
-      throws IOException {
+  static DragonChildProtocol instantiateAMProxy(Configuration conf,
+      final InetSocketAddress serviceAddr) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Connecting to ApplicationMaster at: " + serviceAddr);
     }
+    YarnRPC rpc = YarnRPC.create(conf);
     DragonChildProtocol proxy =
         (DragonChildProtocol) rpc.getProxy(DragonChildProtocol.class,
             serviceAddr, conf);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Connected to ApplicationMaster at: " + serviceAddr);
     }
-   
+
     return proxy;
   }
 
@@ -235,31 +238,32 @@ class YarnChild {
         if (e.getTargetException() instanceof YarnRemoteException) {
           LOG.warn("Error from remote end: "
               + e.getTargetException().getLocalizedMessage());
-          if(LOG.isDebugEnabled())
+          if (LOG.isDebugEnabled())
             LOG.debug("Tracing remote error ", e.getTargetException());
           throw (YarnRemoteException) e.getTargetException();
         }
-        if(LOG.isDebugEnabled())
+        if (LOG.isDebugEnabled())
           LOG.debug("Failed to contact AM for job " + taskid + " retrying..",
               e.getTargetException());
       } catch (Exception e) {
-        if(LOG.isDebugEnabled())
-          LOG.debug("Failed to contact AM for job " + taskid + "  Will retry..", e);
+        if (LOG.isDebugEnabled())
+          LOG.debug(
+              "Failed to contact AM for job " + taskid + "  Will retry..", e);
       }
     }
   }
+
   private static Token<JobTokenIdentifier> loadCredentials(Configuration conf,
       InetSocketAddress address) throws IOException {
-    //load token cache storage
+    // load token cache storage
     String tokenFileLocation =
         System.getenv(ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME);
     String jobTokenFile =
         new Path(tokenFileLocation).makeQualified(FileSystem.getLocal(conf))
             .toUri().getPath();
-    Credentials credentials =
-      TokenCache.loadTokens(jobTokenFile, conf);
-    LOG.debug("loading token. # keys =" +credentials.numberOfSecretKeys() +
-        "; from file=" + jobTokenFile);
+    Credentials credentials = TokenCache.loadTokens(jobTokenFile, conf);
+    LOG.debug("loading token. # keys =" + credentials.numberOfSecretKeys()
+        + "; from file=" + jobTokenFile);
     Token<JobTokenIdentifier> jt = TokenCache.getJobToken(credentials);
     jt.setService(new Text(address.getAddress().getHostAddress() + ":"
         + address.getPort()));

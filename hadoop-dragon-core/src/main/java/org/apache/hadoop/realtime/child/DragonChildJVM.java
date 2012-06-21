@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.realtime.job;
+package org.apache.hadoop.realtime.child;
 
 import java.net.InetSocketAddress;
 import java.util.Iterator;
@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.job.TaskLog;
 import org.apache.hadoop.realtime.job.TaskLog.LogName;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -112,13 +113,14 @@ public class DragonChildJVM {
   }
 
   public static List<String> getVMCommand(
-      InetSocketAddress taskAttemptListenerAddr, TaskAttemptId attemptId,
+      InetSocketAddress childServiceAddr, TaskAttemptId attemptId,
      Configuration conf, ContainerId containerId) {
     
     Vector<CharSequence> vargs = new Vector<CharSequence>(8);
 
     vargs.add("exec");
     vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
+
     String javaOpts = getChildJavaOpts(conf);
     javaOpts = javaOpts.replace("@taskid@", attemptId.toString());
     String[] javaOptsSplit = javaOpts.split(" ");
@@ -136,11 +138,13 @@ public class DragonChildJVM {
     //setupLog4jProperties(conf, vargs,logSize);
 
     // Add main class and its arguments
-    vargs.add(YarnChild.class.getName()); // main of Child
+    vargs.add(DragonChild.class.getName()); // main of Child
     // pass TaskAttemptListener's address
-    vargs.add(taskAttemptListenerAddr.getAddress().getHostAddress());
-    vargs.add(Integer.toString(taskAttemptListenerAddr.getPort()));
-    vargs.add(String.valueOf(attemptId.getTaskId().getJobId().toString())); // pass task identifier
+    vargs.add(childServiceAddr.getAddress().getHostAddress());
+    vargs.add(Integer.toString(childServiceAddr.getPort()));
+    // pass job identifier
+    vargs.add(String.valueOf(attemptId.getTaskId().getJobId().toString())); 
+    // Finally add the container id
     vargs.add(String.valueOf(containerId.toString()));
 
     vargs.add("1>" + getTaskLogFile(TaskLog.LogName.STDOUT));

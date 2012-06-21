@@ -92,8 +92,8 @@ public class TaskHeartbeatHandler extends AbstractService {
   }
 
   public void receivedPing(TaskAttemptId attemptID) {
-  //only put for the registered attempts
-    //TODO throw an exception if the task isn't registered.
+    // only put for the registered attempts
+    // TODO throw an exception if the task isn't registered.
     runningAttempts.replace(attemptID, clock.getTime());
   }
 

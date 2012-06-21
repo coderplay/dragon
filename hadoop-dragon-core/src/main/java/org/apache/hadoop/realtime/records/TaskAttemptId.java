@@ -46,7 +46,8 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
 
   public abstract void setId(int id);
 
-  protected static final String TASKATTEMPT = "attempt";
+  public static final char SEPARATOR = '_';
+  public static final String TASKATTEMPT = "attempt";
 
   @Override
   public int hashCode() {
@@ -78,14 +79,16 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
   public String toString() {
     StringBuilder builder = new StringBuilder(TASKATTEMPT);
     TaskId taskId = getTaskId();
-    builder.append("_").append(
+    builder.append(SEPARATOR).append(
         taskId.getJobId().getAppId().getClusterTimestamp());
-    builder.append("_").append(
+    builder.append(SEPARATOR).append(
         JobId.jobIdFormat.get().format(
             getTaskId().getJobId().getAppId().getId()));
-    builder.append("_")
-        .append(TaskId.taskIdFormat.get().format(taskId.getId()));
-    builder.append("_");
+    builder.append(SEPARATOR).append(
+        TaskId.taskIndexFormat.get().format(taskId.getIndex()));
+    builder.append(SEPARATOR).append(
+        TaskId.taskIdFormat.get().format(taskId.getId()));
+    builder.append(SEPARATOR);
     builder.append(getId());
     return builder.toString();
   }

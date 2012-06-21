@@ -40,6 +40,10 @@ public abstract class TaskId implements Comparable<TaskId> {
    */
   public abstract JobId getJobId();
 
+  /**
+   * @return the topological index of the task in the task DAG
+   */
+  public abstract int getIndex();
 
   /**
    * @return the task number.
@@ -48,9 +52,23 @@ public abstract class TaskId implements Comparable<TaskId> {
 
   public abstract void setJobId(JobId jobId);
 
+  public abstract void setIndex(int index);
+
   public abstract void setId(int id);
 
-  protected static final String TASK = "task";
+  public static final char SEPARATOR = '_';
+  public static final String TASK = "task";
+
+  static final ThreadLocal<NumberFormat> taskIndexFormat =
+      new ThreadLocal<NumberFormat>() {
+        @Override
+        public NumberFormat initialValue() {
+          NumberFormat fmt = NumberFormat.getInstance();
+          fmt.setGroupingUsed(false);
+          fmt.setMinimumIntegerDigits(2);
+          return fmt;
+        }
+      };
 
   static final ThreadLocal<NumberFormat> taskIdFormat =
       new ThreadLocal<NumberFormat>() {
@@ -67,6 +85,7 @@ public abstract class TaskId implements Comparable<TaskId> {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
+    result = prime * result + getIndex();
     result = prime * result + getId();
     result = prime * result + getJobId().hashCode();
     return result;
@@ -81,6 +100,8 @@ public abstract class TaskId implements Comparable<TaskId> {
     if (getClass() != obj.getClass())
       return false;
     TaskId other = (TaskId) obj;
+    if (getIndex() != other.getIndex())
+      return false;
     if (getId() != other.getId())
       return false;
     if (!getJobId().equals(other.getJobId()))
@@ -92,10 +113,12 @@ public abstract class TaskId implements Comparable<TaskId> {
   public String toString() {
     StringBuilder builder = new StringBuilder(TASK);
     JobId jobId = getJobId();
-    builder.append("_").append(jobId.getAppId().getClusterTimestamp());
-    builder.append("_").append(
+    builder.append(SEPARATOR).append(jobId.getAppId().getClusterTimestamp());
+    builder.append(SEPARATOR).append(
         JobId.jobIdFormat.get().format(jobId.getAppId().getId()));
-    builder.append("_");
+    builder.append(SEPARATOR);
+    builder.append(taskIndexFormat.get().format(getIndex()));
+    builder.append(SEPARATOR);
     builder.append(taskIdFormat.get().format(getId()));
     return builder.toString();
   }
@@ -103,10 +126,11 @@ public abstract class TaskId implements Comparable<TaskId> {
   @Override
   public int compareTo(TaskId other) {
     int jobIdComp = this.getJobId().compareTo(other.getJobId());
-    if (jobIdComp == 0) {
-        return this.getId() - other.getId();
-    } else {
+    if (jobIdComp != 0)
       return jobIdComp;
-    }
+    int taskIndexComp = this.getIndex() - other.getIndex();
+    if (taskIndexComp != 0)
+      return taskIndexComp;
+    return this.getId() - other.getId();
   }
 }

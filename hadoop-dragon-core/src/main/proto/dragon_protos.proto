@@ -30,7 +30,8 @@ message JobIdProto {
 
 message TaskIdProto {
   optional JobIdProto job_id = 1;
-  optional int32 id = 2;
+  optional int32 index = 2;
+  optional int32 id = 3;
 }
 
 message TaskAttemptIdProto {
@@ -166,6 +167,8 @@ message TaskAttemptCompletionEventProto {
   optional int32 attempt_run_time = 3;
   optional int32 event_id = 4;
 }
-message TaskInChildProto{
-  optional TaskIdProto task_id = 1;
+message ChildExecutionContextProto{
+  optional TaskAttemptIdProto attempt_id = 1;
+  optional int32 partition = 2;
+  optional string user = 3;
 }

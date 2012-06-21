@@ -20,16 +20,18 @@ package org.apache.hadoop.realtime.util;
 
 import java.util.List;
 
+import org.apache.hadoop.realtime.job.TaskAttempt;
 import org.apache.hadoop.realtime.records.AMInfo;
+import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
-import org.apache.hadoop.realtime.records.TaskInChild;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 public class DragonBuilderUtils {
@@ -40,12 +42,54 @@ public class DragonBuilderUtils {
     jobId.setId(id);
     return jobId;
   }
+  
+  public static JobId newJobId(String str) throws IllegalArgumentException {
+    if (str == null)
+      return null;
+    try {
+      String[] parts = str.split(Character.toString(JobId.SEPARATOR));
+      if (parts.length == 3 && parts[0].equals(JobId.JOB)) {
+        long clusterTimeStamp = Long.parseLong(parts[1]);
+        int id = Integer.parseInt(parts[2]);
+        ApplicationId appId =
+            BuilderUtils.newApplicationId(clusterTimeStamp, id);
+        return newJobId(appId, id);
+      }
+    } catch (Exception ex) {
+      // fall through
+    }
+    throw new IllegalArgumentException("TaskAttemptId string : " + str
+        + " is not properly formed");
+  }
 
-  public static TaskId newTaskId(JobId jobId, int id) {
+  public static TaskId newTaskId(JobId jobId, int index, int id) {
     TaskId taskId = Records.newRecord(TaskId.class);
     taskId.setJobId(jobId);
+    taskId.setIndex(index);
     taskId.setId(id);
     return taskId;
+  }
+  
+  public static TaskId newTaskId(String str) throws IllegalArgumentException {
+    if (str == null)
+      return null;
+    try {
+      String[] parts = str.split(Character.toString(JobId.SEPARATOR));
+      if (parts.length == 5 && parts[0].equals(TaskId.TASK)) {
+        long clusterTimeStamp = Long.parseLong(parts[1]);
+        int jobId = Integer.parseInt(parts[2]);
+        int taskIndex = Integer.parseInt(parts[3]);
+        int taskId = Integer.parseInt(parts[4]);
+        ApplicationId app =
+            BuilderUtils.newApplicationId(clusterTimeStamp, jobId);
+        JobId job = newJobId(app, jobId);
+        return newTaskId(job, taskIndex, taskId);
+      }
+    } catch (Exception ex) {
+      // fall through
+    }
+    throw new IllegalArgumentException("TaskId string : " + str
+        + " is not properly formed");
   }
 
   public static TaskAttemptId newTaskAttemptId(TaskId taskId, int attemptId) {
@@ -55,7 +99,31 @@ public class DragonBuilderUtils {
     return taskAttemptId;
   }
 
-  
+  public static TaskAttemptId newTaskAttemptId(String str)
+      throws IllegalArgumentException {
+    if (str == null)
+      return null;
+    try {
+      String[] parts = str.split(Character.toString(JobId.SEPARATOR));
+      if (parts.length == 6 && parts[0].equals(TaskAttemptId.TASKATTEMPT)) {
+        long clusterTimeStamp = Long.parseLong(parts[1]);
+        int jobId = Integer.parseInt(parts[2]);
+        int taskIndex = Integer.parseInt(parts[3]);
+        int taskId = Integer.parseInt(parts[4]);
+        int attemptId = Integer.parseInt(parts[5]);
+        ApplicationId app =
+            BuilderUtils.newApplicationId(clusterTimeStamp, jobId);
+        JobId job = newJobId(app, jobId);
+        TaskId task = newTaskId(job, taskIndex, taskId);
+        return newTaskAttemptId(task, attemptId);
+      }
+    } catch (Exception ex) {
+      // fall through
+    }
+    throw new IllegalArgumentException("TaskAttemptId string : " + str
+        + " is not properly formed");
+  }
+
   public static JobReport newJobReport(JobId jobId, String jobName,
       String userName, JobState state, long submitTime, long startTime,
       long finishTime, String jobFile, List<AMInfo> amInfos, boolean isUber) {
@@ -86,9 +154,33 @@ public class DragonBuilderUtils {
     return amInfo;
   }
   
-  public static TaskInChild newTaskInChild(TaskId taskId) {
-    TaskInChild task = Records.newRecord(TaskInChild.class);
-    task.setID(taskId);
-    return task;
+  public static ContainerId newContainerId(String str)
+      throws IllegalArgumentException {
+    if (str == null)
+      return null;
+    try {
+      String[] parts = str.split("_");
+      if (parts.length == 5 && parts[0].equals("container")) {
+        long timestamp = Long.parseLong(parts[1]);
+        int appId = Integer.parseInt(parts[2]);
+        int appAttemptId = Integer.parseInt(parts[3]);
+        int id = Integer.parseInt(parts[4]);
+        return BuilderUtils.newContainerId(appId, appAttemptId, timestamp, id);
+      }
+    } catch (Exception ex) {
+      // fall through
+    }
+    throw new IllegalArgumentException("ContainerId string : " + str
+        + " is not properly formed");
+  }
+
+  public static ChildExecutionContext newTaskAttemptExecutionContext(
+      TaskAttempt attempt, String user) {
+    ChildExecutionContext context =
+        Records.newRecord(ChildExecutionContext.class);
+    context.setTaskAttemptId(attempt.getID());
+    context.setPartition(attempt.getPartition());
+    context.setUser(user);
+    return context;
   }
 }

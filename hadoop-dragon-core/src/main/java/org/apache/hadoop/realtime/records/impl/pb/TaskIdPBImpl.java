@@ -78,7 +78,7 @@ public class TaskIdPBImpl extends TaskId {
   @Override
   public synchronized void setId(int id) {
     maybeInitBuilder();
-    builder.setId((id));
+    builder.setId(id);
   }
 
   @Override
@@ -100,6 +100,18 @@ public class TaskIdPBImpl extends TaskId {
     if (jobId == null)
       builder.clearJobId();
     this.jobId = jobId;
+  }
+
+  @Override
+  public synchronized int getIndex() {
+    TaskIdProtoOrBuilder p = viaProto ? proto : builder;
+    return (p.getIndex());
+  }
+
+  @Override
+  public synchronized void setIndex(int index) {
+    maybeInitBuilder();
+    builder.setIndex(index);
   }
 
   private JobIdPBImpl convertFromProtoFormat(JobIdProto p) {

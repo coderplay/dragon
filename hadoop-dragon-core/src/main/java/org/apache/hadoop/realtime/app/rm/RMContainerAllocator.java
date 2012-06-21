@@ -79,8 +79,8 @@ public class RMContainerAllocator extends RMContainerRequestor implements
     PRIORITY_TASK.setPriority(20);
   }
 
-  public RMContainerAllocator(ClientService clientService, AppContext context) {
-    super(clientService, context);
+  public RMContainerAllocator(AppContext context) {
+    super(context);
   }
 
   @Override

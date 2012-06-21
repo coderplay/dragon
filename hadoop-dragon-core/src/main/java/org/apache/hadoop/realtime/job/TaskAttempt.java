@@ -73,4 +73,7 @@ public interface TaskAttempt {
    * @return the port shuffle is on.
    */
   public int getShufflePort();
+  
+  
+  int getPartition();
 }

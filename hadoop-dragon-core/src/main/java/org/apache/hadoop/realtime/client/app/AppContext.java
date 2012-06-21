@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.realtime.client.app;
 
+import java.net.InetSocketAddress;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.server.ChildService;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -52,4 +54,10 @@ public interface AppContext {
   EventHandler getEventHandler();
 
   Clock getClock();
+  
+  InetSocketAddress getClientServiceAddress();
+  
+  int getClientServiceHttpPort();
+  
+  InetSocketAddress getChildServiceAddress();
 }
