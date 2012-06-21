@@ -38,7 +38,6 @@ import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
-import org.apache.hadoop.realtime.job.app.event.JobTaskAttemptCompletedEvent;
 import org.apache.hadoop.realtime.job.app.event.JobTaskEvent;
 import org.apache.hadoop.realtime.job.app.event.JobTaskRescheduledEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
@@ -48,8 +47,6 @@ import org.apache.hadoop.realtime.job.app.event.TaskEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskTAttemptEvent;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.realtime.records.TaskAttemptCompletionEvent;
-import org.apache.hadoop.realtime.records.TaskAttemptCompletionEventStatus;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskAttemptState;
 import org.apache.hadoop.realtime.records.TaskId;
@@ -357,30 +354,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
     }
   }
 
-  // always called inside a transition, in turn inside the Write Lock
-  private void handleTaskAttemptCompletion(TaskAttemptId attemptId,
-      TaskAttemptCompletionEventStatus status) {
-    finishedAttempts++;
-    TaskAttempt attempt = attempts.get(attemptId);
-    // raise the completion event only if the container is assigned
-    // to nextAttemptNumber
-    if (attempt.getNodeHttpAddress() != null) {
-      TaskAttemptCompletionEvent tce =
-          recordFactory.newRecordInstance(TaskAttemptCompletionEvent.class);
-      tce.setEventId(-1);
-      tce.setStatus(status);
-      tce.setAttemptId(attempt.getID());
-      int runTime = 0;
-      if (attempt.getFinishTime() != 0 && attempt.getLaunchTime() != 0)
-        runTime = (int) (attempt.getFinishTime() - attempt.getLaunchTime());
-      tce.setAttemptRunTime(runTime);
-
-      // raise the event to job so that it adds the completion event to its
-      // data structures
-      eventHandler.handle(new JobTaskAttemptCompletedEvent(tce));
-    }
-  }
-
   private void killAllAttempt(TaskAttempt attempt, String logMsg) {
     if (attempt != null) {
       eventHandler.handle(new TaskAttemptEvent(attempt.getID(),
@@ -404,9 +377,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       SingleArcTransition<TaskInAppMaster, TaskEvent> {
     @Override
     public void transition(TaskInAppMaster task, TaskEvent event) {
-      task.handleTaskAttemptCompletion(
-          ((TaskTAttemptEvent) event).getTaskAttemptID(),
-          TaskAttemptCompletionEventStatus.KILLED);
       --task.numberUncompletedAttempts;
       task.addAndScheduleAttempt();
     }
@@ -446,9 +416,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       }
 
       if (task.failedAttempts < task.maxAttempts) {
-        task.handleTaskAttemptCompletion(
-            ((TaskTAttemptEvent) event).getTaskAttemptID(),
-            TaskAttemptCompletionEventStatus.FAILED);
         task.eventHandler
           .handle(new JobTaskRescheduledEvent(task.taskId));
         // we don't need a new event if we already have a spare
@@ -456,9 +423,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
           task.addAndScheduleAttempt();
         }
       } else {
-        task.handleTaskAttemptCompletion(
-            ((TaskTAttemptEvent) event).getTaskAttemptID(),
-            TaskAttemptCompletionEventStatus.TIPFAILED);
         TaskTAttemptEvent ev = (TaskTAttemptEvent) event;
         TaskAttemptId taId = ev.getTaskAttemptID();
 
@@ -492,9 +456,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
 
     @Override
     public TaskState transition(TaskInAppMaster task, TaskEvent event) {
-      task.handleTaskAttemptCompletion(
-          ((TaskTAttemptEvent) event).getTaskAttemptID(),
-          TaskAttemptCompletionEventStatus.KILLED);
       // check whether all attempts are finished
       if (task.finishedAttempts == task.attempts.size()) {
         task.eventHandler.handle(new JobTaskEvent(task.taskId, finalState));

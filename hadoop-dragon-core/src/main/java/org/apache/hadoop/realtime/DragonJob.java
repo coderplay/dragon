@@ -22,6 +22,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.security.PrivilegedExceptionAction;
 import java.util.Enumeration;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +35,8 @@ import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskReport;
+import org.apache.hadoop.realtime.records.TaskState;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -273,18 +276,30 @@ public class DragonJob {
   public boolean monitorAndPrintJob() throws IOException, InterruptedException {
     JobId jobId = getID();
     LOG.info("Running job: " + jobId);
-    JobReport report = null;
-    while (state != JobState.FAILED) {
+    List<TaskReport> reports = null;
+    int taskNums = 0;
+    int toBeScheduledTasks = 0;
+    while (true) {
+      toBeScheduledTasks =0;
       Thread.sleep(MAX_JOBSTATE_AGE);
       if (jobId == null) {
         jobId = getID();
         continue;
       }
       LOG.info(jobId + " " + state);
-      report = getJobReport(jobId);
-      state = report.getJobState();
+      reports = getTaskReports(jobId);
+      taskNums = reports.size();
+      for(TaskReport report:reports){
+        if(report.getTaskState()!=TaskState.RUNNING){
+          toBeScheduledTasks++;
+        }
+      }
+      LOG.info("Your job has "+taskNums+"tasks,"+toBeScheduledTasks+" of them havn't been scheduled.");
+      if(toBeScheduledTasks==0){
+        LOG.info("All task of "+ jobId +" is scheduled. Job starts running.");
+        break;
+      }
     }
-    LOG.info(report.getDiagnostics());
     return true;
   }
 
@@ -302,6 +317,16 @@ public class DragonJob {
       @Override
       public JobReport run() throws IOException, InterruptedException {
         return jobService.getJobReport(jobId);
+      }
+    });
+  }
+  
+  public List<TaskReport> getTaskReports(final JobId jobId) throws IOException,
+      InterruptedException {
+    return ugi.doAs(new PrivilegedExceptionAction<List<TaskReport>>() {
+      @Override
+      public List<TaskReport> run() throws IOException, InterruptedException {
+        return jobService.getTaskReports(jobId);
       }
     });
   }

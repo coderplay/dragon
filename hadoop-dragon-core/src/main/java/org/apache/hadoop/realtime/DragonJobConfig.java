@@ -283,5 +283,11 @@ public class DragonJobConfig {
   public static final int DEFAULT_TASK_MEMORY_MB = 1024;
   
   public static final String WORKING_DIR = "dragon.job.working.dir";
+  
+  public static final String JOB_ID = "dragon.job.id";
+  
+  public static final String TASK_ID = "dragon.task.id";
+  
+  public static final String TASK_ATTEMPT_ID = "dragon.task.attempt.id";
 
 }

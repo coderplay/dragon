@@ -495,7 +495,7 @@ public class DragonAppMaster extends CompositeService {
     /** create a job-start event to get this ball rolling */
     JobEvent startJobEvent = new JobEvent(job.getID(), JobEventType.JOB_START);
     /** send the job-start event. this triggers the job execution. */
-    dispatcher.getEventHandler().handle(startJobEvent);
+    context.getEventHandler().handle(startJobEvent);
   }
 
   private class JobEventDispatcher implements EventHandler<JobEvent> {
