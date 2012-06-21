@@ -79,12 +79,6 @@ public class DragonVertex implements Serializable {
     return tasks;
   }
 
-  @Override
-  public int hashCode() {
-    // TODO: implements it
-    return -1;
-  }
-
   public static final class Builder {
     String label;
     int tasks;

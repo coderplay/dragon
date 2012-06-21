@@ -22,9 +22,5 @@ import java.io.Serializable;
 /**
  */
 public class DragonEdge implements Serializable {
-  
-  @Override
-  public int hashCode() {
-    return -1;
-  }
+
 }
