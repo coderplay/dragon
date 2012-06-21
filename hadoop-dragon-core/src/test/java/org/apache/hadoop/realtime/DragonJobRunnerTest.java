@@ -60,8 +60,8 @@ import org.mockito.stubbing.Answer;
  * Test YarnRunner and make sure the client side plugin works
  * fine
  */
-public class TestDragonJobRunner extends TestCase {
-  private static final Log LOG = LogFactory.getLog(TestDragonJobRunner.class);
+public class DragonJobRunnerTest extends TestCase {
+  private static final Log LOG = LogFactory.getLog(DragonJobRunnerTest.class);
   private static final RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
 
   private DragonJobRunner yarnRunner;
@@ -69,7 +69,7 @@ public class TestDragonJobRunner extends TestCase {
   private ApplicationId appId;
   private JobId jobId;
   private File testWorkDir =
-      new File("target", TestDragonJobRunner.class.getName());
+      new File("target", DragonJobRunnerTest.class.getName());
   private ApplicationSubmissionContext submissionContext;
   private static final String failString = "Rejected job";
 

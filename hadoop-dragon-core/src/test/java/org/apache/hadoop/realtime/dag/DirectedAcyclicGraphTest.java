@@ -25,7 +25,7 @@ import java.util.Iterator;
 
 import org.junit.Test;
 
-public class TestDirectedAcyclicGraph {
+public class DirectedAcyclicGraphTest {
 
   @Test
   public void testAddVertex() {

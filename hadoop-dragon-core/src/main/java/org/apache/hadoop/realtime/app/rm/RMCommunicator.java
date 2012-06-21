@@ -68,7 +68,6 @@ public abstract class RMCommunicator extends AbstractService  {
   @SuppressWarnings("rawtypes")
   protected EventHandler eventHandler;
   protected AMRMProtocol scheduler;
-  private final ClientService clientService;
   protected int lastResponseID;
   private Resource minContainerCapability;
   private Resource maxContainerCapability;
@@ -80,9 +79,8 @@ public abstract class RMCommunicator extends AbstractService  {
   private final AppContext context;
   private Job job;
 
-  public RMCommunicator(ClientService clientService, AppContext context) {
+  public RMCommunicator(AppContext context) {
     super("RMCommunicator");
-    this.clientService = clientService;
     this.context = context;
     this.eventHandler = context.getEventHandler();
     this.applicationId = context.getApplicationID();
@@ -120,15 +118,15 @@ public abstract class RMCommunicator extends AbstractService  {
 
   protected void register() {
     //Register
-    String host = clientService.getBindAddress().getAddress()
+    String host = context.getClientServiceAddress().getAddress()
         .getCanonicalHostName();
     try {
       RegisterApplicationMasterRequest request =
         recordFactory.newRecordInstance(RegisterApplicationMasterRequest.class);
       request.setApplicationAttemptId(applicationAttemptId);
       request.setHost(host);
-      request.setRpcPort(clientService.getBindAddress().getPort());
-      request.setTrackingUrl(host + ":" + clientService.getHttpPort());
+      request.setRpcPort(context.getClientServiceAddress().getPort());
+      request.setTrackingUrl(host + ":" + context.getClientServiceHttpPort());
       RegisterApplicationMasterResponse response =
         scheduler.registerApplicationMaster(request);
       minContainerCapability = response.getMinimumResourceCapability();

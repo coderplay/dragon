@@ -128,7 +128,7 @@ public class DragonJobConfig {
 	// Containers.
 	public static final String APPLICATION_TOKENS_FILE = "appTokens";
 
-	public static final String APPLICATION_MASTER_CLASS = "org.apache.hadoop.realtime.client.app.DragonAppMaster";
+	public static final String APPLICATION_MASTER_CLASS = "org.apache.hadoop.realtime.server.DragonAppMaster";
 
 	public static final String DRAGON_PREFIX = "yarn.app.dragon.";
 
@@ -232,8 +232,56 @@ public class DragonJobConfig {
   /** The number of threads used to handle task RPC calls.*/
   public static final String DRAGON_AM_TASK_LISTENER_THREAD_COUNT =
     DRAGON_AM_PREFIX + "job.task.listener.thread-count";
-  
+
   public static final int DEFAULT_DRAGON_AM_TASK_LISTENER_THREAD_COUNT = 30;
   
   public static final String TASK_MAX_ATTEMPTS = "dragon.task.maxattempts";
+
+  public static final String DRAGON_TASK_MAX_ATTEMPT = "task.max.attempt";
+  public static final int DEFAULT_DRAGON_TASK_MAX_ATTEMPT = 1;
+
+  public static final String DRAGON_ADMIN_USER_SHELL =
+      "dragon.admin.user.shell";
+
+  public static final String DEFAULT_SHELL = "/bin/bash";
+
+  public static final String DRAGON_ADMIN_USER_ENV = "dragon.admin.user.env";
+
+  public static final String DEFAULT_DRAGON_ADMIN_USER_ENV =
+      "LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native";
+
+  public static final String DRAGON_REDUCE_ADMIN_JAVA_OPTS =
+      "dragon.admin.reduce.child.java.opts";
+
+  public static final String DEFAULT_DRAGON_ADMIN_JAVA_OPTS =
+      "-Djava.net.preferIPv4Stack=true " + "-Dhadoop.metrics.log.level=WARN ";
+
+  public static final String TASK_LOG_LEVEL = "dragon.reduce.log.level";
+
+  public static final String DEFAULT_LOG_LEVEL = "INFO";
+
+  public static final String DRAGON_TASK_ENV = "dragon.map.env";
+
+  public static final String DEFAULT_DRAGON_TASK_ENV = "dragon.child.env";
+
+  // Environment variables used by Pipes. (TODO: these
+  // do not appear to be used by current pipes source code!)
+  public static final String STDOUT_LOGFILE_ENV = "STDOUT_LOGFILE_ENV";
+  public static final String STDERR_LOGFILE_ENV = "STDERR_LOGFILE_ENV";
+
+  public static final String APPLICATION_ATTEMPT_ID_ENV =
+      "APPLICATION_ATTEMPT_ID_ENV";
+
+  public static final String DRAGON_TASK_JAVA_OPTS = "dragon.task.java.opts";
+  public static final String DRAGON_ADMIN_JAVA_OPTS =
+      "dragon.admin.task.child.java.opts";
+  public static final String DEFAULT_DRAGON_TASK_JAVA_OPTS =
+      "-Djava.net.preferIPv4Stack=true " + "-Dhadoop.metrics.log.level=WARN ";
+
+  public static final String TASK_MEMORY_MB = "dragon.task.memory.mb";
+
+  public static final int DEFAULT_TASK_MEMORY_MB = 1024;
+  
+  public static final String WORKING_DIR = "dragon.job.working.dir";
+
 }

@@ -20,41 +20,17 @@ package org.apache.hadoop.realtime.server;
 
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.realtime.job.Task;
+import org.apache.hadoop.realtime.job.app.event.ChildExecutionEvent;
+import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.event.EventHandler;
 
 /**
  * This class listens for changes to the state of a Task.
  */
-public interface TaskAttemptListener {
-
-  InetSocketAddress getAddress();
-
-  /**
-   * Register a JVM with the listener.  This should be called as soon as a 
-   * JVM ID is assigned to a task attempt, before it has been launched.
-   * @param task the task itself for this JVM.
-   * @param jvmID The ID of the JVM .
-   */
-  void registerPendingTask(Task task,ContainerId containerId);
+public interface ChildService extends EventHandler<ChildExecutionEvent> {
   
-  /**
-   * Register task attempt. This should be called when the JVM has been
-   * launched.
-   * 
-   * @param attemptID
-   *          the id of the attempt for this JVM.
-   * @param jvmID the ID of the JVM.
-   */
-  void registerLaunchedTask(TaskAttemptId attemptID,ContainerId containerId);
-
-  /**
-   * Unregister the JVM and the attempt associated with it.  This should be 
-   * called when the attempt/JVM has finished executing and is being cleaned up.
-   * @param attemptID the ID of the attempt.
-   * @param jvmID the ID of the JVM for that attempt.
-   */
-  void unregister(TaskAttemptId attemptID,int containerId);
+  public InetSocketAddress getBindAddress();
 
 }

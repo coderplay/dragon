@@ -107,6 +107,7 @@ message GetTaskRequestProto {
   optional ContainerIdProto container_id = 1;
 }
 message GetTaskResponseProto {
+  optional ChildExecutionContextProto context = 1;
 }
 
 message PingRequestProto {

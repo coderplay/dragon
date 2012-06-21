@@ -37,12 +37,6 @@ public interface TaskAttempt {
   Counters getCounters();
   TaskAttemptState getState();
 
-  /** 
-   * Has attempt reached the final state or not.
-   * @return true if it has finished, else false
-   */
-  boolean isFinished();
-
   /**
    * @return the container ID if a container is assigned, otherwise null.
    */
@@ -74,21 +68,12 @@ public interface TaskAttempt {
    *  yet, returns 0.
    */
   long getFinishTime();
-  
-  /**
-   * @return The attempt's shuffle finish time if the attempt is a reduce. If
-   * attempt is not finished yet, returns 0.
-   */
-  long getShuffleFinishTime();
-
-  /**
-   * @return The attempt's sort or merge finish time if the attempt is a reduce. 
-   * If attempt is not finished yet, returns 0.
-   */
-  long getSortFinishTime();
 
   /**
    * @return the port shuffle is on.
    */
   public int getShufflePort();
+  
+  
+  int getPartition();
 }

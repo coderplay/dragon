@@ -53,8 +53,8 @@ public abstract class JobId implements Comparable<JobId> {
   public abstract void setId(int id);
 
 
-  protected static final String JOB = "job";
-  protected static final char SEPARATOR = '_';
+  public static final String JOB = "job";
+  public static final char SEPARATOR = '_';
   static final ThreadLocal<NumberFormat> jobIdFormat =
       new ThreadLocal<NumberFormat>() {
         @Override

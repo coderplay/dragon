@@ -37,7 +37,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertFalse;
 /**
  */
-public class TestSerializer {
+public class SerializerTest {
 
   private DragonJobGraph graph = null;
 

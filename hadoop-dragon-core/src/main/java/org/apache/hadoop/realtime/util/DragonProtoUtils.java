@@ -19,9 +19,11 @@
 package org.apache.hadoop.realtime.util;
 
 import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskAttemptCompletionEventStatus;
 import org.apache.hadoop.realtime.records.TaskAttemptState;
 import org.apache.hadoop.realtime.records.TaskState;
 import org.apache.hadoop.yarn.proto.DragonProtos.JobStateProto;
+import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptCompletionEventStatusProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptStateProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskStateProto;
 
@@ -58,6 +60,17 @@ public class DragonProtoUtils {
   }
   public static TaskState convertFromProtoFormat(TaskStateProto e) {
     return TaskState.valueOf(e.name().replace(TASK_STATE_PREFIX, ""));
+  }
+  
+  /*
+   * TaskAttemptCompletionEventStatus
+   */
+  private static String TACE_PREFIX = "TACE_";
+  public static TaskAttemptCompletionEventStatusProto convertToProtoFormat(TaskAttemptCompletionEventStatus e) {
+    return TaskAttemptCompletionEventStatusProto.valueOf(TACE_PREFIX + e.name());
+  }
+  public static TaskAttemptCompletionEventStatus convertFromProtoFormat(TaskAttemptCompletionEventStatusProto e) {
+    return TaskAttemptCompletionEventStatus.valueOf(e.name().replace(TACE_PREFIX, ""));
   }
   
 }
