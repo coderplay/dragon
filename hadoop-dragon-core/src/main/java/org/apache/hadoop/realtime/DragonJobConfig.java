@@ -207,7 +207,7 @@ public class DragonJobConfig {
       DRAGON_AM_PREFIX + "job.node-blacklisting.enable";
 
   public static final String MAX_TASK_FAILURES_PER_TRACKER =
-      "mapreduce.job.maxtaskfailures.per.tracker";
+      "dragon.job.maxtaskfailures.per.tracker";
 
   /** Ignore blacklisting if a certain percentage of nodes have been blacklisted */
   public static final String DRAGON_AM_IGNORE_BLACKLISTING_BLACKLISTED_NODE_PERECENT =
@@ -283,5 +283,22 @@ public class DragonJobConfig {
   public static final int DEFAULT_TASK_MEMORY_MB = 1024;
   
   public static final String WORKING_DIR = "dragon.job.working.dir";
+  
+  public static final String JOB_ID = "dragon.job.id";
+  
+  public static final String TASK_ID = "dragon.task.id";
+  
+  public static final String TASK_ATTEMPT_ID = "dragon.task.attempt.id";
+  
+  public static final String COUNTERS_MAX_KEY = "dragon.job.counters.max";
+  public static final int COUNTERS_MAX_DEFAULT = 120;
 
+  public static final String COUNTER_GROUP_NAME_MAX_KEY = "dragon.job.counters.group.name.max";
+  public static final int COUNTER_GROUP_NAME_MAX_DEFAULT = 128;
+
+  public static final String COUNTER_NAME_MAX_KEY = "dragon.job.counters.counter.name.max";
+  public static final int COUNTER_NAME_MAX_DEFAULT = 64;
+
+  public static final String COUNTER_GROUPS_MAX_KEY = "dragon.job.counters.groups.max";
+  public static final int COUNTER_GROUPS_MAX_DEFAULT = 50;
 }

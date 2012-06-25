@@ -237,11 +237,14 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
           .addTransition(TaskAttemptState.RUNNING,
               TaskAttemptState.FAIL_CONTAINER_CLEANUP,
               TaskAttemptEventType.TA_TIMED_OUT, CLEANUP_CONTAINER_TRANSITION)
+          // if container killed by AM shutting down
+          .addTransition(TaskAttemptState.RUNNING, TaskAttemptState.KILLED,
+              TaskAttemptEventType.TA_CONTAINER_CLEANED, new KilledTransition())
           // Kill handling
           .addTransition(TaskAttemptState.RUNNING,
               TaskAttemptState.KILL_CONTAINER_CLEANUP,
               TaskAttemptEventType.TA_KILL, CLEANUP_CONTAINER_TRANSITION)
-
+              
           // Transitions from FAIL_CONTAINER_CLEANUP state.
           .addTransition(TaskAttemptState.FAIL_CONTAINER_CLEANUP,
               TaskAttemptState.FAIL_TASK_CLEANUP,
@@ -258,7 +261,9 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
               EnumSet.of(TaskAttemptEventType.TA_KILL,
                   TaskAttemptEventType.TA_CONTAINER_COMPLETED,
                   TaskAttemptEventType.TA_UPDATE,
+                  // Container launch events can arrive late
                   TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
                   TaskAttemptEventType.TA_FAILMSG,
                   TaskAttemptEventType.TA_TIMED_OUT))
 
@@ -279,6 +284,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
                   TaskAttemptEventType.TA_CONTAINER_COMPLETED,
                   TaskAttemptEventType.TA_UPDATE,
                   TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
                   TaskAttemptEventType.TA_FAILMSG,
                   TaskAttemptEventType.TA_TIMED_OUT))
 
@@ -295,11 +301,14 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
           .addTransition(
               TaskAttemptState.FAIL_TASK_CLEANUP,
               TaskAttemptState.FAIL_TASK_CLEANUP,
-              EnumSet
-                  .of(TaskAttemptEventType.TA_KILL,
-                      TaskAttemptEventType.TA_CONTAINER_COMPLETED,
-                      TaskAttemptEventType.TA_UPDATE,
-                      TaskAttemptEventType.TA_FAILMSG))
+              EnumSet.of(TaskAttemptEventType.TA_KILL,
+                  TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+                  TaskAttemptEventType.TA_UPDATE,
+                  TaskAttemptEventType.TA_FAILMSG,
+                  TaskAttemptEventType.TA_CONTAINER_CLEANED,
+                  // Container launch events can arrive late
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED))
 
           // Transitions from KILL_TASK_CLEANUP
           .addTransition(TaskAttemptState.KILL_TASK_CLEANUP,
@@ -313,11 +322,14 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
           .addTransition(
               TaskAttemptState.KILL_TASK_CLEANUP,
               TaskAttemptState.KILL_TASK_CLEANUP,
-              EnumSet
-                  .of(TaskAttemptEventType.TA_KILL,
-                      TaskAttemptEventType.TA_CONTAINER_COMPLETED,
-                      TaskAttemptEventType.TA_UPDATE,
-                      TaskAttemptEventType.TA_FAILMSG))
+              EnumSet.of(TaskAttemptEventType.TA_KILL,
+                  TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+                  TaskAttemptEventType.TA_UPDATE,
+                  TaskAttemptEventType.TA_FAILMSG,
+                  TaskAttemptEventType.TA_CONTAINER_CLEANED,
+                  // Container launch events can arrive late
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED))
 
           // Transitions from FAILED state
           .addTransition(TaskAttemptState.FAILED, TaskAttemptState.FAILED,
@@ -327,13 +339,15 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
           .addTransition(
               TaskAttemptState.FAILED,
               TaskAttemptState.FAILED,
-              EnumSet
-                  .of(TaskAttemptEventType.TA_KILL,
-                      TaskAttemptEventType.TA_ASSIGNED,
-                      TaskAttemptEventType.TA_CONTAINER_COMPLETED,
-                      TaskAttemptEventType.TA_UPDATE,
-                      TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-                      TaskAttemptEventType.TA_FAILMSG))
+              EnumSet.of(TaskAttemptEventType.TA_KILL,
+                  TaskAttemptEventType.TA_ASSIGNED,
+                  TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+                  TaskAttemptEventType.TA_UPDATE,
+                  // Container launch events can arrive late
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
+                  TaskAttemptEventType.TA_CONTAINER_CLEANED,
+                  TaskAttemptEventType.TA_FAILMSG))
 
           // Transitions from KILLED state
           .addTransition(TaskAttemptState.KILLED, TaskAttemptState.KILLED,
@@ -343,13 +357,16 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
           .addTransition(
               TaskAttemptState.KILLED,
               TaskAttemptState.KILLED,
-              EnumSet
-                  .of(TaskAttemptEventType.TA_KILL,
-                      TaskAttemptEventType.TA_ASSIGNED,
-                      TaskAttemptEventType.TA_CONTAINER_COMPLETED,
-                      TaskAttemptEventType.TA_UPDATE,
-                      TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-                      TaskAttemptEventType.TA_FAILMSG))
+              EnumSet.of(
+                  TaskAttemptEventType.TA_KILL,
+                  TaskAttemptEventType.TA_ASSIGNED,
+                  TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+                  TaskAttemptEventType.TA_UPDATE,
+                  // Container launch events can arrive late
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+                  TaskAttemptEventType.TA_CONTAINER_LAUNCH_FAILED,
+                  TaskAttemptEventType.TA_CONTAINER_CLEANED,
+                  TaskAttemptEventType.TA_FAILMSG))
 
           // create the topology tables
           .installTopology();
