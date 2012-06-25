@@ -19,10 +19,14 @@
 package org.apache.hadoop.realtime.util;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.realtime.job.TaskAttempt;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
+import org.apache.hadoop.realtime.records.Counter;
+import org.apache.hadoop.realtime.records.CounterGroup;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
@@ -182,5 +186,18 @@ public class DragonBuilderUtils {
     context.setPartition(attempt.getPartition());
     context.setUser(user);
     return context;
+  }
+  
+  public static Counter newCounter(String name){
+    Counter counter = Records.newRecord(Counter.class);
+    counter.setName(name);
+    counter.setValue(0);
+    return counter;
+  }
+  
+  public static Counters newCounters(){
+    Counters counters = Records.newRecord(Counters.class);
+    counters.addAllCounterGroups(new ConcurrentSkipListMap<String, CounterGroup>());
+    return counters;
   }
 }

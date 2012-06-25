@@ -108,6 +108,12 @@ public class CounterPBImpl extends ProtoBase<CounterProto> implements Counter {
     builder.setValue(getValue()+value);   
   }
 
+  @Override
+  public Counter getUnderlyingCounter() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
 
 
 }  
