@@ -52,9 +52,9 @@ public class ProcessTree {
   private static boolean isSetsidSupported() {
     ShellCommandExecutor shexec = null;
     boolean setsidSupported = true;
+    String[] args = { "setsid", "bash", "-c", "echo $$" };
+    shexec = new ShellCommandExecutor(args);
     try {
-      String[] args = { "setsid", "bash", "-c", "echo $$" };
-      shexec = new ShellCommandExecutor(args);
       shexec.execute();
     } catch (IOException ioe) {
       LOG.warn("setsid is not available on this machine. So not using it.");
@@ -127,9 +127,9 @@ public class ProcessTree {
    */
   private static void sendSignal(String pid, int signalNum, String signalName) {
     ShellCommandExecutor shexec = null;
+    String[] args = { "kill", "-" + signalNum, pid };
+    shexec = new ShellCommandExecutor(args);
     try {
-      String[] args = { "kill", "-" + signalNum, pid };
-      shexec = new ShellCommandExecutor(args);
       shexec.execute();
     } catch (IOException ioe) {
       LOG.warn("Error executing shell command " + ioe);

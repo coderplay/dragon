@@ -127,6 +127,10 @@ public class ClientServiceDelegate {
     while (application == null
         || YarnApplicationState.RUNNING == application
             .getYarnApplicationState()) {
+      if (application == null) {
+        LOG.debug("Could not get Job info from RM for job " + jobId + ". ");
+        return getNotRunningJob(null, JobState.NEW);
+      }
       try {
         if (application.getHost() == null || "".equals(application.getHost())) {
           if (LOG.isDebugEnabled()) {

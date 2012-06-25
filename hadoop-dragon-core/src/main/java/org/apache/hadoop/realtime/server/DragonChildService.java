@@ -45,9 +45,16 @@ import org.apache.hadoop.realtime.job.app.event.ChildExecutionEvent;
 import org.apache.hadoop.realtime.job.app.event.ChildExecutionEventType;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
+import org.apache.hadoop.realtime.job.app.event.TaskAttemptDiagnosticsUpdateEvent;
+import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
+import org.apache.hadoop.realtime.job.app.event.TaskAttemptEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.realtime.protocol.DragonChildProtocol;
+import org.apache.hadoop.realtime.protocol.records.FatalErrorRequest;
+import org.apache.hadoop.realtime.protocol.records.FatalErrorResponse;
+import org.apache.hadoop.realtime.protocol.records.FsErrorRequest;
+import org.apache.hadoop.realtime.protocol.records.FsErrorResponse;
 import org.apache.hadoop.realtime.protocol.records.GetShuffleAddressRequest;
 import org.apache.hadoop.realtime.protocol.records.GetShuffleAddressResponse;
 import org.apache.hadoop.realtime.protocol.records.GetTaskRequest;
@@ -294,6 +301,38 @@ public class DragonChildService extends CompositeService implements
       return null;
     }
 
+    @Override
+    public FsErrorResponse fsError(FsErrorRequest request)
+        throws YarnRemoteException {
+      TaskAttemptId attemptId = request.getTaskAttemptId();
+      String errorMessage = request.getMessage();
+      LOG.fatal("Task: " + attemptId + " - failed due to FSError: "
+          + errorMessage);
+      reportDiagnosticInfo(attemptId, "FSError: " + errorMessage);
+
+      context.getEventHandler().handle(
+          new TaskAttemptEvent(attemptId, TaskAttemptEventType.TA_FAILMSG));
+      FsErrorResponse response =
+          recordFactory.newRecordInstance(FsErrorResponse.class);
+      return response;
+    }
+
+    @Override
+    public FatalErrorResponse fatalError(FatalErrorRequest request)
+        throws YarnRemoteException {
+      TaskAttemptId attemptId = request.getTaskAttemptId();
+      String errorMessage = request.getMessage();
+      LOG.fatal("Task: " + attemptId + " - failed due to FSError: "
+          + errorMessage);
+      reportDiagnosticInfo(attemptId, "Error: " + errorMessage);
+
+      context.getEventHandler().handle(
+          new TaskAttemptEvent(attemptId, TaskAttemptEventType.TA_FAILMSG));
+      FatalErrorResponse response =
+          recordFactory.newRecordInstance(FatalErrorResponse.class);
+      return response;
+    }
+
   }
 
   @Override
@@ -301,4 +340,13 @@ public class DragonChildService extends CompositeService implements
     return bindAddress;
   }
 
+  
+  public void reportDiagnosticInfo(TaskAttemptId attemptId,
+      String diagnosticInfo){
+    LOG.info("Diagnostics report from " + attemptId.toString() + ": "
+        + diagnosticInfo);
+
+    context.getEventHandler().handle(
+        new TaskAttemptDiagnosticsUpdateEvent(attemptId, diagnosticInfo));
+  }
 }

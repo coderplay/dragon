@@ -22,8 +22,11 @@ public interface Counter {
   public abstract String getName();
   public abstract String getDisplayName();
   public abstract long getValue();
+  public abstract Counter getUnderlyingCounter();
   
   public abstract void setName(String name);
   public abstract void setDisplayName(String displayName);
   public abstract void setValue(long value);
+  public abstract void increment(long value);
+
 }

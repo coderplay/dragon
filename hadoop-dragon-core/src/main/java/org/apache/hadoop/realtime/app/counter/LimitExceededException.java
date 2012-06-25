@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,18 +16,21 @@
  * limitations under the License.
  */
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "DragonChildProtocol";
-option java_generic_services = true;
+package org.apache.hadoop.realtime.app.counter;
 
-import "dragon_service_protos.proto";
+import org.apache.hadoop.classification.InterfaceAudience;
 
-/* If making changes to this, please edit DragonClientProtocolService */
-service DragonChildProtocolService {
-  rpc getShuffleAddress (GetShuffleAddressRequestProto) returns (GetShuffleAddressResponseProto);
-  rpc getTask (GetTaskRequestProto) returns (GetTaskResponseProto);
-  rpc ping (PingRequestProto) returns (PingResponseProto);
-  rpc statusUpdate (StatusUpdateRequestProto) returns (StatusUpdateResponseProto);
-  rpc fsError (FsErrorRequestProto) returns (FsErrorResponseProto);
-  rpc fatalError (FatalErrorRequestProto) returns (FatalErrorResponseProto);
+@InterfaceAudience.Private
+public class LimitExceededException extends RuntimeException {
+
+  private static final long serialVersionUID = 1L;
+
+  public LimitExceededException(String msg) {
+    super(msg);
+  }
+
+  // Only allows chaining of related exceptions
+  public LimitExceededException(LimitExceededException cause) {
+    super(cause);
+  }
 }
