@@ -21,8 +21,6 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.realtime.FileSystemCounter;
-import org.apache.hadoop.realtime.TaskCounter;
 import org.apache.hadoop.realtime.job.JobCounter;
 import org.apache.hadoop.realtime.records.Counter;
 import org.apache.hadoop.realtime.records.Counters;
