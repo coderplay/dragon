@@ -38,8 +38,8 @@ import org.apache.hadoop.realtime.protocol.records.PingRequest;
 import org.apache.hadoop.realtime.protocol.records.PingResponse;
 import org.apache.hadoop.realtime.protocol.records.StatusUpdateRequest;
 import org.apache.hadoop.realtime.protocol.records.StatusUpdateResponse;
+import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.records.TaskInChild;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
@@ -49,6 +49,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
@@ -75,12 +76,12 @@ public class ChildServiceDelegate {
     this.rpc = YarnRPC.create(conf);
   }
 
-  public TaskInChild getTask(String containerIdString)
+  public ChildExecutionContext getTask(ContainerId containerId)
       throws YarnRemoteException {
     GetTaskRequest request =
         recordFactory.newRecordInstance(GetTaskRequest.class);
-    request.setContainerId(containerIdString);
-    TaskInChild task =
+    request.setContainerId(containerId);
+    ChildExecutionContext task =
         ((GetTaskResponse) invoke("getTask", GetTaskRequest.class, request))
             .getTask();
     return task;
