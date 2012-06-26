@@ -22,12 +22,11 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskReport;
-import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
 
@@ -100,4 +99,6 @@ public interface DragonJobService extends Configurable {
       InterruptedException;
 
   public JobReport getJobReport(JobId jobId) throws YarnRemoteException;
+  
+  public Counters getCounters(JobId jobId) throws YarnRemoteException;
 }

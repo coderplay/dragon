@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.Task;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
@@ -103,6 +104,12 @@ public class LocalJob implements Job {
 
   @Override
   public Task getTask(TaskId taskID) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Counters getAllCounters() {
     // TODO Auto-generated method stub
     return null;
   }

@@ -35,6 +35,7 @@ import org.apache.hadoop.realtime.DragonConfig;
 import org.apache.hadoop.realtime.DragonJob;
 import org.apache.hadoop.realtime.DragonJobService;
 import org.apache.hadoop.realtime.job.Task;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
@@ -316,6 +317,12 @@ public class LocalJobRunner implements DragonJobService {
     } catch (IOException e) {
       throw new RuntimeException("Error in instantiating local job runner", e);
     }
+  }
+
+  @Override
+  public Counters getCounters(JobId jobId) throws YarnRemoteException {
+    // TODO Auto-generated method stub
+    return null;
   }
 
 }

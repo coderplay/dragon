@@ -38,15 +38,16 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.app.counter.CountersManager;
 import org.apache.hadoop.realtime.app.rm.ContainerAllocator;
 import org.apache.hadoop.realtime.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.realtime.app.rm.ContainerRequestEvent;
@@ -160,6 +161,8 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
 
   private ChildExecutionContext remoteTask;
 
+  private final CountersManager countersManager = new CountersManager();
+  
   private final static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
@@ -385,6 +388,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     this.jobFile = jobFile;
     this.partition = partition;
     this.appContext = appContext;
+    this.reportedStatus = new TaskAttemptStatus();
 
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     readLock = readWriteLock.readLock();
@@ -460,7 +464,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     try {
       Counters counters = reportedStatus.counters;
       if (counters == null) {
-        counters = recordFactory.newRecordInstance(Counters.class);
+        counters = countersManager.getCounters();
       }
       return counters;
     } finally {

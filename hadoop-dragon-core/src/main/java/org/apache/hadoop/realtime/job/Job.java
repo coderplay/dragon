@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
@@ -92,6 +93,8 @@ public interface Job {
   Task getTask(TaskId taskID);
   
   JobReport getReport();
-
+  
   List<String> getDiagnostics();
+
+  Counters getAllCounters();
 }

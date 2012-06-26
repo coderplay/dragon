@@ -28,7 +28,7 @@ import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 
 import com.google.common.collect.Maps;
 
-public class CountersInAppMaster {
+public class CountersManager {
 
   protected static final Log LOG = LogFactory.getLog("dragon.Counters");
 
