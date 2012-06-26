@@ -18,13 +18,11 @@
 package org.apache.hadoop.realtime.app.counter;
 
 import java.util.Locale;
-import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.realtime.FileSystemCounter;
 import org.apache.hadoop.realtime.records.Counter;
 import org.apache.hadoop.realtime.records.CounterGroup;
 import org.apache.hadoop.realtime.records.impl.pb.CounterGroupPBImpl;

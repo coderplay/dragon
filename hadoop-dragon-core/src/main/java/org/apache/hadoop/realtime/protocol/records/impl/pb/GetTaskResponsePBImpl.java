@@ -20,6 +20,7 @@ package org.apache.hadoop.realtime.protocol.records.impl.pb;
 
 import org.apache.hadoop.realtime.protocol.records.GetTaskResponse;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
+import org.apache.hadoop.realtime.records.impl.pb.ChildExecutionContextPBImpl;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.DragonProtos.ChildExecutionContextProto;
 import org.apache.hadoop.yarn.proto.DragonServiceProtos.GetTaskResponseProto;

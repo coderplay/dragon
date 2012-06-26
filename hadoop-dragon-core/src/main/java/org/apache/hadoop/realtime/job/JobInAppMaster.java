@@ -20,10 +20,10 @@ package org.apache.hadoop.realtime.job;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -46,8 +46,10 @@ import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.DragonJobGraph;
 import org.apache.hadoop.realtime.DragonVertex;
 import org.apache.hadoop.realtime.JobSubmissionFiles;
+import org.apache.hadoop.realtime.app.counter.CountersManager;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.client.app.AppContext;
+import org.apache.hadoop.realtime.job.app.event.JobCounterUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
@@ -70,8 +72,6 @@ import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.realtime.serialize.HessianSerializer;
-import org.apache.hadoop.realtime.server.DragonChildService;
-import org.apache.hadoop.realtime.server.ChildService;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -121,10 +121,13 @@ public class JobInAppMaster implements Job,
   private final long appSubmitTime;
   private final AppContext appContext;
 
+  private final CountersManager countersInApp = new CountersManager();
+  
   private boolean lazyTasksCopyNeeded = false;
   volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
-  private Object fullCountersLock = new Object();
-  private Counters fullCounters = null;
+  
+  private final CountersManager counterManager = new CountersManager();
+  private Counters jobCounters = counterManager.getCounters();
     // FIXME:  
     //
     // Can then replace task-level uber counters (MR-2424) with job-level ones
@@ -136,7 +139,6 @@ public class JobInAppMaster implements Job,
   private FileSystem fs;
   private Path remoteJobSubmitDir;
   public Path remoteJobConfFile;
-  private volatile int taskNumber = 0;
   private Token<JobTokenIdentifier> jobToken;
   private JobTokenSecretManager jobTokenSecretManager;
   private final List<String> diagnostics = new ArrayList<String>();
@@ -337,7 +339,7 @@ public class JobInAppMaster implements Job,
   EventHandler getEventHandler() {
     return this.eventHandler;
   }
-
+  
 //
 //  public boolean checkAccess(UserGroupInformation callerUGI, 
 //      JobACL jobOperation) {
@@ -348,35 +350,25 @@ public class JobInAppMaster implements Job,
 //    return aclsManager.checkAccess(callerUGI, jobOperation, username, jobACL);
 //  }
 
-//  @Override
-//  public Counters getAllCounters() {
-//
-//    readLock.lock();
-//
-//    try {
-//      JobState state = getState();
-//      if (state == JobState.ERROR || state == JobState.FAILED
-//          || state == JobState.KILLED || state == JobState.SUCCEEDED) {
-//        this.mayBeConstructFinalFullCounters();
-//        return fullCounters;
-//      }
-//
-//      Counters counters = new Counters();
-//      counters.incrAllCounters(jobCounters);
-//      return incrTaskCounters(counters, tasks.values());
-//
-//    } finally {
-//      readLock.unlock();
-//    }
-//  }
-//
-//  public static Counters incrTaskCounters(
-//      Counters counters, Collection<Task> tasks) {
-//    for (Task task : tasks) {
-//      counters.incrAllCounters(task.getCounters());
-//    }
-//    return counters;
-//  }
+  @Override
+  public Counters getAllCounters() {
+    readLock.lock();
+    try {
+      Counters counters = DragonBuilderUtils.newCounters();
+      counters.addAllCounterGroups(jobCounters.getAllCounterGroups());
+      return incrTaskCounters(counters, tasks.values());
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  public static Counters incrTaskCounters(Counters counters,
+      Collection<Task> tasks) {
+    for (Task task : tasks) {
+      counters.addAllCounterGroups(task.getCounters().getAllCounterGroups());
+    }
+    return counters;
+  }
 
   @Override
   public List<String> getDiagnostics() {
@@ -587,6 +579,7 @@ public class JobInAppMaster implements Job,
 
         // create the Tasks but don't start them yet
         createTasks(job, inputLength, graph);
+        job.countersInApp.getCounter(JobCounter.NUM_FAILED_TASKS).increment(54321);
 
         return JobState.INITED;
       } catch (IOException e) {
@@ -935,12 +928,12 @@ public class JobInAppMaster implements Job,
       SingleArcTransition<JobInAppMaster, JobEvent> {
     @Override
     public void transition(JobInAppMaster job, JobEvent event) {
-//      JobCounterUpdateEvent jce = (JobCounterUpdateEvent) event;
-//      for (JobCounterUpdateEvent.CounterIncrementalUpdate ci : jce
-//          .getCounterUpdates()) {
-//        job.jobCounters.findCounter(ci.getCounterKey()).increment(
-//          ci.getIncrementValue());
-//      }
+      JobCounterUpdateEvent jce = (JobCounterUpdateEvent) event;
+      for (JobCounterUpdateEvent.CounterIncrementalUpdate ci : jce
+          .getCounterUpdates()) {
+        job.jobCounters.getCounter(ci.getCounterKey()).increment(
+          ci.getIncrementValue());
+      }
     }
   }
   
