@@ -102,6 +102,18 @@ public class CounterPBImpl extends ProtoBase<CounterProto> implements Counter {
     builder.setDisplayName((displayName));
   }
 
+  @Override
+  public void increment(long value) {
+    maybeInitBuilder();
+    builder.setValue(getValue()+value);   
+  }
+
+  @Override
+  public Counter getUnderlyingCounter() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
 
 
 }  

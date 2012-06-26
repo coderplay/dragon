@@ -22,6 +22,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.realtime.protocol.records.FatalErrorRequest;
+import org.apache.hadoop.realtime.protocol.records.FatalErrorResponse;
+import org.apache.hadoop.realtime.protocol.records.FsErrorRequest;
+import org.apache.hadoop.realtime.protocol.records.FsErrorResponse;
 import org.apache.hadoop.realtime.protocol.records.GetShuffleAddressRequest;
 import org.apache.hadoop.realtime.protocol.records.GetShuffleAddressResponse;
 import org.apache.hadoop.realtime.protocol.records.GetTaskRequest;
@@ -88,5 +92,11 @@ public interface DragonChildProtocol {
    */
   GetShuffleAddressResponse getShuffleAddress(GetShuffleAddressRequest request)
       throws YarnRemoteException;
+  
+  /** Report that the task encounted a local filesystem error.*/
+  FsErrorResponse fsError(FsErrorRequest request) throws YarnRemoteException;
+
+  /** Report that the task encounted a fatal error.*/
+  FatalErrorResponse fatalError(FatalErrorRequest request) throws YarnRemoteException;
 
 }

@@ -19,10 +19,10 @@
 package org.apache.hadoop.realtime.records.impl.pb;
 
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.hadoop.realtime.records.Counter;
 import org.apache.hadoop.realtime.records.CounterGroup;
@@ -133,7 +133,7 @@ public class CounterGroupPBImpl extends ProtoBase<CounterGroupProto> implements 
     }
     CounterGroupProtoOrBuilder p = viaProto ? proto : builder;
     List<StringCounterMapProto> list = p.getCountersList();
-    this.counters = new HashMap<String, Counter>();
+    this.counters = new ConcurrentHashMap<String, Counter>();
 
     for (StringCounterMapProto c : list) {
       this.counters.put(c.getKey(), convertFromProtoFormat(c.getValue()));

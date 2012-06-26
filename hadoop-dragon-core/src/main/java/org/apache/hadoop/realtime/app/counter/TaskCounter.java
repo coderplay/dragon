@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 
-option java_package = "org.apache.hadoop.yarn.proto";
-option java_outer_classname = "DragonChildProtocol";
-option java_generic_services = true;
+package org.apache.hadoop.realtime.app.counter;
 
-import "dragon_service_protos.proto";
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
-/* If making changes to this, please edit DragonClientProtocolService */
-service DragonChildProtocolService {
-  rpc getShuffleAddress (GetShuffleAddressRequestProto) returns (GetShuffleAddressResponseProto);
-  rpc getTask (GetTaskRequestProto) returns (GetTaskResponseProto);
-  rpc ping (PingRequestProto) returns (PingResponseProto);
-  rpc statusUpdate (StatusUpdateRequestProto) returns (StatusUpdateResponseProto);
-  rpc fsError (FsErrorRequestProto) returns (FsErrorResponseProto);
-  rpc fatalError (FatalErrorRequestProto) returns (FatalErrorResponseProto);
+// Counters used by Task classes
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public enum TaskCounter {
+  GC_TIME_MILLIS,
+  CPU_MILLISECONDS,
+  PHYSICAL_MEMORY_BYTES,
+  VIRTUAL_MEMORY_BYTES
 }

@@ -217,7 +217,7 @@ public class DragonClientService extends AbstractService
       Job job = verifyAndGetJob(jobId, false);
       GetCountersResponse response =
         recordFactory.newRecordInstance(GetCountersResponse.class);
-//      response.setCounters(TypeConverter.toYarn(job.getAllCounters()));
+      response.setCounters(job.getAllCounters());
       return response;
     }
     

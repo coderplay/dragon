@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.protocol.records.impl.pb;
+package org.apache.hadoop.realtime.records.impl.pb;
 
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.impl.pb.TaskAttemptIdPBImpl;
+import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.DragonProtos.ChildExecutionContextProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.ChildExecutionContextProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptIdProto;
@@ -27,7 +28,8 @@ import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptIdProto;
 /**
  * {@link ChildExecutionContext} protobuf implementation.
  */
-public class ChildExecutionContextPBImpl implements ChildExecutionContext {
+public class ChildExecutionContextPBImpl extends
+    ProtoBase<ChildExecutionContextProto> implements ChildExecutionContext {
 
   ChildExecutionContextProto proto = ChildExecutionContextProto
       .getDefaultInstance();
