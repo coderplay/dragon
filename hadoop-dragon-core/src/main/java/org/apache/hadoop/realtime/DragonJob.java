@@ -19,9 +19,7 @@ package org.apache.hadoop.realtime;
 
 import java.io.IOException;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.security.PrivilegedExceptionAction;
-import java.util.Enumeration;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -29,9 +27,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.realtime.conf.DragonConfiguration;
-import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
+import org.apache.hadoop.realtime.job.JobCounter;
+import org.apache.hadoop.realtime.records.Counter;
+import org.apache.hadoop.realtime.records.CounterGroup;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
@@ -294,12 +295,19 @@ public class DragonJob {
           toBeScheduledTasks++;
         }
       }
-      LOG.info("Your job has "+taskNums+"tasks,"+toBeScheduledTasks+" of them havn't been scheduled.");
+      LOG.info("Your job has "+taskNums+" tasks, "+toBeScheduledTasks+" of them havn't been scheduled.");
       if(toBeScheduledTasks==0){
         LOG.info("All task of "+ jobId +" is scheduled. Job starts running.");
         break;
       }
     }
+    CounterGroup group = null ;
+    while(group == null){
+      group= getCounters(jobId).getCounterGroup(JobCounter.class.getName());
+    }
+    for(Counter counter:group.getAllCounters().values()){
+      LOG.info(counter.getDisplayName()+" : "+counter.getValue());
+    }     
     return true;
   }
 
@@ -320,7 +328,16 @@ public class DragonJob {
       }
     });
   }
-  
+
+  public Counters getCounters(final JobId jobId) throws IOException,
+      InterruptedException {
+    return ugi.doAs(new PrivilegedExceptionAction<Counters>() {
+      @Override
+      public Counters run() throws IOException, InterruptedException {
+        return jobService.getCounters(jobId);
+      }
+    });
+}
   public List<TaskReport> getTaskReports(final JobId jobId) throws IOException,
       InterruptedException {
     return ugi.doAs(new PrivilegedExceptionAction<List<TaskReport>>() {

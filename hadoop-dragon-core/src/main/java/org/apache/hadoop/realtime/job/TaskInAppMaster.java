@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.realtime.job;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
@@ -32,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.app.counter.CountersManager;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.app.rm.ContainerFailedEvent;
 import org.apache.hadoop.realtime.client.app.AppContext;
@@ -53,11 +53,9 @@ import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.records.TaskState;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
-import org.apache.hadoop.realtime.server.ChildService;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -90,6 +88,8 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   protected final AppContext appContext;
   private final DragonAppMetrics metrics;
 
+  private final CountersManager countersManager = new CountersManager();
+  
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
   
@@ -256,12 +256,11 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
     Counters counters = null;
     readLock.lock();
     try {
-      TaskAttempt bestAttempt = attempts.get(0);
+      TaskAttempt bestAttempt = selectBestAttempt();
       if (bestAttempt != null) {
         counters = bestAttempt.getCounters();
       } else {
-        counters = recordFactory.newRecordInstance(Counters.class);
-        // counters.groups = new HashMap<CharSequence, CounterGroup>();
+        counters = countersManager.getCounters();
       }
       return counters;
     } finally {
@@ -509,7 +508,8 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
         continue;
       }
       if (result == null) {
-        result = at; // The first time around
+        result = at; 
+        break;
       }
     }
     return result;

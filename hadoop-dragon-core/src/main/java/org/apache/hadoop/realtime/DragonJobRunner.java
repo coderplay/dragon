@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.client.ClientCache;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
@@ -607,6 +608,11 @@ public class DragonJobRunner implements DragonJobService {
   // this method is for internal use only
   private static final String toFullPropertyName(String queue, String property) {
     return "dragon.queue." + queue + "." + property;
+  }
+
+  @Override
+  public Counters getCounters(JobId jobId) throws YarnRemoteException {
+    return clientCache.getClient(jobId).getCounters(jobId);
   }
 
 }

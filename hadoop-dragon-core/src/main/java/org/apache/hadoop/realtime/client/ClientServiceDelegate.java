@@ -36,6 +36,8 @@ import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.ResourceMgrDelegate;
 import org.apache.hadoop.realtime.protocol.DragonClientProtocol;
 import org.apache.hadoop.realtime.protocol.records.FailTaskAttemptRequest;
+import org.apache.hadoop.realtime.protocol.records.GetCountersRequest;
+import org.apache.hadoop.realtime.protocol.records.GetCountersResponse;
 import org.apache.hadoop.realtime.protocol.records.GetDiagnosticsRequest;
 import org.apache.hadoop.realtime.protocol.records.GetDiagnosticsResponse;
 import org.apache.hadoop.realtime.protocol.records.GetJobReportRequest;
@@ -44,6 +46,7 @@ import org.apache.hadoop.realtime.protocol.records.GetTaskReportsRequest;
 import org.apache.hadoop.realtime.protocol.records.GetTaskReportsResponse;
 import org.apache.hadoop.realtime.protocol.records.KillJobRequest;
 import org.apache.hadoop.realtime.protocol.records.KillTaskAttemptRequest;
+import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
@@ -253,7 +256,10 @@ public class ClientServiceDelegate {
     }
     while (true) {
       try {
-        return methodOb.invoke(getProxy(), args);
+        Object object = methodOb.invoke(getProxy(), args);
+        if(object == null)
+          continue;
+        return object;
       } catch (YarnRemoteException yre) {
         LOG.warn("Exception thrown by remote end.", yre);
         throw yre;
@@ -299,6 +305,14 @@ public class ClientServiceDelegate {
     JobReport report = ((GetJobReportResponse) invoke("getJobReport",
         GetJobReportRequest.class, request)).getJobReport();
     return report;
+  }
+  
+  public Counters getCounters(JobId jobId) throws YarnRemoteException {
+    GetCountersRequest request = recordFactory.newRecordInstance(GetCountersRequest.class);
+    request.setJobId(jobId);
+    Counters cnt = ((GetCountersResponse)
+        invoke("getCounters", GetCountersRequest.class, request)).getCounters();
+    return cnt;
   }
 
   public List<TaskReport> getTaskReports(JobId jobId)
