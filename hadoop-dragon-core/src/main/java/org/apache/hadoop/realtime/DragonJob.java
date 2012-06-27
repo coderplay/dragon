@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -301,13 +302,11 @@ public class DragonJob {
         break;
       }
     }
-    CounterGroup group = null ;
-    while(group == null){
-      group= getCounters(jobId).getCounterGroup(JobCounter.class.getName());
+    Map<String, CounterGroup> groups = null ;
+    while(groups == null){
+      groups= getCounters(jobId).getAllCounterGroups();
     }
-    for(Counter counter:group.getAllCounters().values()){
-      LOG.info(counter.getDisplayName()+" : "+counter.getValue());
-    }     
+    LOG.info(groups);   
     return true;
   }
 

@@ -158,6 +158,8 @@ public class DragonJobConfig {
 	/** The staging directory for dragon. */
 	public static final String DRAGON_AM_STAGING_DIR = DRAGON_AM_PREFIX
 	    + "staging-dir";
+  public static final String DEFAULT_DRAGON_AM_STAGING_DIR =
+      "/tmp/hadoop-yarn/staging";
 
   public static final String APPLICATION_ATTEMPT_ID =
       "dragon.job.application.attempt.id";

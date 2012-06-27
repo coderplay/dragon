@@ -186,8 +186,10 @@ public class ResourceMgrDelegate {
   public String getStagingAreaDir() throws IOException, InterruptedException {
     String user = UserGroupInformation.getCurrentUser().getShortUserName();
     Path path =
-        new Path(conf.get(DragonJobConfig.DRAGON_AM_STAGING_DIR)
-            + Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
+        new Path(conf.get(DragonJobConfig.DRAGON_AM_STAGING_DIR,
+            DragonJobConfig.DEFAULT_DRAGON_AM_STAGING_DIR)
+            + Path.SEPARATOR
+            + user + Path.SEPARATOR + STAGING_CONSTANT);
     if (LOG.isDebugEnabled()) {
       LOG.debug("getStagingAreaDir: dir=" + path);
     }

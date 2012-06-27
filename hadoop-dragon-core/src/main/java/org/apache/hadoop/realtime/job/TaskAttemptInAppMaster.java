@@ -464,7 +464,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     try {
       Counters counters = reportedStatus.counters;
       if (counters == null) {
-        counters = countersManager.getCounters();
+        counters = DragonBuilderUtils.newCounters();
       }
       return counters;
     } finally {

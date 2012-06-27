@@ -37,7 +37,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Apps;
 
-@SuppressWarnings("deprecation")
 public class DragonChildJVM {
 
   private static String getTaskLogFile(LogName filter) {
@@ -53,7 +52,7 @@ public class DragonChildJVM {
   private static String getChildLogLevel(Configuration conf) {
 
     return conf.get(DragonJobConfig.TASK_LOG_LEVEL,
-        DragonJobConfig.DEFAULT_LOG_LEVEL.toString());
+        DragonJobConfig.DEFAULT_LOG_LEVEL);
   }
 
   public static void setVMEnv(Map<String, String> environment,

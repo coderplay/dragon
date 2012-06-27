@@ -128,11 +128,6 @@ public class JobInAppMaster implements Job,
   
   private final CountersManager counterManager = new CountersManager();
   private Counters jobCounters = counterManager.getCounters();
-    // FIXME:  
-    //
-    // Can then replace task-level uber counters (MR-2424) with job-level ones
-    // sent from LocalContainerLauncher, and eventually including a count of
-    // of uber-AM attempts (probably sent from MRAppMaster).
   public Configuration conf;
 
   // fields initialized in init
@@ -544,10 +539,10 @@ public class JobInAppMaster implements Job,
 
     /**
      * Note that this transition method is called directly (and synchronously)
-     * by MRAppMaster's init() method (i.e., no RPC, no thread-switching;
+     * by DragonAppMaster's init() method (i.e., no RPC, no thread-switching;
      * just plain sequential call within AM context), so we can trigger
      * modifications in AM state from here (at least, if AM is written that
-     * way; MR version is).
+     * way; Dragon version is).
      */
     @Override
     public JobState transition(JobInAppMaster job, JobEvent event) {
