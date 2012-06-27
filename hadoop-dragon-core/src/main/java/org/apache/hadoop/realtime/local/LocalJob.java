@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.realtime.DragonJobGraph;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.records.Counters;
@@ -110,6 +111,12 @@ public class LocalJob implements Job {
 
   @Override
   public Counters getAllCounters() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public DragonJobGraph getJobGraph() {
     // TODO Auto-generated method stub
     return null;
   }
