@@ -683,7 +683,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       Path path =
           DragonApps.getStagingAreaDir(conf, UserGroupInformation
               .getCurrentUser().getShortUserName());
-      Path remoteJobSubmitDir = new Path(path, jobId.toString());
+      Path remoteJobSubmitDir = remoteFS.makeQualified(new Path(path, jobId.toString()));
 
       // //////////// Set up JobJar to be localized properly on the remote NM.
       Path remoteJobJarPath =

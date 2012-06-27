@@ -29,10 +29,6 @@ public class DragonJobConfig {
   // individual containers/tasks.
   public static final String JOB_JAR = "graphjob.jar";
 
-	// Put all of the attribute names in here so that Job and JobContext are
-	// consistent.
-	public static final String JAR = "dragon.job.jar";
-
   public static final String JOB_SUBMIT_FILE_REPLICATION = 
       "dragon.client.submit.file.replication";
 
@@ -42,6 +38,12 @@ public class DragonJobConfig {
   // This should be the name of the localized job-configuration file on the node
   // running ApplicationMaster and Task
   public static final String JOB_CONF_FILE = "job.xml";
+  
+  public static final String JOB_DiST_CACHE_FILES = "files";
+  
+  public static final String JOB_DIST_CACHE_ARCHIVES = "archives";
+  
+  public static final String JOB_DIST_CACHE_LIBJARS = "libjars";
 
 	public static final String USER_NAME = "dragon.job.user.name";
 
@@ -70,41 +72,10 @@ public class DragonJobConfig {
       "dragon.job.credentials.json";
 
 	public static final String QUEUE_NAME = "dragon.job.queuename";
+	
 	public static final String DEFAULT_QUEUE_NAME = "default";
 
-	public static final String DRAGON_JOB_USER_CLASSPATH_FIRST = "dragon.job.user.classpath.first";
-
-	public static final String CLASSPATH_ARCHIVES = "dragon.job.classpath.archives";
-
-	public static final String CLASSPATH_FILES = "dragon.job.classpath.files";
-
-	public static final String CACHE_FILES = "dragon.job.cache.files";
-
-	public static final String CACHE_ARCHIVES = "dragon.job.cache.archives";
-
-	public static final String CACHE_FILES_SIZES = "dragon.job.cache.files.filesizes"; // internal
-																																										 // use
-																																										 // only
-
-	public static final String CACHE_ARCHIVES_SIZES = "dragon.job.cache.archives.filesizes"; // ditto
-
-	public static final String CACHE_LOCALFILES = "dragon.job.cache.local.files";
-
-	public static final String CACHE_LOCALARCHIVES = "dragon.job.cache.local.archives";
-
-	public static final String CACHE_FILE_TIMESTAMPS = "dragon.job.cache.files.timestamps";
-
-	public static final String CACHE_ARCHIVES_TIMESTAMPS = "dragon.job.cache.archives.timestamps";
-
-	public static final String CACHE_FILE_VISIBILITIES = "dragon.job.cache.files.visibilities";
-
-	public static final String CACHE_ARCHIVES_VISIBILITIES = "dragon.job.cache.archives.visibilities";
-
-	public static final String CACHE_SYMLINK = "dragon.job.cache.symlink.create";
-
 	public static final String TASK_USERLOG_LIMIT = "dragon.task.userlog.limit.kb";
-
-	public static final String JOB_METAINFO = "job.metainfo";
 
 	public static final String JOB_ACL_VIEW_JOB = "dragon.job.acl-view-job";
 
@@ -113,8 +84,6 @@ public class DragonJobConfig {
 	public static final String JOB_ACL_MODIFY_JOB = "dragon.job.acl-modify-job";
 
 	public static final String DEFAULT_JOB_ACL_MODIFY_JOB = " ";
-
-	public static final String JOB_CANCEL_DELEGATION_TOKEN = "dragon.job.complete.cancel.delegation.tokens";
 
 	// This should be the directory where splits file gets localized on the node
 	// running ApplicationMaster.
@@ -159,7 +128,7 @@ public class DragonJobConfig {
 	public static final String DRAGON_AM_STAGING_DIR = DRAGON_AM_PREFIX
 	    + "staging-dir";
   public static final String DEFAULT_DRAGON_AM_STAGING_DIR =
-      "/tmp/hadoop-yarn/staging";
+      "hadoop-yarn/staging";
 
   public static final String APPLICATION_ATTEMPT_ID =
       "dragon.job.application.attempt.id";

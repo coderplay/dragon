@@ -46,21 +46,21 @@ public class JobSubmissionFiles {
     FsPermission.createImmutable((short) 0644); // rw-r--r--
   
   public static Path getJobDescriptionFile(Path jobSubmissionDir) {
-    return new Path(jobSubmissionDir, "job.desc");
+    return new Path(jobSubmissionDir, DragonJobConfig.JOB_DESCRIPTION_FILE);
   }
 
   /**
    * Get the job conf path.
    */
   public static Path getJobConfPath(Path jobSubmitDir) {
-    return new Path(jobSubmitDir, "job.xml");
+    return new Path(jobSubmitDir, DragonJobConfig.JOB_CONF_FILE);
   }
     
   /**
    * Get the job jar path.
    */
   public static Path getJobJar(Path jobSubmitDir) {
-    return new Path(jobSubmitDir, "job.jar");
+    return new Path(jobSubmitDir, DragonJobConfig.JOB_JAR);
   }
   
   /**
@@ -68,21 +68,21 @@ public class JobSubmissionFiles {
    * @param jobSubmitDir
    */
   public static Path getJobDistCacheFiles(Path jobSubmitDir) {
-    return new Path(jobSubmitDir, "files");
+    return new Path(jobSubmitDir, DragonJobConfig.JOB_DiST_CACHE_FILES);
   }
   /**
    * Get the job distributed cache archives path.
    * @param jobSubmitDir 
    */
   public static Path getJobDistCacheArchives(Path jobSubmitDir) {
-    return new Path(jobSubmitDir, "archives");
+    return new Path(jobSubmitDir, DragonJobConfig.JOB_DIST_CACHE_ARCHIVES);
   }
   /**
    * Get the job distributed cache libjars path.
    * @param jobSubmitDir 
    */
   public static Path getJobDistCacheLibjars(Path jobSubmitDir) {
-    return new Path(jobSubmitDir, "libjars");
+    return new Path(jobSubmitDir, DragonJobConfig.JOB_DIST_CACHE_LIBJARS);
   }
 
   /**
