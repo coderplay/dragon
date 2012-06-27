@@ -63,11 +63,11 @@ public class DragonVertex implements Serializable {
     return label;
   }
   
-  List<String> getFiles() {
+  public List<String> getFiles() {
     return files;
   }
   
-  List<String> getArchives() {
+  public List<String> getArchives() {
     return archives;
   }
   

@@ -47,6 +47,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.DragonVertex;
+import org.apache.hadoop.realtime.JobSubmissionFiles;
 import org.apache.hadoop.realtime.app.counter.CountersManager;
 import org.apache.hadoop.realtime.app.rm.ContainerAllocator;
 import org.apache.hadoop.realtime.app.rm.ContainerAllocatorEvent;
@@ -125,6 +127,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   private final int partition;
   private final TaskAttemptId attemptId;
   private final Configuration conf;
+  private final DragonVertex taskVertex;
   private final Path jobFile;
   private Token<JobTokenIdentifier> jobToken;
 
@@ -172,8 +175,14 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   private static final DiagnosticInformationUpdater DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION =
       new DiagnosticInformationUpdater();
 
-  private static final StateMachineFactory<TaskAttemptInAppMaster, TaskAttemptState, TaskAttemptEventType, TaskAttemptEvent> stateMachineFactory =
-      new StateMachineFactory<TaskAttemptInAppMaster, TaskAttemptState, TaskAttemptEventType, TaskAttemptEvent>(
+  private static final StateMachineFactory<TaskAttemptInAppMaster, 
+                                           TaskAttemptState,
+                                           TaskAttemptEventType,
+                                           TaskAttemptEvent> stateMachineFactory =
+      new StateMachineFactory<TaskAttemptInAppMaster,
+                              TaskAttemptState,
+                              TaskAttemptEventType,
+                              TaskAttemptEvent>(
           TaskAttemptState.NEW)
 
           // Transitions from the NEW state.
@@ -377,7 +386,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   private final StateMachine<TaskAttemptState, TaskAttemptEventType, TaskAttemptEvent> stateMachine;
 
   TaskAttemptInAppMaster(TaskId taskId, int attempt, EventHandler eventHandler,
-      Path jobFile, int partition, Configuration conf,
+      Path jobFile, int partition, Configuration conf, DragonVertex vertex,
       Token<JobTokenIdentifier> jobToken, Credentials credentials, Clock clock,
       AppContext appContext) {
     this.attemptId = recordFactory.newRecordInstance(TaskAttemptId.class);
@@ -385,6 +394,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     this.attemptId.setId(attempt);
     this.jobId = taskId.getJobId();
     this.conf = conf;
+    this.taskVertex = vertex;
     this.jobFile = jobFile;
     this.partition = partition;
     this.appContext = appContext;
@@ -585,10 +595,10 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       // create the container object to be launched for a given Task attempt
       ContainerLaunchContext launchContext =
           createContainerLaunchContext(cEvent.getApplicationACLs(),
-              taskAttempt.containerID, taskAttempt.conf, taskAttempt.jobToken,
+              taskAttempt.containerID, taskAttempt.conf,
+              taskAttempt.taskVertex, taskAttempt.jobToken,
               taskAttempt.attemptId, taskAttempt.jobId,
-              taskAttempt.assignedCapability,
-              taskAttempt.credentials,
+              taskAttempt.assignedCapability, taskAttempt.credentials,
               taskAttempt.appContext);
       taskAttempt.eventHandler.handle(new ContainerRemoteLaunchEvent(
           taskAttempt.attemptId, taskAttempt.containerID,
@@ -599,17 +609,16 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
 
   static ContainerLaunchContext createContainerLaunchContext(
       Map<ApplicationAccessType, String> applicationACLs,
-      ContainerId containerId, Configuration conf,
+      ContainerId containerId, Configuration conf, DragonVertex vertex,
       Token<JobTokenIdentifier> jobToken, TaskAttemptId attemptId,
-      final JobId jobId, Resource assignedCapability,
-      Credentials credentials,
+      final JobId jobId, Resource assignedCapability, Credentials credentials,
       AppContext context) {
 
     synchronized (commonContainerSpecLock) {
       if (commonContainerSpec == null) {
         commonContainerSpec =
-            createCommonContainerLaunchContext(applicationACLs, conf, jobToken,
-                jobId, credentials);
+            createCommonContainerLaunchContext(applicationACLs, conf, vertex,
+                jobToken, jobId, credentials);
       }
     }
 
@@ -653,8 +662,8 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
    */
   private static ContainerLaunchContext createCommonContainerLaunchContext(
       Map<ApplicationAccessType, String> applicationACLs, Configuration conf,
-      Token<JobTokenIdentifier> jobToken, final JobId jobId,
-      Credentials credentials) {
+      DragonVertex vertex, Token<JobTokenIdentifier> jobToken,
+      final JobId jobId, Credentials credentials) {
 
     // Application resources
     Map<String, LocalResource> localResources =
@@ -671,31 +680,23 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     try {
       FileSystem remoteFS = FileSystem.get(conf);
 
-      // //////////// Set up JobJar to be localized properly on the remote NM.
-      String jobJar = conf.get(DragonJobConfig.JOB_JAR);
-      if (jobJar != null) {
-        Path remoteJobJar =
-            (new Path(jobJar)).makeQualified(remoteFS.getUri(),
-                remoteFS.getWorkingDirectory());
-        localResources.put(
-            DragonJobConfig.JOB_JAR,
-            createLocalResource(remoteFS, remoteJobJar, LocalResourceType.FILE,
-                LocalResourceVisibility.APPLICATION));
-        LOG.info("The job-jar file on the remote FS is "
-            + remoteJobJar.toUri().toASCIIString());
-      } else {
-        // Job jar may be null. For e.g, for pipes, the job jar is the hadoop
-        // DRAGONuce jar itself which is already on the classpath.
-        LOG.info("Job jar is not present. "
-            + "Not adding any jar to the list of resources.");
-      }
-      // //////////// End of JobJar setup
-
-      // //////////// Set up JobConf to be localized properly on the remote NM.
       Path path =
           DragonApps.getStagingAreaDir(conf, UserGroupInformation
               .getCurrentUser().getShortUserName());
       Path remoteJobSubmitDir = new Path(path, jobId.toString());
+
+      // //////////// Set up JobJar to be localized properly on the remote NM.
+      Path remoteJobJarPath =
+          new Path(remoteJobSubmitDir, DragonJobConfig.JOB_JAR);
+      localResources.put(
+          DragonJobConfig.JOB_JAR,
+          createLocalResource(remoteFS, remoteJobJarPath, LocalResourceType.FILE,
+              LocalResourceVisibility.APPLICATION));
+      LOG.info("The job-jar file on the remote FS is "
+          + remoteJobJarPath.toUri().toASCIIString());
+      // //////////// End of JobJar setup
+
+      // //////////// Set up job config to be localized properly on the remote NM.
       Path remoteJobConfPath =
           new Path(remoteJobSubmitDir, DragonJobConfig.JOB_CONF_FILE);
       localResources.put(
@@ -704,7 +705,40 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
               LocalResourceType.FILE, LocalResourceVisibility.APPLICATION));
       LOG.info("The job-conf file on the remote FS is "
           + remoteJobConfPath.toUri().toASCIIString());
-      // //////////// End of JobConf setup
+      // //////////// End of job config setup
+      
+      // //////////// Set up job graph to be localized properly on the remote NM.
+      Path remoteJobDescPath =
+          new Path(remoteJobSubmitDir, DragonJobConfig.JOB_DESCRIPTION_FILE);
+      localResources.put(
+          DragonJobConfig.JOB_DESCRIPTION_FILE,
+          createLocalResource(remoteFS, remoteJobDescPath,
+              LocalResourceType.FILE, LocalResourceVisibility.APPLICATION));
+      LOG.info("The job graph file on the remote FS is "
+          + remoteJobDescPath.toUri().toASCIIString());
+      // //////////// End of job graph setup      
+
+      // files
+      Path remoteFileDir =
+          JobSubmissionFiles.getJobDistCacheFiles(remoteJobSubmitDir);
+      for (String file : vertex.getFiles()) {
+        Path remoteFilePath = new Path(remoteFileDir, file);
+        localResources.put(
+            file,
+            createLocalResource(remoteFS, remoteFilePath,
+                LocalResourceType.FILE, LocalResourceVisibility.PRIVATE));
+      }
+
+      // archives
+      Path remoteArchiveDir =
+          JobSubmissionFiles.getJobDistCacheArchives(remoteJobSubmitDir);
+      for (String archive : vertex.getArchives()) {
+        Path remoteArchivePath = new Path(remoteArchiveDir, archive);
+        localResources.put(
+            archive,
+            createLocalResource(remoteFS, remoteArchivePath,
+                LocalResourceType.FILE, LocalResourceVisibility.PRIVATE));
+      }
 
       // Setup up tokens
       Credentials taskCredentials = new Credentials();

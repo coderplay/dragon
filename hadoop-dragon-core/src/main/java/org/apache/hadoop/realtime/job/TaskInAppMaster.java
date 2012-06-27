@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.DragonVertex;
 import org.apache.hadoop.realtime.app.counter.CountersManager;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.app.rm.ContainerFailedEvent;
@@ -74,29 +75,30 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
 
   private static final Log LOG = LogFactory.getLog(TaskInAppMaster.class);
 
-  protected final Configuration conf;
-  protected final Path jobFile;
-  protected final int partition;
-  protected final EventHandler eventHandler;
+  private final Configuration conf;
+  private final DragonVertex taskVertex;
+  private final Path jobFile;
+  private final int partition;
+  private final EventHandler eventHandler;
   private final TaskId taskId;
   private Map<TaskAttemptId, TaskAttempt> attempts;
   private final int maxAttempts;
-  protected final Clock clock;
+  private final Clock clock;
   private final Lock readLock;
   private final Lock writeLock;
   private long scheduledTime;
-  protected final AppContext appContext;
+  private final AppContext appContext;
   private final DragonAppMetrics metrics;
   
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
   
 
-  protected Credentials credentials;
-  protected Token<JobTokenIdentifier> jobToken;
+  private Credentials credentials;
+  private Token<JobTokenIdentifier> jobToken;
 
   // By default, the next TaskAttempt number is zero. Changes during recovery
-  protected int nextAttemptNumber = 0;
+  private int nextAttemptNumber = 0;
   private int finishedAttempts;// finish are total of failed and killed
   private int failedAttempts;
 
@@ -175,9 +177,11 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
 
   public TaskInAppMaster(JobId jobId, int taskIndex, int partition,
       EventHandler eventHandler, Path remoteJobConfFile, Configuration conf,
-      Token<JobTokenIdentifier> jobToken, Credentials credentials, Clock clock,
-      int startCount, DragonAppMetrics metrics, AppContext appContext) {
+      DragonVertex vertex, Token<JobTokenIdentifier> jobToken,
+      Credentials credentials, Clock clock, int startCount,
+      DragonAppMetrics metrics, AppContext appContext) {
     this.conf = conf;
+    this.taskVertex = vertex;
     this.clock = clock;
     this.jobFile = remoteJobConfFile;
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -311,7 +315,8 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   // TODO: createAttempt
   protected TaskAttempt createAttempt() {
     return new TaskAttemptInAppMaster(taskId, nextAttemptNumber, eventHandler,
-        jobFile, partition, conf, jobToken, credentials, clock, appContext);
+        jobFile, partition, conf, taskVertex, jobToken, credentials, clock,
+        appContext);
   }
 
   // This is always called in the Write Lock

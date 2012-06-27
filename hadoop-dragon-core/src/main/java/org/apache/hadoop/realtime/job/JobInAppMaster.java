@@ -123,6 +123,7 @@ public class JobInAppMaster implements Job,
 
   private final CountersManager countersInApp = new CountersManager();
   
+  private DragonJobGraph jobGraph;
   private boolean lazyTasksCopyNeeded = false;
   volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
   
@@ -560,20 +561,16 @@ public class JobInAppMaster implements Job,
 //        job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
         //TODO JH Verify jobACLs, UserName via UGI?
 
-        DragonJobGraph graph = createJobGraph(job);
-        job.numTasks = getTaskCount(graph);
+        job.jobGraph = createJobGraph(job);
+        job.numTasks = getTaskCount(job.jobGraph);
         if (job.numTasks == 0) {
           job.addDiagnostic("No of tasks are 0 " + job.jobId);
         }
 
         checkTaskLimits();
-        long inputLength = 0;
-//        for (int i = 0; i < job.numTasks; ++i) {
-//          inputLength += taskSplitMetaInfo[i].getInputDataLength();
-//        }
 
         // create the Tasks but don't start them yet
-        createTasks(job, inputLength, graph);
+        createTasks(job);
         job.countersInApp.getCounter(JobCounter.NUM_FAILED_TASKS).increment(54321);
 
         return JobState.INITED;
@@ -631,16 +628,17 @@ public class JobInAppMaster implements Job,
       return count;
     }
 
-    private void createTasks(JobInAppMaster job, long inputLength,
-        DragonJobGraph graph) {
+    private void createTasks(JobInAppMaster job) {
       int index = 0;
+      final DragonJobGraph graph = job.jobGraph;
       for (DragonVertex vertex : graph.vertexSet()) {
         for (int i = 0; i < vertex.getTasks(); i++) {
           Task task =
               new TaskInAppMaster(job.jobId, index, i, job.eventHandler,
-                  job.remoteJobConfFile, job.conf, job.jobToken, job.fsTokens,
-                  job.clock, job.applicationAttemptId.getAttemptId(),
-                  job.metrics, job.appContext);
+                  job.remoteJobConfFile, job.conf, vertex, job.jobToken,
+                  job.fsTokens, job.clock,
+                  job.applicationAttemptId.getAttemptId(), job.metrics,
+                  job.appContext);
           job.addTask(task);
         }
         index++;
@@ -978,5 +976,10 @@ public class JobInAppMaster implements Job,
   @Override
   public Task getTask(TaskId taskID) {
     return tasks.get(taskID);
+  }
+
+  @Override
+  public DragonJobGraph getJobGraph() {
+    return jobGraph;
   }
 }
