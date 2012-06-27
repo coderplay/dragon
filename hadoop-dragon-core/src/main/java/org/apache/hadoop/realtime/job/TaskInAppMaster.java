@@ -89,8 +89,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   private long scheduledTime;
   private final AppContext appContext;
   private final DragonAppMetrics metrics;
-
-  private final CountersManager countersManager = new CountersManager();
   
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -264,7 +262,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       if (bestAttempt != null) {
         counters = bestAttempt.getCounters();
       } else {
-        counters = countersManager.getCounters();
+        counters = DragonBuilderUtils.newCounters();
       }
       return counters;
     } finally {
