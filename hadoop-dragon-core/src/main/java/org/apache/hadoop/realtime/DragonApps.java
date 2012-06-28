@@ -160,17 +160,19 @@ public class DragonApps extends Apps {
 	 */
   public static void addLog4jSystemProperties(
       String logLevel, long logSize, List<CharSequence> vargs) {
-    vargs.add("-Dlog4j.configuration=container-log4j.properties");
+    //vargs.add("-Dlog4j.configuration=dragon-container-log4j.properties");
     vargs.add("-D" + DragonJobConfig.TASK_LOG_DIR + "=" +
         ApplicationConstants.LOG_DIR_EXPANSION_VAR);
     vargs.add("-D" + DragonJobConfig.TASK_LOG_SIZE + "=" + logSize);
-    vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA"); 
+    //vargs.add("-Dhadoop.root.logger=" + logLevel + ",CLA"); 
   }
 
   private static final String STAGING_CONSTANT = ".staging";
   public static Path getStagingAreaDir(Configuration conf, String user) {
-    return new Path(
-        conf.get(DragonJobConfig.DRAGON_AM_STAGING_DIR) + 
-        Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
+    return new Path(conf.get(DragonJobConfig.DRAGON_AM_STAGING_DIR,
+        DragonJobConfig.DEFAULT_DRAGON_AM_STAGING_DIR)
+        + Path.SEPARATOR
+        + user
+        + Path.SEPARATOR + STAGING_CONSTANT);
   }
 }
