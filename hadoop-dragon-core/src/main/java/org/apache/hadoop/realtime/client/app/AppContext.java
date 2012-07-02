@@ -19,11 +19,16 @@
 package org.apache.hadoop.realtime.client.app;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.yarn.Clock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -44,7 +49,7 @@ public interface AppContext {
 
   long getStartTime();
 
-  CharSequence getUser();
+  String getUser();
 
   Job getJob(JobId jobID);
 
@@ -59,4 +64,13 @@ public interface AppContext {
   int getClientServiceHttpPort();
   
   InetSocketAddress getChildServiceAddress();
+  
+  JobTokenSecretManager getJobTokenSecretManager();
+  
+  List<AMInfo> getAmInfos();
+  
+  Credentials getFsTokens();
+  
+  DragonAppMetrics getMetrics();
+  
 }
