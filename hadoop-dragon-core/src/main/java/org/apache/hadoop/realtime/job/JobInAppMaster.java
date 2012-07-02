@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.realtime.job;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -292,32 +293,27 @@ public class JobInAppMaster implements Job,
 
   private Credentials fsTokens;
 
-  public JobInAppMaster(JobId jobId, ApplicationAttemptId applicationAttemptId,
-      Configuration conf, EventHandler eventHandler,
-      JobTokenSecretManager jobTokenSecretManager,
-      Credentials fsTokenCredentials, Clock clock, DragonAppMetrics metrics,
-      String userName, long appSubmitTime, List<AMInfo> amInfos,
-      AppContext appContext) {
-    this.applicationAttemptId = applicationAttemptId;
+  public JobInAppMaster(JobId jobId, Configuration conf, AppContext appContext) {
+    this.applicationAttemptId = appContext.getApplicationAttemptId();
     this.jobId = jobId;
     this.jobName = conf.get(DragonJobConfig.JOB_NAME, "<missing job name>");
     this.conf = new Configuration(conf);
-    this.metrics = metrics;
-    this.clock = clock;
-    this.amInfos = amInfos;
+    this.metrics = appContext.getMetrics();
+    this.clock = appContext.getClock();
+    this.amInfos = appContext.getAmInfos();
     this.appContext = appContext;
-    this.userName = userName;
+    this.userName = appContext.getUser();
     this.queueName = conf.get(DragonJobConfig.QUEUE_NAME, "default");
-    this.appSubmitTime = appSubmitTime;
+    this.appSubmitTime = appContext.getStartTime();
+    this.eventHandler = appContext.getEventHandler();
 
-    this.eventHandler = eventHandler;
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     this.readLock = readWriteLock.readLock();
     this.writeLock = readWriteLock.writeLock();
 
-    this.fsTokens = fsTokenCredentials;
-    this.jobTokenSecretManager = jobTokenSecretManager;
-    this.username = System.getProperty("user.name");
+    this.fsTokens = appContext.getFsTokens();
+    this.jobTokenSecretManager = appContext.getJobTokenSecretManager();
+    this.username = conf.get(DragonJobConfig.USER_NAME);
     // This "this leak" is okay because the retained pointer is in an
     // instance variable.
     stateMachine = stateMachineFactory.make(this);
@@ -331,8 +327,16 @@ public class JobInAppMaster implements Job,
   public JobId getID() {
     return jobId;
   }
+  
+  public Clock getClock(){
+    return clock;
+  }
+  
+  public DragonAppMetrics getMetrics(){
+    return metrics;
+  }
 
-  EventHandler getEventHandler() {
+  public EventHandler getEventHandler() {
     return this.eventHandler;
   }
   
@@ -411,6 +415,12 @@ public class JobInAppMaster implements Job,
     }
   }
 
+  public ApplicationAttemptId getAppAttemptId(){
+    return applicationAttemptId;
+  }
+  public AppContext getAppContext(){
+    return appContext;
+  }
   protected void scheduleTasks(Set<TaskId> taskIDs) {
     for (TaskId taskID : taskIDs) {
       eventHandler.handle(new TaskEvent(taskID, 
@@ -449,7 +459,7 @@ public class JobInAppMaster implements Job,
   }
 
   //helpful in testing
-  protected void addTask(Task task) {
+  public void addTask(Task task) {
     synchronized (tasksSyncHandle) {
       if (lazyTasksCopyNeeded) {
         Map<TaskId, Task> newTasks = new LinkedHashMap<TaskId, Task>();
@@ -512,6 +522,10 @@ public class JobInAppMaster implements Job,
     return remoteJobConfFile;
   }
   
+  public void setNumTasks(int num){
+    this.numTasks = num;
+  }
+  
   @Override
   public String getName() {
     return jobName;
@@ -562,17 +576,15 @@ public class JobInAppMaster implements Job,
         //TODO JH Verify jobACLs, UserName via UGI?
 
         job.jobGraph = createJobGraph(job);
-        job.numTasks = getTaskCount(job.jobGraph);
-        if (job.numTasks == 0) {
-          job.addDiagnostic("No of tasks are 0 " + job.jobId);
+        if (job.jobGraph != null) {
+          job.numTasks = getTaskCount(job.jobGraph);
+          if (job.numTasks == 0) {
+            job.addDiagnostic("No of tasks are 0 " + job.jobId);
+          }
+          checkTaskLimits();
+          // create the Tasks but don't start them yet
+          createTasks(job);
         }
-
-        checkTaskLimits();
-
-        // create the Tasks but don't start them yet
-        createTasks(job);
-        job.countersInApp.getCounter(JobCounter.NUM_FAILED_TASKS).increment(54321);
-
         return JobState.INITED;
       } catch (IOException e) {
         LOG.warn("Job init failed", e);
@@ -628,7 +640,7 @@ public class JobInAppMaster implements Job,
       return count;
     }
 
-    private void createTasks(JobInAppMaster job) {
+    protected void createTasks(JobInAppMaster job) {
       int index = 0;
       final DragonJobGraph graph = job.jobGraph;
       for (DragonVertex vertex : graph.vertexSet()) {
@@ -656,9 +668,14 @@ public class JobInAppMaster implements Job,
         DragonJobGraph djg = serializer.deserialize(in);
         in.close();
         return djg;
+      }catch(FileNotFoundException fnfe){
+        LOG.warn("Don't have the job desc .");
       } catch (IOException ioe) {
-        throw new YarnException(ioe);
+        LOG.error("Get the job desc failed , job will end.",ioe);
+        job.eventHandler.handle(new JobEvent(job.getID(),
+            JobEventType.INTERNAL_ERROR));
       }
+      return null;
     }
 
     /**
@@ -844,9 +861,7 @@ public class JobInAppMaster implements Job,
       if (job.hasTaskFailure) {
         job.setFinishTime();
 
-        String diagnosticMsg = "Job failed as tasks failed. " +
-            "failedMaps:" + job.hasTaskFailure + 
-            " failedReduces:" + job.hasTaskFailure;
+        String diagnosticMsg = "Job failed as tasks failed. ";
         LOG.info(diagnosticMsg);
         job.addDiagnostic(diagnosticMsg);
         job.abortJob(JobState.FAILED);

@@ -107,7 +107,7 @@ public class DragonAppMaster extends CompositeService {
   private ContainerLauncher containerLauncher;
 
   private Dispatcher dispatcher;
-  private UserGroupInformation currentUser;
+  protected UserGroupInformation currentUser;
   private Credentials fsTokens = new Credentials();
 
   public DragonAppMaster(ApplicationAttemptId applicationAttemptId,
@@ -140,7 +140,7 @@ public class DragonAppMaster extends CompositeService {
     downloadTokensAndSetupUGI(conf);
 
     // Initialize application context,name,attemptId,jobId
-    context = new RunningAppContext(conf);
+    context = new RunningAppContext();
     appName = conf.get(DragonJobConfig.JOB_NAME, "<missing app name>");
     conf.setInt(DragonJobConfig.APPLICATION_ATTEMPT_ID,
         appAttemptId.getAttemptId());
@@ -294,15 +294,10 @@ public class DragonAppMaster extends CompositeService {
   /** Create and initialize (but don't start) a single job. */
   protected Job createJob(Configuration conf) {
     // create single job
-    Job newJob =
-        new JobInAppMaster(jobId, appAttemptId, conf,
-            dispatcher.getEventHandler(),
-            jobTokenSecretManager, fsTokens, clock, metrics,
-            currentUser.getUserName(), appSubmitTime, amInfos, context);
+    Job newJob = new JobInAppMaster(jobId, conf, context);
     ((RunningAppContext) context).jobs.put(newJob.getID(), newJob);
-
     dispatcher.register(JobFinishEvent.Type.class,
-        createJobFinishEventHandler());     
+        createJobFinishEventHandler());
     return newJob;
   }
 
@@ -314,11 +309,6 @@ public class DragonAppMaster extends CompositeService {
 
     private final Map<JobId, Job> jobs =
         new ConcurrentHashMap<JobId, Job>();
-    private final Configuration conf;
-
-    public RunningAppContext(Configuration config) {
-      this.conf = config;
-    }
 
     @Override
     public ApplicationAttemptId getApplicationAttemptId() {
@@ -356,8 +346,8 @@ public class DragonAppMaster extends CompositeService {
     }
 
     @Override
-    public CharSequence getUser() {
-      return this.conf.get(DragonJobConfig.USER_NAME);
+    public String getUser() {
+      return currentUser.getUserName();
     }
 
     @Override
@@ -378,6 +368,26 @@ public class DragonAppMaster extends CompositeService {
     @Override
     public InetSocketAddress getChildServiceAddress() {
       return childService.getBindAddress();
+    }
+
+    @Override
+    public JobTokenSecretManager getJobTokenSecretManager() {
+      return jobTokenSecretManager;
+    }
+
+    @Override
+    public List<AMInfo> getAmInfos() {
+      return amInfos;
+    }
+
+    @Override
+    public Credentials getFsTokens() {
+      return fsTokens;
+    }
+
+    @Override
+    public DragonAppMetrics getMetrics() {
+      return metrics;
     }
   }
 
@@ -421,8 +431,7 @@ public class DragonAppMaster extends CompositeService {
   }
   
   protected ChildService createChildService(AppContext context) {
-    ChildService lis =
-        new DragonChildService(context, jobTokenSecretManager);
+    ChildService lis = new DragonChildService(context);
     return lis;
   }
 
@@ -603,5 +612,17 @@ public class DragonAppMaster extends CompositeService {
       super.stop();
     }
   }
-
+  
+  public Dispatcher getDispatcher() {
+    return dispatcher;
+  }
+  
+  public AppContext getContext(){
+    return context;
+  }
+  
+  public JobId getJobId(){
+    return jobId;
+  }
+  
 }

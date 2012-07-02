@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.client.ClientCache;
+import org.apache.hadoop.realtime.job.TaskLog;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
@@ -348,7 +349,7 @@ public class DragonJobRunner implements DragonJobService {
       ts.writeTokenStorageToStream(dob);
       securityTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
     }
-    
+
     // Setup the command to run the AM
     List<String> vargs = setupAMCommand(conf);
 
@@ -376,7 +377,11 @@ public class DragonJobRunner implements DragonJobService {
     Vector<CharSequence> vargs = new Vector<CharSequence>(8);
     vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
 
-    //addLog4jSystemProperties(conf, vargs);
+    long logSize = TaskLog.getTaskLogLength(conf);
+    String logLevel =
+        conf.get(DragonJobConfig.DRAGON_AM_LOG_LEVEL,
+            DragonJobConfig.DEFAULT_DRAGON_AM_LOG_LEVEL);
+    DragonApps.addLog4jSystemProperties(logLevel, logSize, vargs);
 
     vargs.add(conf.get(DragonJobConfig.DRAGON_AM_COMMAND_OPTS,
         DragonJobConfig.DEFAULT_DRAGON_AM_COMMAND_OPTS));

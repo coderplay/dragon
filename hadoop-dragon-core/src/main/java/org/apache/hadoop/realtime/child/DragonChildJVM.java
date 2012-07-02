@@ -19,7 +19,6 @@
 package org.apache.hadoop.realtime.child;
 
 import java.net.InetSocketAddress;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
@@ -29,64 +28,26 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.job.TaskLog;
-import org.apache.hadoop.realtime.job.TaskLog.LogName;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.util.Apps;
 
 public class DragonChildJVM {
 
-  private static String getTaskLogFile(LogName filter) {
-    return ApplicationConstants.LOG_DIR_EXPANSION_VAR + Path.SEPARATOR
-        + filter.toString();
-  }
-
-  private static String getChildEnv(Configuration conf) {
-    return conf.get(DragonJobConfig.DRAGON_ADMIN_USER_ENV,
-        DragonJobConfig.DEFAULT_DRAGON_ADMIN_USER_ENV);
-  }
-
   private static String getChildLogLevel(Configuration conf) {
-
     return conf.get(DragonJobConfig.TASK_LOG_LEVEL,
         DragonJobConfig.DEFAULT_LOG_LEVEL);
   }
 
   public static void setVMEnv(Map<String, String> environment,
-      Configuration conf) {
-    String dragonChildEnv = getChildEnv(conf);
-    Apps.setEnvFromInputString(environment, dragonChildEnv);
+      Configuration conf) {  
     environment.put("HADOOP_ROOT_LOGGER", getChildLogLevel(conf) + ",CLA");
-
-    // TODO: The following is useful for instance in streaming tasks. Should be
-    // set in ApplicationMaster's env by the RM.
-    String hadoopClientOpts = System.getenv("HADOOP_CLIENT_OPTS");
-    if (hadoopClientOpts == null) {
-      hadoopClientOpts = "";
-    } else {
-      hadoopClientOpts = hadoopClientOpts + " ";
-    }
-    // FIXME: don't think this is also needed given we already set java
-    // properties.
-    long logSize = TaskLog.getTaskLogLength(conf);
-    Vector<CharSequence> logProps = new Vector<CharSequence>(4);
-    //setupLog4jProperties(conf, logProps, logSize);
-    Iterator<CharSequence> it = logProps.iterator();
-    StringBuffer buffer = new StringBuffer();
-    while (it.hasNext()) {
-      buffer.append(" " + it.next());
-    }
-    hadoopClientOpts = hadoopClientOpts + buffer.toString();
-    environment.put("HADOOP_CLIENT_OPTS", hadoopClientOpts);
-
     // Add stdout/stderr env
     environment.put(DragonJobConfig.STDOUT_LOGFILE_ENV,
-        getTaskLogFile(TaskLog.LogName.STDOUT));
+        DragonApps.getTaskLogFile(TaskLog.LogName.STDOUT));
     environment.put(DragonJobConfig.STDERR_LOGFILE_ENV,
-        getTaskLogFile(TaskLog.LogName.STDERR));
+        DragonApps.getTaskLogFile(TaskLog.LogName.STDERR));
     environment.put(DragonJobConfig.APPLICATION_ATTEMPT_ID_ENV,
         conf.get(DragonJobConfig.APPLICATION_ATTEMPT_ID).toString());
   }
@@ -101,7 +62,6 @@ public class DragonChildJVM {
         conf.get(DragonJobConfig.DRAGON_ADMIN_JAVA_OPTS,
             DragonJobConfig.DEFAULT_DRAGON_ADMIN_JAVA_OPTS);
 
-    // Add admin classpath first so it can be overridden by user.
     return adminClasspath + " " + userClasspath;
   }
 
@@ -134,7 +94,7 @@ public class DragonChildJVM {
 
     // Setup the log4j prop
     long logSize = TaskLog.getTaskLogLength(conf);
-    //setupLog4jProperties(conf, vargs,logSize);
+    setupLog4jProperties(conf, vargs,logSize);
 
     // Add main class and its arguments
     vargs.add(DragonChild.class.getName()); // main of Child
@@ -146,8 +106,8 @@ public class DragonChildJVM {
     // Finally add the container id
     vargs.add(String.valueOf(containerId.toString()));
 
-    vargs.add("1>" + getTaskLogFile(TaskLog.LogName.STDOUT));
-    vargs.add("2>" + getTaskLogFile(TaskLog.LogName.STDERR));
+    vargs.add("1>" + DragonApps.getTaskLogFile(TaskLog.LogName.STDOUT));
+    vargs.add("2>" + DragonApps.getTaskLogFile(TaskLog.LogName.STDERR));
 
     // Final commmand
     StringBuilder mergedCommand = new StringBuilder();
