@@ -54,6 +54,8 @@ import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskEventType;
+import org.apache.hadoop.realtime.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.realtime.jobhistory.JobHistoryEventHandler;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
@@ -156,6 +158,11 @@ public class DragonAppMaster extends CompositeService {
     // service to handle requests from JobClient
     clientService = createClientService(context);
     addIfService(clientService);
+
+    //service to log job history events
+    EventHandler<JobHistoryEvent> historyHandler =
+        createJobHistoryHandler(context);
+    dispatcher.register(JobEventType.class, historyHandler);
 
     // Initialize the JobEventDispatcher
     this.jobEventDispatcher = new JobEventDispatcher();
@@ -303,6 +310,16 @@ public class DragonAppMaster extends CompositeService {
 
   protected Dispatcher createDispatcher() {
     return new AsyncDispatcher();
+  }
+
+  protected EventHandler<JobHistoryEvent> createJobHistoryHandler(AppContext context) {
+    JobHistoryEventHandler eventHandler = new JobHistoryEventHandler(context,
+        getStartCount());
+    return eventHandler;
+  }
+
+  private int getStartCount() {
+     return appAttemptId.getAttemptId();
   }
 
   private class RunningAppContext implements AppContext {
