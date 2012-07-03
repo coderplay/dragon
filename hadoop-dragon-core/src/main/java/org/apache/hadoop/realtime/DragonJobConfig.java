@@ -221,17 +221,11 @@ public class DragonJobConfig {
   public static final String DEFAULT_DRAGON_ADMIN_USER_ENV =
       "LD_LIBRARY_PATH=$HADOOP_COMMON_HOME/lib/native";
 
-  public static final String DRAGON_REDUCE_ADMIN_JAVA_OPTS =
-      "dragon.admin.reduce.child.java.opts";
-
-  public static final String DEFAULT_DRAGON_ADMIN_JAVA_OPTS =
-      "-Djava.net.preferIPv4Stack=true " + "-Dhadoop.metrics.log.level=WARN ";
-
   public static final String TASK_LOG_LEVEL = "dragon.reduce.log.level";
 
   public static final String DEFAULT_LOG_LEVEL = "INFO";
 
-  public static final String DRAGON_TASK_ENV = "dragon.map.env";
+  public static final String DRAGON_TASK_ENV = "dragon.task.env";
 
   public static final String DEFAULT_DRAGON_TASK_ENV = "dragon.child.env";
 
@@ -244,9 +238,11 @@ public class DragonJobConfig {
       "APPLICATION_ATTEMPT_ID_ENV";
 
   public static final String DRAGON_TASK_JAVA_OPTS = "dragon.task.java.opts";
+  public static final String DEFAULT_DRAGON_TASK_JAVA_OPTS = "-Xmx200m"; 
+  
   public static final String DRAGON_ADMIN_JAVA_OPTS =
       "dragon.admin.task.child.java.opts";
-  public static final String DEFAULT_DRAGON_TASK_JAVA_OPTS =
+  public static final String DEFAULT_DRAGON_ADMIN_JAVA_OPTS =
       "-Djava.net.preferIPv4Stack=true " + "-Dhadoop.metrics.log.level=WARN ";
 
   public static final String TASK_MEMORY_MB = "dragon.task.memory.mb";

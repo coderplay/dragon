@@ -98,18 +98,14 @@ public class DragonChildService extends CompositeService implements
 
   private AppContext context;
 
-  private JobTokenSecretManager jobTokenSecretManager = null;
-
   BlockingQueue<ChildExecutionEvent> eventQueue =
       new LinkedBlockingQueue<ChildExecutionEvent>();
   private Thread eventHandlingThread;
   private volatile boolean stopEventHandling;
 
-  public DragonChildService(AppContext appContext,
-      JobTokenSecretManager jobTokenSecretManager) {
+  public DragonChildService(AppContext appContext) {
     super("DragonChildService");
     this.context = appContext;
-    this.jobTokenSecretManager = jobTokenSecretManager;
     this.protocolHandler = new DragonChildProtocolHandler();
   }
 
@@ -137,10 +133,10 @@ public class DragonChildService extends CompositeService implements
     } catch (UnknownHostException e) {
       throw new YarnException(e);
     }
-
+    
     server =
         rpc.getServer(DragonChildProtocol.class, protocolHandler, address,
-            conf, jobTokenSecretManager, conf.getInt(
+            conf, context.getJobTokenSecretManager(), conf.getInt(
                 DragonJobConfig.DRAGON_AM_TASK_LISTENER_THREAD_COUNT,
                 DragonJobConfig.DEFAULT_DRAGON_AM_TASK_LISTENER_THREAD_COUNT));
 

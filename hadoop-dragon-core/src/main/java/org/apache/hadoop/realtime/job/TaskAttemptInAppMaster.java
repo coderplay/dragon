@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.realtime.job;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -634,7 +635,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     // Set up the launch command
     List<String> commands =
         DragonChildJVM.getVMCommand(context.getChildServiceAddress(),
-            attemptId, conf, containerId);
+            attemptId, conf, containerId); 
 
     // Duplicate the ByteBuffers for access by multiple containers.
     Map<String, ByteBuffer> myServiceData = new HashMap<String, ByteBuffer>();
@@ -651,7 +652,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
             myServiceData,
             commonContainerSpec.getContainerTokens().duplicate(),
             applicationACLs);
-
+    
     return container;
   }
 
@@ -771,10 +772,13 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
 
       Apps.addToEnvironment(environment, Environment.CLASSPATH.name(),
           getInitialClasspath(conf));
-    } catch (IOException e) {
+    } catch(FileNotFoundException fnfe){
+      LOG.warn("Files of Job load failed!.");
+    }catch (IOException e) {
       throw new YarnException(e);
     }
 
+    
     // Shell
     environment
         .put(Environment.SHELL.name(), conf.get(
@@ -1054,8 +1058,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
    * use it for all the containers, so this should go away once the
    * mr-generated-classpath stuff is gone.
    */
-  private static String getInitialClasspath(Configuration conf)
-      throws IOException {
+  private static String getInitialClasspath(Configuration conf) {
     synchronized (classpathLock) {
       if (initialClasspathFlag.get()) {
         return initialClasspath;

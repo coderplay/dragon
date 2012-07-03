@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.DragonVertex;
-import org.apache.hadoop.realtime.app.counter.CountersManager;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.app.rm.ContainerFailedEvent;
 import org.apache.hadoop.realtime.client.app.AppContext;
@@ -87,6 +86,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   private final Lock readLock;
   private final Lock writeLock;
   private long scheduledTime;
+  private long finishTime;
   private final AppContext appContext;
   private final DragonAppMetrics metrics;
   
@@ -226,6 +226,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       report.setTaskId(taskId);
       report.setStartTime(getLaunchTime());
       report.setTaskState(getState());
+      report.setFinishTime(finishTime);
       for (TaskAttempt attempt : attempts.values()) {
         if (TaskAttemptState.RUNNING.equals(attempt.getState())) {
           report.addRunningAttempt(attempt.getID());
@@ -425,11 +426,9 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
           task.addAndScheduleAttempt();
         }
       } else {
-        TaskTAttemptEvent ev = (TaskTAttemptEvent) event;
-        TaskAttemptId taId = ev.getTaskAttemptID();
-
         task.eventHandler
             .handle(new JobTaskEvent(task.taskId, TaskState.FAILED));
+        task.finishTime = System.currentTimeMillis();
         return task.finished(TaskState.FAILED);
       }
       return getDefaultState(task);
@@ -437,10 +436,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
 
     protected TaskState getDefaultState(Task task) {
       return task.getState();
-    }
-
-    protected void unSucceed(TaskInAppMaster task) {
-      ++task.numberUncompletedAttempts;
     }
   }
 
