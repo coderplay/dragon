@@ -20,6 +20,7 @@ package org.apache.hadoop.realtime.jobhistory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.yarn.YarnException;
@@ -28,6 +29,8 @@ import org.apache.hadoop.yarn.service.AbstractService;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -58,7 +61,7 @@ public class JobHistoryEventHandler extends AbstractService
   private AppContext appContext;
 
   public JobHistoryEventHandler(AppContext context, int startCount) {
-    super("");    //TODO give a name
+    super("JobHistoryEventHandler");
 
     this.appContext = context;
     this.startCount = startCount;
@@ -180,7 +183,32 @@ public class JobHistoryEventHandler extends AbstractService
     //To change body of created methods use File | Settings | File Templates.
   }
 
-  private static class MetaInfo {
+  private class MetaInfo {
+    private Path historyFile;
+    private Path confFile;
+    private JobSummary jobSummary;
+    private Timer flushTimer;
+    private FlushTimerTask flushTimerTask;
+    private boolean isTimerShutDown = false;
+    private EventWriter writer;
+
+    void writeEvent(HistoryEvent event) throws IOException {
+      synchronized (lock) {
+        if (writer != null) {
+          writer.write(event);
+          processEventForFlush(event);
+          maybeFlush(event);
+        }
+      }
+    }
+
+    private void maybeFlush(HistoryEvent event) {
+      //To change body of created methods use File | Settings | File Templates.
+    }
+
+    private void processEventForFlush(HistoryEvent event) {
+      //To change body of created methods use File | Settings | File Templates.
+    }
 
     public void shutDownTimer() throws IOException {
       //To change body of created methods use File | Settings | File Templates.
@@ -188,6 +216,14 @@ public class JobHistoryEventHandler extends AbstractService
 
     public void closeWriter() throws IOException {
       //To change body of created methods use File | Settings | File Templates.
+    }
+  }
+
+  private class FlushTimerTask extends TimerTask {
+
+    @Override
+    public void run() {
+      //To change body of implemented methods use File | Settings | File Templates.
     }
   }
 
