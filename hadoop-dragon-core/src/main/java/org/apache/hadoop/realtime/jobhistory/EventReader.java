@@ -22,13 +22,14 @@ import com.esotericsoftware.kryo.io.Input;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobKilledEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
 
 import java.io.Closeable;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 

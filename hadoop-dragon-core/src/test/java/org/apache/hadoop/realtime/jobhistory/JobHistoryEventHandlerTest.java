@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.realtime.jobhistory;
 
+import org.junit.Test;
+
 /**
  * class description goes here.
  *
  * @author xiaofeng_metis
  */
-public class JobStartedEvent implements HistoryEvent {
-  @Override
-  public EventType getEventType() {
-    return EventType.JOB_STARTED;
-  }
+public class JobHistoryEventHandlerTest {
 
+  @Test
+  public void testEventHandle() {
+
+  }
 }

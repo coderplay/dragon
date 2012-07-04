@@ -17,14 +17,25 @@
  */
 package org.apache.hadoop.realtime.jobhistory;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.realtime.records.JobId;
+
+import java.io.IOException;
+
 /**
  * class description goes here.
  *
  * @author xiaofeng_metis
  */
-public class JobKilledEvent implements HistoryEvent {
-  @Override
-  public EventType getEventType() {
-    return EventType.JOB_KILLED;
+public class JobHistoryUtils {
+  public static final short HISTORY_STAGING_DIR_PERMISSIONS = 0700;
+
+  public static Path getJobHistoryFile(JobId jobId, int startCount) {
+    return null;  //To change body of created methods use File | Settings | File Templates.
+  }
+
+  public static String getConfiguredHistoryStagingDirPrefix(Configuration conf) throws IOException {
+    return null;  //To change body of created methods use File | Settings | File Templates.
   }
 }

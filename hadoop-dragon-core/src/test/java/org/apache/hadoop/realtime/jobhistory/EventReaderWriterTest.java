@@ -17,23 +17,21 @@
  */
 package org.apache.hadoop.realtime.jobhistory;
 
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobKilledEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.mockito.stubbing.OngoingStubbing;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.byteThat;
 import static org.mockito.Mockito.*;
 
 /**

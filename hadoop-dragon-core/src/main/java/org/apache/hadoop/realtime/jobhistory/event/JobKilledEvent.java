@@ -15,16 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.jobhistory;
+package org.apache.hadoop.realtime.jobhistory.event;
+
+import org.apache.hadoop.realtime.jobhistory.EventType;
+import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
 
 /**
  * class description goes here.
  *
  * @author xiaofeng_metis
  */
-public class JobInitedEvent implements HistoryEvent {
+public class JobKilledEvent implements HistoryEvent {
   @Override
   public EventType getEventType() {
-    return EventType.JOB_INITED;
+    return EventType.JOB_KILLED;
   }
 }

@@ -17,12 +17,17 @@
  */
 package org.apache.hadoop.realtime.jobhistory;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.realtime.client.app.AppContext;
+import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobKilledEvent;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
@@ -58,18 +63,59 @@ public class JobHistoryEventHandler extends AbstractService
       new ConcurrentHashMap<JobId, MetaInfo>();
 
   private int startCount;
-  private AppContext appContext;
+  private AppContext context;
+  private Path stagingDirPath;
+  private FileSystem stagingDirFS;
 
   public JobHistoryEventHandler(AppContext context, int startCount) {
     super("JobHistoryEventHandler");
 
-    this.appContext = context;
+    this.context = context;
     this.startCount = startCount;
   }
 
   @Override
   public void init(Configuration conf) {
+    String stagingDirStr = null;
+    try {
+      stagingDirStr = JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf);
+    } catch (IOException e) {
+      LOG.error("Failed while getting the configured log directories", e);
+      throw new YarnException(e);
+    }
+
+    //Check for the existence of the history staging dir. Maybe create it.
+    try {
+      stagingDirPath =
+          FileSystem.get(conf).makeQualified(new Path(stagingDirStr));
+      stagingDirFS = FileSystem.get(stagingDirPath.toUri(), conf);
+      mkdir(stagingDirFS, stagingDirPath, new FsPermission(
+          JobHistoryUtils.HISTORY_STAGING_DIR_PERMISSIONS));
+    } catch (IOException e) {
+      LOG.error("Failed while checking for/creating  history staging path: ["
+          + stagingDirPath + "]", e);
+      throw new YarnException(e);
+    }
+
      super.init(conf);
+  }
+
+  private void mkdir(FileSystem fs, Path path, FsPermission fsp) throws IOException {
+    if (!fs.exists(path)) {
+      try {
+        fs.mkdirs(path, fsp);
+        FileStatus fsStatus = fs.getFileStatus(path);
+        LOG.info("Perms after creating " + fsStatus.getPermission().toShort()
+            + ", Expected: " + fsp.toShort());
+        if (fsStatus.getPermission().toShort() != fsp.toShort()) {
+          LOG.info("Explicitly setting permissions to : " + fsp.toShort()
+              + ", " + fsp);
+          fs.setPermission(path, fsp);
+        }
+      } catch (FileAlreadyExistsException e) {
+        LOG.info("Directory: [" + path + "] already exists.");
+      }
+    }
   }
 
   @Override
@@ -179,18 +225,139 @@ public class JobHistoryEventHandler extends AbstractService
     }
   }
 
-  private void handleEvent(JobHistoryEvent event) {
-    //To change body of created methods use File | Settings | File Templates.
+  @VisibleForTesting
+  void handleEvent(JobHistoryEvent event) {
+    synchronized (lock) {
+
+      // If this is JobSubmitted Event, setup the writer
+      if (event.getHistoryEvent().getEventType() == EventType.JOB_INITED) {
+        try {
+          setupEventWriter(event.getJobId());
+        } catch (IOException ioe) {
+          LOG.error("Error JobHistoryEventHandler in handleEvent: " + event,
+              ioe);
+          throw new YarnException(ioe);
+        }
+      }
+
+      // For all events
+      // (1) Write it out
+      // (2) Process it for JobSummary
+      MetaInfo mi = fileMap.get(event.getJobId());
+      try {
+        HistoryEvent historyEvent = event.getHistoryEvent();
+        mi.writeEvent(historyEvent);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("In HistoryEventHandler "
+              + event.getHistoryEvent().getEventType());
+        }
+      } catch (IOException e) {
+        LOG.error("Error writing History Event: " + event.getHistoryEvent(),
+            e);
+        throw new YarnException(e);
+      }
+    }
+  }
+
+  /**
+   * Create an event writer for the Job represented by the jobID.
+   * Writes out the job configuration to the log directory.
+   * This should be the first call to history for a job
+   *
+   * @param jobId the jobId.
+   * @throws IOException
+   */
+  protected void setupEventWriter(JobId jobId) throws IOException {
+
+    MetaInfo oldFi = fileMap.get(jobId);
+
+    Path historyFile = JobHistoryUtils.getJobHistoryFile(jobId, startCount);
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    if (user == null) {
+      throw new IOException(
+          "User is null while setting up jobhistory eventwriter");
+    }
+
+    String jobName = context.getJob(jobId).getName();
+    EventWriter writer = (oldFi == null) ? null : oldFi.writer;
+
+    if (writer == null) {
+      try {
+        writer = createEventWriter(historyFile);
+        LOG.info("Event Writer setup for JobId: " + jobId + ", File: "
+            + historyFile);
+      } catch (IOException ioe) {
+        LOG.info("Could not create log file: [" + historyFile + "] + for job "
+            + "[" + jobName + "]");
+        throw ioe;
+      }
+    }
+
+    MetaInfo fi = new MetaInfo(historyFile, writer);
+    fileMap.put(jobId, fi);
+  }
+
+  @VisibleForTesting
+  EventWriter createEventWriter(Path historyFile) throws IOException {
+    FSDataOutputStream out = stagingDirFS.create(historyFile, true);
+    return new EventWriter(out);
+  }
+
+  /** Close the event writer for this id
+   * @throws IOException */
+  public void closeWriter(JobId id) throws IOException {
+    try {
+      final MetaInfo mi = fileMap.get(id);
+      if (mi != null) {
+        mi.closeWriter();
+      }
+
+    } catch (IOException e) {
+      LOG.error("Error closing writer for JobID: " + id);
+      throw e;
+    }
+  }
+
+  @VisibleForTesting
+  void closeEventWriter(JobId jobId) throws IOException {
+    final MetaInfo mi = fileMap.get(jobId);
+    if (mi == null) {
+      throw new IOException("No MetaInfo found for JobId: [" + jobId + "]");
+    }
+
+    if (!mi.isWriterActive()) {
+      throw new IOException(
+          "Inactive Writer: Likely received multiple JobFinished / " +
+              "JobUnsuccessful events for JobId: ["
+              + jobId + "]");
+    }
+
+    // Close the Writer
+    try {
+      mi.closeWriter();
+    } catch (IOException e) {
+      LOG.error("Error closing writer for JobID: " + jobId);
+      throw e;
+    }
+
+    if (mi.getHistoryFile() == null) {
+      LOG.warn("No file for job-history with " + jobId + " found in cache!");
+    }
+
   }
 
   private class MetaInfo {
     private Path historyFile;
-    private Path confFile;
-    private JobSummary jobSummary;
     private Timer flushTimer;
     private FlushTimerTask flushTimerTask;
     private boolean isTimerShutDown = false;
     private EventWriter writer;
+    private boolean writerActive;
+
+    public MetaInfo(Path historyFile, EventWriter writer) {
+      this.historyFile = historyFile;
+      this.writer = writer;
+    }
 
     void writeEvent(HistoryEvent event) throws IOException {
       synchronized (lock) {
@@ -216,6 +383,14 @@ public class JobHistoryEventHandler extends AbstractService
 
     public void closeWriter() throws IOException {
       //To change body of created methods use File | Settings | File Templates.
+    }
+
+    public boolean isWriterActive() {
+      return writerActive;
+    }
+
+    public Path getHistoryFile() {
+      return historyFile;
     }
   }
 
