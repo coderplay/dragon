@@ -23,4 +23,25 @@ package org.apache.hadoop.realtime.jobhistory;
  * @author xiaofeng_metis
  */
 public enum EventType {
+  //Producer:Client
+  JOB_KILLED,
+
+  //Producer:MRAppMaster
+  JOB_INITED,
+  JOB_STARTED,
+
+  //Producer:Task
+  JOB_TASK_COMPLETED,
+  JOB_TASK_RESCHEDULED,
+  JOB_TASK_ATTEMPT_COMPLETED,
+
+  //Producer:Job
+  JOB_COMPLETED,
+
+  //Producer:Any component
+  JOB_DIAGNOSTIC_UPDATED,
+  JOB_COUNTER_UPDATED,
+
+  //Producer:TaskAttemptListener
+  JOB_TASK_ATTEMPT_FETCH_FAILURED;
 }

@@ -160,9 +160,10 @@ public class DragonAppMaster extends CompositeService {
     addIfService(clientService);
 
     //service to log job history events
-    EventHandler<JobHistoryEvent> historyHandler =
+    EventHandler<JobHistoryEvent> historyHandlerService =
         createJobHistoryHandler(context);
-    dispatcher.register(JobEventType.class, historyHandler);
+    dispatcher.register(org.apache.hadoop.realtime.jobhistory.EventType.class,
+        historyHandlerService);
 
     // Initialize the JobEventDispatcher
     this.jobEventDispatcher = new JobEventDispatcher();
@@ -170,7 +171,8 @@ public class DragonAppMaster extends CompositeService {
     // register the event dispatchers
     dispatcher.register(JobEventType.class, jobEventDispatcher);
     dispatcher.register(TaskEventType.class, new TaskEventDispatcher());
-    dispatcher.register(TaskAttemptEventType.class, new TaskAttemptEventDispatcher());
+    dispatcher.register(TaskAttemptEventType.class,
+        new TaskAttemptEventDispatcher());
 
     // service to handle requests to TaskUmbilicalProtocol
     childService = createChildService(context);

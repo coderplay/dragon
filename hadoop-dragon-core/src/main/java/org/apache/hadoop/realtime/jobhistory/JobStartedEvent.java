@@ -17,31 +17,15 @@
  */
 package org.apache.hadoop.realtime.jobhistory;
 
-import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.yarn.event.AbstractEvent;
-
 /**
  * class description goes here.
  *
  * @author xiaofeng_metis
  */
-public class JobHistoryEvent extends AbstractEvent<EventType> {
-
-  private final JobId jobId;
-  private final HistoryEvent historyEvent;
-
-  public JobHistoryEvent(JobId jobId, HistoryEvent historyEvent) {
-    super(historyEvent.getEventType());
-
-    this.jobId = jobId;
-    this.historyEvent = historyEvent;
+public class JobStartedEvent implements HistoryEvent {
+  @Override
+  public EventType getEventType() {
+    return EventType.JOB_STARTED;
   }
 
-  public JobId getJobId() {
-    return jobId;
-  }
-
-  public HistoryEvent getHistoryEvent() {
-    return historyEvent;
-  }
 }

@@ -1,15 +1,13 @@
 package org.apache.hadoop.realtime.jobhistory;
 
-import org.apache.hadoop.yarn.event.AbstractEvent;
-
 /**
- * class description goes here.
- *
- * @author xiaofeng_metis
+ * Interface for event wrapper classes. we use kryo serialize it
+ * adding constructors and accessor methods.
  */
-public class HistoryEvent extends AbstractEvent<EventType> {
-  public HistoryEvent(EventType eventType) {
-    super(eventType);
-  }
+public interface HistoryEvent {
+
+  /** Return this event's type. */
+  EventType getEventType();
 
 }
+
