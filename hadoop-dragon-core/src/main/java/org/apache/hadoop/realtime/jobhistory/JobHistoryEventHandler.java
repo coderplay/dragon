@@ -24,8 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.realtime.client.app.AppContext;
-import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobKilledEvent;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.YarnException;
