@@ -22,8 +22,6 @@ import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
 
 /**
  * class description goes here.
- *
- * @author xiaofeng_metis
  */
 public class JobStartedEvent implements HistoryEvent {
   @Override

@@ -22,12 +22,10 @@ import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
 
 /**
  * class description goes here.
- *
- * @author xiaofeng_metis
  */
-public class JobKilledEvent implements HistoryEvent {
+public class JobCompletedEvent implements HistoryEvent {
   @Override
   public EventType getEventType() {
-    return EventType.JOB_KILLED;
+    return EventType.JOB_COMPLETED;
   }
 }

@@ -20,11 +20,8 @@ package org.apache.hadoop.realtime.jobhistory;
 /**
  * class description goes here.
  *
- * @author xiaofeng_metis
  */
 public enum EventType {
-  //Producer:Client
-  JOB_KILLED,
 
   //Producer:MRAppMaster
   JOB_INITED,

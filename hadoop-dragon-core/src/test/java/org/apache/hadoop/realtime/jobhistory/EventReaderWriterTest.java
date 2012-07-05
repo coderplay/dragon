@@ -18,8 +18,8 @@
 package org.apache.hadoop.realtime.jobhistory;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.realtime.jobhistory.event.JobCompletedEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobKilledEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -45,7 +45,7 @@ public class EventReaderWriterTest {
 
   HistoryEvent event1 = new JobInitedEvent();
   HistoryEvent event2 = new JobStartedEvent();
-  HistoryEvent event3 = new JobKilledEvent();
+  HistoryEvent event3 = new JobCompletedEvent();
 
   ByteBuffer buffer = ByteBuffer.allocate(4096);
 
@@ -87,7 +87,7 @@ public class EventReaderWriterTest {
 
     assertTrue(newEvent1 instanceof JobInitedEvent);
     assertTrue(newEvent2 instanceof JobStartedEvent);
-    assertTrue(newEvent3 instanceof JobKilledEvent);
+    assertTrue(newEvent3 instanceof JobCompletedEvent);
 
     reader.close();
   }

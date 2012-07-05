@@ -25,15 +25,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobKilledEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * class description goes here.
@@ -45,15 +40,13 @@ public class EventReader implements Closeable {
 
   private Input input;
   private Kryo kryo;
-  private InputStream inputStream;
 
-  public EventReader(FileSystem fs, Path name) throws IOException {
+  public EventReader(final FileSystem fs, final Path name) throws IOException {
     this(fs.open(name));
   }
 
   @VisibleForTesting
-  EventReader(InputStream inputStream) {
-    this.inputStream = inputStream;
+  EventReader(final InputStream inputStream) {
     this.input = new Input(inputStream);
     this.kryo = KryoUtils.createHistoryEventKryo();
   }
@@ -71,7 +64,6 @@ public class EventReader implements Closeable {
     try {
       input.close();
       input = null;
-      inputStream = null;
     } finally {
       IOUtils.cleanup(LOG, input);
     }

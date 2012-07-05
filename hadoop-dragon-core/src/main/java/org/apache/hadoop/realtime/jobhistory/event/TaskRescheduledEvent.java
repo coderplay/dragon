@@ -15,24 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.jobhistory;
+package org.apache.hadoop.realtime.jobhistory.event;
 
-import com.esotericsoftware.kryo.Kryo;
-import org.apache.hadoop.realtime.jobhistory.event.JobCompletedEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
+import org.apache.hadoop.realtime.jobhistory.EventType;
+import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
 
 /**
  * class description goes here.
  */
-public class KryoUtils {
-
-  public static Kryo createHistoryEventKryo() {
-    Kryo kryo = new Kryo();
-    kryo.register(JobInitedEvent.class);
-    kryo.register(JobStartedEvent.class);
-    kryo.register(JobCompletedEvent.class);
-
-    return kryo;
+public class TaskRescheduledEvent implements HistoryEvent {
+  @Override
+  public EventType getEventType() {
+    return EventType.JOB_TASK_RESCHEDULED;
   }
 }

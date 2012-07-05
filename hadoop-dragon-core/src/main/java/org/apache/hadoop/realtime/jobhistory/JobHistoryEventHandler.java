@@ -40,8 +40,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * class description goes here.
- *
- * @author xiaofeng_metis
  */
 public class JobHistoryEventHandler extends AbstractService
     implements EventHandler<JobHistoryEvent> {
