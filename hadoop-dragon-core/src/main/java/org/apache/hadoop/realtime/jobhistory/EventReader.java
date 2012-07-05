@@ -63,23 +63,7 @@ public class EventReader implements Closeable {
   }
 
   public HistoryEvent nextEvent() throws IOException {
-    EventWrapper wrapper = this.kryo.readObject(input, EventWrapper.class);
-    Class<? extends HistoryEvent> eventClass = null;
-    switch (wrapper.eventType) {
-      case JOB_INITED:
-        eventClass = JobInitedEvent.class;
-        break;
-      case JOB_STARTED:
-        eventClass = JobStartedEvent.class;
-        break;
-      case JOB_KILLED:
-        eventClass = JobKilledEvent.class;
-        break;
-    }
-
-    checkState(eventClass != null, "");
-
-    return this.kryo.readObject(new Input(wrapper.eventData), eventClass);
+    return (HistoryEvent) this.kryo.readClassAndObject(this.input);
   }
 
   @Override

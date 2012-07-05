@@ -32,8 +32,6 @@ import java.io.IOException;
  * @author xiaofeng_metis
  */
 class EventWriter {
-  public static final int BUFFER_SIZE = 1024;
-  public static final int MAX_BUFFER_SIZE = 1024 * 1024;
   private static final Log LOG = LogFactory.getLog(EventWriter.class);
 
   private final Kryo kryo;
@@ -47,14 +45,7 @@ class EventWriter {
   }
 
   synchronized void write(HistoryEvent event) throws IOException {
-    EventWrapper wrapper = new EventWrapper();
-    wrapper.eventType = event.getEventType();
-
-    Output eventOutput = new Output(BUFFER_SIZE, MAX_BUFFER_SIZE);
-    this.kryo.writeObject(eventOutput, event);
-    wrapper.eventData = eventOutput.getBuffer();
-
-    this.kryo.writeObject(this.output, wrapper);
+    this.kryo.writeClassAndObject(this.output, event);
   }
 
   void flush() throws IOException {
