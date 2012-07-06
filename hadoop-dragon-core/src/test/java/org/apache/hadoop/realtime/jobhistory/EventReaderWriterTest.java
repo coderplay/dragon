@@ -21,6 +21,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.realtime.jobhistory.event.JobCompletedEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
+import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.util.DragonBuilderUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -43,9 +50,11 @@ public class EventReaderWriterTest {
 
   FSDataOutputStream outputStream = mock(FSDataOutputStream.class);
 
-  HistoryEvent event1 = new JobInitedEvent();
-  HistoryEvent event2 = new JobStartedEvent();
-  HistoryEvent event3 = new JobCompletedEvent();
+  ApplicationId appId = BuilderUtils.newApplicationId(200, 1);
+
+  HistoryEvent event1 = new JobInitedEvent(BuilderUtils.newApplicationAttemptId(appId, 1));
+  HistoryEvent event2 = new JobStartedEvent(DragonBuilderUtils.newJobId(appId, 1));
+  HistoryEvent event3 = new JobCompletedEvent(DragonBuilderUtils.newJobId(appId, 1));
 
   ByteBuffer buffer = ByteBuffer.allocate(4096);
 

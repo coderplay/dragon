@@ -19,11 +19,19 @@ package org.apache.hadoop.realtime.jobhistory.event;
 
 import org.apache.hadoop.realtime.jobhistory.EventType;
 import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
+import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 
 /**
  * class description goes here.
  */
 public class JobStartedEvent implements HistoryEvent {
+
+  public JobStartedEvent(JobId jobId) {
+    //To change body of created methods use File | Settings | File Templates.
+  }
+
   @Override
   public EventType getEventType() {
     return EventType.JOB_STARTED;

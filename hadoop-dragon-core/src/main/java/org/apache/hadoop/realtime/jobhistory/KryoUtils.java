@@ -21,6 +21,7 @@ import com.esotericsoftware.kryo.Kryo;
 import org.apache.hadoop.realtime.jobhistory.event.JobCompletedEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
+import org.objenesis.strategy.StdInstantiatorStrategy;
 
 /**
  * class description goes here.
@@ -29,6 +30,8 @@ public class KryoUtils {
 
   public static Kryo createHistoryEventKryo() {
     Kryo kryo = new Kryo();
+    kryo.setInstantiatorStrategy(new StdInstantiatorStrategy());
+
     kryo.register(JobInitedEvent.class);
     kryo.register(JobStartedEvent.class);
     kryo.register(JobCompletedEvent.class);

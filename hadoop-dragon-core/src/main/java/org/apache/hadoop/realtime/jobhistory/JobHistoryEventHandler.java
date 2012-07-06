@@ -50,7 +50,7 @@ public class JobHistoryEventHandler extends AbstractService
   private volatile boolean stopped;
   private int eventCounter;
 
-  private final BlockingQueue<JobHistoryEvent> eventQueue =
+  protected final BlockingQueue<JobHistoryEvent> eventQueue =
       new LinkedBlockingQueue<JobHistoryEvent>();
 
   private final Object lock = new Object();
@@ -257,8 +257,7 @@ public class JobHistoryEventHandler extends AbstractService
         contains(historyEvent.getEventType()));
   }
 
-  @VisibleForTesting
-  void handleEvent(JobHistoryEvent event) {
+  protected void handleEvent(JobHistoryEvent event) {
     synchronized (lock) {
 
       // If this is JobSubmitted Event, setup the writer
@@ -385,11 +384,12 @@ public class JobHistoryEventHandler extends AbstractService
     private FlushTimerTask flushTimerTask;
     private boolean isTimerShutDown = false;
     private EventWriter writer;
-    private boolean writerActive;
 
     public MetaInfo(Path historyFile, EventWriter writer) {
       this.historyFile = historyFile;
       this.writer = writer;
+
+      this.flushTimer = new Timer("FlushTimer", true);
     }
 
     void closeWriter() throws IOException {
@@ -455,8 +455,8 @@ public class JobHistoryEventHandler extends AbstractService
       }
     }
 
-    public boolean isWriterActive() {
-      return writerActive;
+    boolean isWriterActive() {
+      return writer != null;
     }
 
     public Path getHistoryFile() {

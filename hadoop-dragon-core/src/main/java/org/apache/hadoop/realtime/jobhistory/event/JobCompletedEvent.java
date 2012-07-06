@@ -19,11 +19,16 @@ package org.apache.hadoop.realtime.jobhistory.event;
 
 import org.apache.hadoop.realtime.jobhistory.EventType;
 import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
+import org.apache.hadoop.realtime.records.JobId;
 
 /**
  * class description goes here.
  */
 public class JobCompletedEvent implements HistoryEvent {
+  public JobCompletedEvent(JobId jobId) {
+    //To change body of created methods use File | Settings | File Templates.
+  }
+
   @Override
   public EventType getEventType() {
     return EventType.JOB_COMPLETED;
