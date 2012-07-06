@@ -26,6 +26,6 @@ import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
 public class TaskRescheduledEvent implements HistoryEvent {
   @Override
   public EventType getEventType() {
-    return EventType.JOB_TASK_RESCHEDULED;
+    return EventType.TASK_RESCHEDULED;
   }
 }

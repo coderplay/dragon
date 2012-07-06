@@ -28,13 +28,11 @@ import java.io.IOException;
 
 /**
  * class description goes here.
- *
- * @author xiaofeng_metis
  */
 class EventWriter {
   private static final Log LOG = LogFactory.getLog(EventWriter.class);
 
-  private final Kryo kryo;
+  private Kryo kryo;
   private Output output;
   private FSDataOutputStream out;
 
@@ -59,6 +57,7 @@ class EventWriter {
 
       output = null;
       out = null;
+      kryo = null;
     } finally {
       IOUtils.cleanup(LOG, output);
     }

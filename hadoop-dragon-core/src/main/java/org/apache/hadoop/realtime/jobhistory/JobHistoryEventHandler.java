@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -31,6 +32,7 @@ import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
 
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -58,23 +60,31 @@ public class JobHistoryEventHandler extends AbstractService
   private final static ConcurrentHashMap<JobId, MetaInfo> fileMap =
       new ConcurrentHashMap<JobId, MetaInfo>();
 
-  private int startCount;
-  private AppContext context;
-  private Path stagingDirPath;
-  private FileSystem stagingDirFS;
+  private final int attemptId;
+  private final AppContext context;
 
-  public JobHistoryEventHandler(AppContext context, int startCount) {
+  private Path logDirPath;
+  private FileSystem logDirFS;
+
+  private int numUnflushedCompletionEvents = 0;
+  private boolean isTimerActive;
+  private long flushTimeout;
+  private int minQueueSizeForBatchingFlushes;
+  private int maxUnflushedCompletionEvents;
+  private int postJobCompletionMultiplier;
+
+  public JobHistoryEventHandler(final AppContext context, final int attemptId) {
     super("JobHistoryEventHandler");
 
     this.context = context;
-    this.startCount = startCount;
+    this.attemptId = attemptId;
   }
 
   @Override
   public void init(Configuration conf) {
-    String stagingDirStr = null;
+    String logDirStr = null;
     try {
-      stagingDirStr = JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf);
+      logDirStr = JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf);
     } catch (IOException e) {
       LOG.error("Failed while getting the configured log directories", e);
       throw new YarnException(e);
@@ -82,18 +92,39 @@ public class JobHistoryEventHandler extends AbstractService
 
     //Check for the existence of the history staging dir. Maybe create it.
     try {
-      stagingDirPath =
-          FileSystem.get(conf).makeQualified(new Path(stagingDirStr));
-      stagingDirFS = FileSystem.get(stagingDirPath.toUri(), conf);
-      mkdir(stagingDirFS, stagingDirPath, new FsPermission(
-          JobHistoryUtils.HISTORY_STAGING_DIR_PERMISSIONS));
+      logDirPath =
+          FileSystem.get(conf).makeQualified(new Path(logDirStr));
+      logDirFS = FileSystem.get(logDirPath.toUri(), conf);
+      mkdir(logDirFS, logDirPath, new FsPermission(
+          JobHistoryUtils.HISTORY_DIR_PERMISSIONS));
     } catch (IOException e) {
       LOG.error("Failed while checking for/creating  history staging path: ["
-          + stagingDirPath + "]", e);
+          + logDirPath + "]", e);
       throw new YarnException(e);
     }
 
-     super.init(conf);
+    // Maximum number of unflushed completion-events that can stay in the queue
+    // before flush kicks in.
+    maxUnflushedCompletionEvents =
+        conf.getInt(DragonJobConfig.JOB_HISTORY_MAX_UNFLUSHED_COMPLETE_EVENTS,
+            DragonJobConfig.DEFAULT_JOB_HISTORY_MAX_UNFLUSHED_COMPLETE_EVENTS);
+    // We want to cut down flushes after job completes so as to write quicker,
+    // so we increase maxUnflushedEvents post Job completion by using the
+    // following multiplier.
+    postJobCompletionMultiplier =
+        conf.getInt(
+            DragonJobConfig.JOB_HISTORY_JOB_COMPLETE_UNFLUSHED_MULTIPLIER,
+            DragonJobConfig.DEFAULT_JOB_HISTORY_JOB_COMPLETE_UNFLUSHED_MULTIPLIER);
+    // Max time until which flush doesn't take place.
+    flushTimeout =
+        conf.getLong(DragonJobConfig.JOB_HISTORY_COMPLETE_EVENT_FLUSH_TIMEOUT_MS,
+            DragonJobConfig.DEFAULT_JOB_HISTORY_COMPLETE_EVENT_FLUSH_TIMEOUT_MS);
+    minQueueSizeForBatchingFlushes =
+        conf.getInt(
+            DragonJobConfig.JOB_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD,
+            DragonJobConfig.DEFAULT_JOB_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD);
+
+    super.init(conf);
   }
 
   private void mkdir(FileSystem fs, Path path, FsPermission fsp) throws IOException {
@@ -209,16 +240,21 @@ public class JobHistoryEventHandler extends AbstractService
   @Override
   public void handle(JobHistoryEvent event) {
     try {
-      /*if (isJobCompletionEvent(event.getHistoryEvent())) {
+      if (isJobCompletionEvent(event.getHistoryEvent())) {
         // When the job is complete, flush slower but write faster.
         maxUnflushedCompletionEvents =
             maxUnflushedCompletionEvents * postJobCompletionMultiplier;
-      }          */
+      }
 
       eventQueue.put(event);
     } catch (InterruptedException e) {
       throw new YarnException(e);
     }
+  }
+
+  private boolean isJobCompletionEvent(HistoryEvent historyEvent) {
+    return (EnumSet.of(EventType.JOB_COMPLETED, EventType.INTERNAL_ERROR_OCCUR).
+        contains(historyEvent.getEventType()));
   }
 
   @VisibleForTesting
@@ -267,7 +303,8 @@ public class JobHistoryEventHandler extends AbstractService
 
     MetaInfo oldFi = fileMap.get(jobId);
 
-    Path historyFile = JobHistoryUtils.getJobHistoryFile(jobId, startCount);
+    Path historyFile = JobHistoryUtils.getJobHistoryFile(
+        logDirPath, jobId, attemptId);
     String user = UserGroupInformation.getCurrentUser().getShortUserName();
     if (user == null) {
       throw new IOException(
@@ -295,7 +332,7 @@ public class JobHistoryEventHandler extends AbstractService
 
   @VisibleForTesting
   EventWriter createEventWriter(Path historyFile) throws IOException {
-    FSDataOutputStream out = stagingDirFS.create(historyFile, true);
+    FSDataOutputStream out = logDirFS.create(historyFile, true);
     return new EventWriter(out);
   }
 
@@ -355,6 +392,15 @@ public class JobHistoryEventHandler extends AbstractService
       this.writer = writer;
     }
 
+    void closeWriter() throws IOException {
+      synchronized (lock) {
+        if (writer != null) {
+          writer.close();
+        }
+        writer = null;
+      }
+    }
+
     void writeEvent(HistoryEvent event) throws IOException {
       synchronized (lock) {
         if (writer != null) {
@@ -365,20 +411,48 @@ public class JobHistoryEventHandler extends AbstractService
       }
     }
 
-    private void maybeFlush(HistoryEvent event) {
-      //To change body of created methods use File | Settings | File Templates.
+    void processEventForFlush(HistoryEvent historyEvent) throws IOException {
+      if (EnumSet.of(EventType.JOB_COMPLETED).contains(historyEvent.getEventType())) {
+        numUnflushedCompletionEvents++;
+        if (!isTimerActive) {
+          resetFlushTimer();
+          if (!isTimerShutDown) {
+            flushTimerTask = new FlushTimerTask(this);
+            flushTimer.schedule(flushTimerTask, flushTimeout);
+          }
+        }
+      }
     }
 
-    private void processEventForFlush(HistoryEvent event) {
-      //To change body of created methods use File | Settings | File Templates.
+    void resetFlushTimer() throws IOException {
+      if (flushTimerTask != null) {
+        IOException exception = flushTimerTask.getException();
+        flushTimerTask.stop();
+        if (exception != null) {
+          throw exception;
+        }
+        flushTimerTask = null;
+      }
+      isTimerActive = false;
     }
 
-    public void shutDownTimer() throws IOException {
-      //To change body of created methods use File | Settings | File Templates.
+    void maybeFlush(HistoryEvent historyEvent) throws IOException {
+      if ((eventQueue.size() < minQueueSizeForBatchingFlushes
+          && numUnflushedCompletionEvents > 0)
+          || numUnflushedCompletionEvents >= maxUnflushedCompletionEvents
+          || isJobCompletionEvent(historyEvent)) {
+        this.flush();
+      }
     }
 
-    public void closeWriter() throws IOException {
-      //To change body of created methods use File | Settings | File Templates.
+    void shutDownTimer() throws IOException {
+      synchronized (lock) {
+        isTimerShutDown = true;
+        flushTimer.cancel();
+        if (flushTimerTask != null && flushTimerTask.getException() != null) {
+          throw flushTimerTask.getException();
+        }
+      }
     }
 
     public boolean isWriterActive() {
@@ -388,13 +462,51 @@ public class JobHistoryEventHandler extends AbstractService
     public Path getHistoryFile() {
       return historyFile;
     }
+
+    public boolean isTimerShutDown() {
+      return isTimerShutDown;
+    }
+
+    public void flush() throws IOException {
+      synchronized (lock) {
+        if (numUnflushedCompletionEvents != 0) { // skipped timer cancel.
+          writer.flush();
+          numUnflushedCompletionEvents = 0;
+          resetFlushTimer();
+        }
+      }
+    }
+
   }
 
   private class FlushTimerTask extends TimerTask {
+    private MetaInfo metaInfo;
+    private IOException ioe = null;
+    private volatile boolean shouldRun = true;
+
+    FlushTimerTask(MetaInfo metaInfo) {
+      this.metaInfo = metaInfo;
+    }
 
     @Override
     public void run() {
-      //To change body of implemented methods use File | Settings | File Templates.
+      synchronized (lock) {
+        try {
+          if (!metaInfo.isTimerShutDown() && shouldRun)
+            metaInfo.flush();
+        } catch (IOException e) {
+          ioe = e;
+        }
+      }
+    }
+
+    public IOException getException() {
+      return ioe;
+    }
+
+    public void stop() {
+      shouldRun = false;
+      this.cancel();
     }
   }
 

@@ -23,11 +23,9 @@ import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
 /**
  * class description goes here.
  */
-public class TaskCompletedEvent implements HistoryEvent {
+public class InternalErrorOccurEvent implements HistoryEvent {
   @Override
   public EventType getEventType() {
-    return EventType.TASK_COMPLETED;
+    return EventType.INTERNAL_ERROR_OCCUR;
   }
-
-
 }

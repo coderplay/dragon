@@ -19,23 +19,40 @@ package org.apache.hadoop.realtime.jobhistory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.IOException;
 
 /**
  * class description goes here.
- *
- * @author xiaofeng_metis
  */
 public class JobHistoryUtils {
-  public static final short HISTORY_STAGING_DIR_PERMISSIONS = 0700;
 
-  public static Path getJobHistoryFile(JobId jobId, int startCount) {
-    return null;  //To change body of created methods use File | Settings | File Templates.
+  public static final short HISTORY_DIR_PERMISSIONS = 0700;
+
+  /**
+   * Job History File extension.
+   */
+  public static final String JOB_HISTORY_FILE_EXTENSION = ".jhist";
+
+  public static Path getJobHistoryFile(Path logDir, JobId jobId, int attempt) {
+    Path jobFilePath = null;
+    if (logDir != null) {
+      jobFilePath = new Path(
+          logDir, jobId.toString() + "_" + attempt + JOB_HISTORY_FILE_EXTENSION);
+    }
+    return jobFilePath;
   }
 
   public static String getConfiguredHistoryStagingDirPrefix(Configuration conf) throws IOException {
-    return null;  //To change body of created methods use File | Settings | File Templates.
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+
+    Path path = new Path(
+        conf.get(DragonJobConfig.JOB_HISTORY_DIR) +
+            Path.SEPARATOR + user + Path.SEPARATOR);
+    String logDir = path.toString();
+    return logDir;
   }
 }

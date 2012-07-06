@@ -23,11 +23,9 @@ import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
 /**
  * class description goes here.
  */
-public class TaskCompletedEvent implements HistoryEvent {
+public class JobCounterUpdatedEvent implements HistoryEvent {
   @Override
   public EventType getEventType() {
-    return EventType.TASK_COMPLETED;
+    return EventType.JOB_COUNTER_UPDATED;
   }
-
-
 }
