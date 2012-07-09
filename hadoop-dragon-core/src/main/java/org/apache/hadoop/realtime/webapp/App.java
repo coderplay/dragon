@@ -18,21 +18,36 @@
 
 package org.apache.hadoop.realtime.webapp;
 
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.WebApp;
+import com.google.inject.Inject;
+import com.google.inject.servlet.RequestScoped;
+import org.apache.hadoop.realtime.client.app.AppContext;
+import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.job.Task;
 
-import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
+@RequestScoped
+public class App {
+  final AppContext context;
+  private Job job;
+  private Task task;
 
-/**
- * Application master webapp
- */
-public class DragonWebApp extends WebApp implements DragonParams {
-
-  @Override
-  public void setup() {
-    bind(GenericExceptionHandler.class);
-    route("/", AppController.class);
-    route(pajoin("/job", JOB_ID), AppController.class, "job");
+  @Inject
+  App(AppContext ctx) {
+    context = ctx;
   }
 
+  void setJob(Job job) {
+    this.job = job;
+  }
+
+  public Job getJob() {
+    return job;
+  }
+
+  void setTask(Task task) {
+    this.task = task;
+  }
+
+  public Task getTask() {
+    return task;
+  }
 }

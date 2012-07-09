@@ -18,21 +18,28 @@
 
 package org.apache.hadoop.realtime.webapp;
 
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.SubView;
 
-import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
+import static org.apache.hadoop.realtime.webapp.DragonParams.JOB_ID;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
 
-/**
- * Application master webapp
- */
-public class DragonWebApp extends WebApp implements DragonParams {
+public class JobPage extends AppView {
 
-  @Override
-  public void setup() {
-    bind(GenericExceptionHandler.class);
-    route("/", AppController.class);
-    route(pajoin("/job", JOB_ID), AppController.class, "job");
+  @Override protected void preHead(Page.HTML<_> html) {
+    String jobID = $(JOB_ID);
+    set(TITLE, jobID.isEmpty() ? "Bad request: missing job ID"
+               : join("MapReduce Job ", $(JOB_ID)));
+    commonPreHead(html);
+
+    // This is a job-summary page. Helps to refresh automatically.
+    html.meta_http("refresh", "10");
+
+    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");
   }
 
+  @Override protected Class<? extends SubView> content() {
+    return JobBlock.class;
+  }
 }
