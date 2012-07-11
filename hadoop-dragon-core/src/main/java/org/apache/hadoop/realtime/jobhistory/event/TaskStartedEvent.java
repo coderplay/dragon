@@ -19,54 +19,43 @@ package org.apache.hadoop.realtime.jobhistory.event;
 
 import org.apache.hadoop.realtime.jobhistory.EventType;
 import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
-import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.realtime.records.TaskId;
 
 /**
- * Event to record the initialization of a job
+ * Event to record the start of a task
+ *
  */
-public class JobInitedEvent implements HistoryEvent {
-  private final JobId jobId;
+public class TaskStartedEvent implements HistoryEvent {
+  private final TaskId taskId;
   private final long startTime;
-  private final int numTasks;
-  private final String jobState;
-
+  private final String taskLabel;
 
   /**
-   * Create an event to record job initialization
-   *
-   * @param jobId
-   * @param startTime
-   * @param numTasks
-   * @param jobState
+   * Create an event to record start of a task
+   * @param id Task Id
+   * @param startTime Start time of the task
+   * @param taskLabel Type of the task
    */
-  public JobInitedEvent(JobId jobId, long startTime, int numTasks, String jobState) {
-    this.jobId = jobId;
+  public TaskStartedEvent(TaskId id, long startTime, String taskLabel) {
+    this.taskId = id;
     this.startTime = startTime;
-    this.numTasks = numTasks;
-    this.jobState = jobState;
+    this.taskLabel = taskLabel;
   }
 
-  public JobId getJobId() {
-    return jobId;
+  @Override
+  public EventType getEventType() {
+    return EventType.TASK_STARTED;
+  }
+
+  public TaskId getTaskId() {
+    return taskId;
   }
 
   public long getStartTime() {
     return startTime;
   }
 
-  public String getJobState() {
-    return jobState;
+  public String getLabel() {
+    return taskLabel;
   }
-
-  public int getNumTasks() {
-    return numTasks;
-  }
-
-  @Override
-  public EventType getEventType() {
-    return EventType.JOB_INITED;
-  }
-
 }

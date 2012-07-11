@@ -24,22 +24,27 @@ package org.apache.hadoop.realtime.jobhistory;
 public enum EventType {
 
   //Producer:MRAppMaster
+  JOB_SUBMITTED,
   JOB_INITED,
   JOB_STARTED,
 
   //Producer:Task
+  TASK_STARTED,
   TASK_COMPLETED,
   TASK_RESCHEDULED,
+  TASK_FAILED,
   TASK_ATTEMPT_COMPLETED,
 
   //Producer:Job
   JOB_COMPLETED,
+  JOB_UNSUCCESSFUL_COMPLETION,
+  JOB_INFO_CHANGED,
 
   //Producer:Any component
   JOB_DIAGNOSTIC_UPDATED,
-  INTERNAL_ERROR_OCCUR,
   JOB_COUNTER_UPDATED,
 
   //Producer:TaskAttemptListener
+  TASK_ATTEMPT_STARTED,
   TASK_ATTEMPT_FETCH_FAILURED;
 }

@@ -19,13 +19,42 @@ package org.apache.hadoop.realtime.jobhistory.event;
 
 import org.apache.hadoop.realtime.jobhistory.EventType;
 import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
+import org.apache.hadoop.realtime.records.JobId;
 
 /**
- * class description goes here.
+ * Event to record Failed and Killed completion of jobs
  */
-public class InternalErrorOccurEvent implements HistoryEvent {
+public class JobUnsuccessfulCompletionEvent implements HistoryEvent {
+  private final JobId jobId;
+  private final long finishTime;
+  private final String jobStatus;
+
+  /**
+   * Create an event to record unsuccessful completion (killed/failed) of jobs
+   * @param jobId Job ID
+   * @param finishTime Finish time of the job
+   * @param jobStatus Status of the job
+   */
+  public JobUnsuccessfulCompletionEvent(JobId jobId, long finishTime, String jobStatus) {
+    this.jobId = jobId;
+    this.finishTime = finishTime;
+    this.jobStatus = jobStatus;
+  }
+
   @Override
   public EventType getEventType() {
-    return EventType.INTERNAL_ERROR_OCCUR;
+    return EventType.JOB_UNSUCCESSFUL_COMPLETION;
+  }
+
+  public JobId getJobId() {
+    return jobId;
+  }
+
+  public long getFinishTime() {
+    return finishTime;
+  }
+
+  public String getStatus() {
+    return jobStatus;
   }
 }

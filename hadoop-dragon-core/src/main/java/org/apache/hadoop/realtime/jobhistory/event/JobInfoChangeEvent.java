@@ -20,53 +20,41 @@ package org.apache.hadoop.realtime.jobhistory.event;
 import org.apache.hadoop.realtime.jobhistory.EventType;
 import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
 import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 
 /**
- * Event to record the initialization of a job
+ * Event to record changes in the submit and launch time of a job
  */
-public class JobInitedEvent implements HistoryEvent {
+public class JobInfoChangeEvent implements HistoryEvent {
   private final JobId jobId;
+  private final long submitTime;
   private final long startTime;
-  private final int numTasks;
-  private final String jobState;
-
 
   /**
-   * Create an event to record job initialization
-   *
-   * @param jobId
-   * @param startTime
-   * @param numTasks
-   * @param jobState
+   * Create a event to record the submit and launch time of a job
+   * @param jobId Job Id
+   * @param submitTime Submit time of the job
+   * @param startTime Launch time of the job
    */
-  public JobInitedEvent(JobId jobId, long startTime, int numTasks, String jobState) {
+  public JobInfoChangeEvent(JobId jobId, long submitTime, long startTime) {
     this.jobId = jobId;
+    this.submitTime = submitTime;
     this.startTime = startTime;
-    this.numTasks = numTasks;
-    this.jobState = jobState;
   }
 
   public JobId getJobId() {
     return jobId;
   }
 
+  public long getSubmitTime() {
+    return submitTime;
+  }
+
   public long getStartTime() {
     return startTime;
   }
 
-  public String getJobState() {
-    return jobState;
-  }
-
-  public int getNumTasks() {
-    return numTasks;
-  }
-
   @Override
   public EventType getEventType() {
-    return EventType.JOB_INITED;
+    return EventType.JOB_INFO_CHANGED;
   }
-
 }

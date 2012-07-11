@@ -19,54 +19,39 @@ package org.apache.hadoop.realtime.jobhistory.event;
 
 import org.apache.hadoop.realtime.jobhistory.EventType;
 import org.apache.hadoop.realtime.jobhistory.HistoryEvent;
-import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskId;
 
 /**
- * Event to record the initialization of a job
+ * Event to record the failure of a task
+ *
  */
-public class JobInitedEvent implements HistoryEvent {
-  private final JobId jobId;
-  private final long startTime;
-  private final int numTasks;
-  private final String jobState;
-
+public class TaskFailedEvent implements HistoryEvent {
+  private final TaskId taskId;
+  private final String label;
+  private final String error;
+  private final String status;
+  private final TaskAttemptId failedDueToAttempt;
 
   /**
-   * Create an event to record job initialization
-   *
-   * @param jobId
-   * @param startTime
-   * @param numTasks
-   * @param jobState
+   * Create an event to record task failure
+   * @param id Task ID
+   * @param label label of the task
+   * @param error Error String
+   * @param status Status
+   * @param failedDueToAttempt The attempt id due to which the task failed
    */
-  public JobInitedEvent(JobId jobId, long startTime, int numTasks, String jobState) {
-    this.jobId = jobId;
-    this.startTime = startTime;
-    this.numTasks = numTasks;
-    this.jobState = jobState;
-  }
-
-  public JobId getJobId() {
-    return jobId;
-  }
-
-  public long getStartTime() {
-    return startTime;
-  }
-
-  public String getJobState() {
-    return jobState;
-  }
-
-  public int getNumTasks() {
-    return numTasks;
+  public TaskFailedEvent(TaskId id, String label, String error, String status,
+                         TaskAttemptId failedDueToAttempt) {
+    this.taskId = id;
+    this.label = label;
+    this.error = error;
+    this.status = status;
+    this.failedDueToAttempt = failedDueToAttempt;
   }
 
   @Override
   public EventType getEventType() {
-    return EventType.JOB_INITED;
+    return EventType.TASK_FAILED;
   }
-
 }
