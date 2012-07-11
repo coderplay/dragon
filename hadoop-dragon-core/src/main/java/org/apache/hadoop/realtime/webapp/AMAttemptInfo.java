@@ -44,7 +44,6 @@ public class AMAttemptInfo {
   }
 
   public AMAttemptInfo(AMInfo amInfo, String jobId, String user) {
-
     this.nodeHttpAddress = "";
     this.nodeId = "";
     String nmHost = amInfo.getNodeManagerHost();

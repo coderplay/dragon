@@ -76,7 +76,7 @@ public class JobBlock extends HtmlBlock {
       _(InfoBlock.class).
       div(_INFO_WRAP);
 
-    // MRAppMasters Table
+    // DragonAppMasters Table
     TABLE<DIV<Hamlet>> table = div.table("#job");
     table.
       tr().
@@ -107,7 +107,7 @@ public class JobBlock extends HtmlBlock {
 
     html.div(_INFO_WRAP).        
       // Tasks table
-        table("#job").
+        table("#tasks").
           tr().
             th(_TH, "Task Type").
             th(_TH, "Total")._().
@@ -118,7 +118,7 @@ public class JobBlock extends HtmlBlock {
           ._().
 
         // Attempts table
-        table("#job").
+        table("#attempts").
         tr().
           th(_TH, "Attempt Type").
           th(_TH, "New").
@@ -142,6 +142,7 @@ public class JobBlock extends HtmlBlock {
         _().
        _().
      _();
-  }
 
+    html.div("#dag")._();
+  }
 }
