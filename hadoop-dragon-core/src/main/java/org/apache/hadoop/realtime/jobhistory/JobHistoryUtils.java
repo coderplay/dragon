@@ -49,7 +49,7 @@ public class JobHistoryUtils {
     String user = UserGroupInformation.getCurrentUser().getShortUserName();
 
     Path path = new Path(
-        conf.get(DragonJobConfig.JOB_HISTORY_DIR) +
+        conf.get(DragonJobConfig.JOB_HISTORY_DIR, DragonJobConfig.DEFAULT_JOB_HISTORY_DIR) +
             Path.SEPARATOR + user + Path.SEPARATOR);
     String historyDir = path.toString();
     return historyDir;

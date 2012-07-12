@@ -86,6 +86,8 @@ public class JobHistoryEventHandler extends AbstractService
 
   @Override
   public void init(Configuration conf) {
+    LOG.error("enter event handler init");
+
     String stagingDirStr = null;
     String historyDirStr = null;
     try {

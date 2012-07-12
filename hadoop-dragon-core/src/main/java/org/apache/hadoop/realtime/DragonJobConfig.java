@@ -270,6 +270,8 @@ public class DragonJobConfig {
   public static final int COUNTER_GROUPS_MAX_DEFAULT = 50;
 
   public static final String JOB_HISTORY_DIR = "dragon.history.dir";
+  public static final String DEFAULT_JOB_HISTORY_DIR = "/dragon-history";
+
   public static final String JOB_HISTORY_COMPLETE_EVENT_FLUSH_TIMEOUT_MS =
       "dragon.history.complete-event-flush-timeout";
   public static final long DEFAULT_JOB_HISTORY_COMPLETE_EVENT_FLUSH_TIMEOUT_MS =

@@ -42,11 +42,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * class description goes here.
+ * mock web server for test
  */
 public class DragonWebAppTest {
 
-  @Test
   public void runMockDragonWebApp() {
     final AppContext appContext = mock(AppContext.class);
     final Job job = mock(Job.class);
@@ -93,5 +92,9 @@ public class DragonWebAppTest {
 
     WebApps.$for("mapreduce", AppContext.class, appContext)
         .inDevMode().at(8888).start(new DragonWebApp()).joinThread();
+  }
+
+  public static void main(String[] args) {
+    new DragonWebAppTest().runMockDragonWebApp();
   }
 }
