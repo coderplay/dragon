@@ -25,10 +25,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.job.Job;
-import org.apache.hadoop.realtime.jobhistory.event.JobCompletedEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
-import org.apache.hadoop.realtime.records.Counters;
+import org.apache.hadoop.realtime.jobhistory.event.JobSubmittedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobUnsuccessfulCompletionEvent;
+import org.apache.hadoop.realtime.jobhistory.event.TaskFailedEvent;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
@@ -47,7 +47,7 @@ import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.when;
 
 /**
- * class description goes here.
+ * job history event handler tester
  */
 public class JobHistoryEventHandlerTest {
 
@@ -74,21 +74,20 @@ public class JobHistoryEventHandlerTest {
     EventWriter mockWriter = null;
     try {
       jheh.start();
-      handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobInitedEvent(
-          t.appAttemptId)));
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, createJobInitedEvent()));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
       for (int i = 0; i < 100; i++) {
-        queueEvent(jheh, new JobHistoryEvent(t.jobId, new JobStartedEvent(
-            t.jobId)));
+        queueEvent(jheh,
+            new JobHistoryEvent(t.jobId, createJobSubmittedEvent()));
       }
       handleNextNEvents(jheh, 100);
       verify(mockWriter, times(0)).flush();
 
       // First completion event, but min-queue-size for batching flushes is 10
-      handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobCompletedEvent(
-          t.jobId)));
+      handleEvent(jheh,
+          new JobHistoryEvent(t.jobId, createJobCompletionEvent()));
       verify(mockWriter).flush();
 
     } finally {
@@ -107,7 +106,7 @@ public class JobHistoryEventHandlerTest {
     conf.setInt(DragonJobConfig.JOB_HISTORY_JOB_COMPLETE_UNFLUSHED_MULTIPLIER, 10);
     conf.setInt(DragonJobConfig.JOB_HISTORY_MAX_UNFLUSHED_COMPLETE_EVENTS, 10);
     conf.setInt(
-        DragonJobConfig.JOB_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD, 200);
+        DragonJobConfig.JOB_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD, 5);
 
     JHEvenHandlerForTest realJheh =
         new JHEvenHandlerForTest(t.mockAppContext, 0);
@@ -117,14 +116,13 @@ public class JobHistoryEventHandlerTest {
     EventWriter mockWriter = null;
     try {
       jheh.start();
-      handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobInitedEvent(
-          t.appAttemptId)));
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, createJobInitedEvent()));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
       for (int i = 0 ; i < 100 ; i++) {
-        queueEvent(jheh, new JobHistoryEvent(t.jobId, new JobCompletedEvent(
-            t.jobId)));
+        queueEvent(jheh,
+            new JobHistoryEvent(t.jobId, createTaskFailureEvent()));
       }
 
       handleNextNEvents(jheh, 9);
@@ -141,7 +139,6 @@ public class JobHistoryEventHandlerTest {
       verify(mockWriter).close();
     }
   }
-
 
   @Test
   public void testUnflushedTimer() throws Exception {
@@ -163,14 +160,13 @@ public class JobHistoryEventHandlerTest {
     EventWriter mockWriter = null;
     try {
       jheh.start();
-      handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobInitedEvent(
-          t.appAttemptId)));
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, createJobInitedEvent()));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
       for (int i = 0 ; i < 100 ; i++) {
-        queueEvent(jheh, new JobHistoryEvent(t.jobId, new JobCompletedEvent(
-            t.jobId)));
+        queueEvent(jheh,
+            new JobHistoryEvent(t.jobId, createTaskFailureEvent()));
       }
 
       handleNextNEvents(jheh, 9);
@@ -204,17 +200,16 @@ public class JobHistoryEventHandlerTest {
     EventWriter mockWriter = null;
     try {
       jheh.start();
-      handleEvent(jheh, new JobHistoryEvent(t.jobId, new JobInitedEvent(
-          t.appAttemptId)));
+      handleEvent(jheh, new JobHistoryEvent(t.jobId, createJobInitedEvent()));
       mockWriter = jheh.getEventWriter();
       verify(mockWriter).write(any(HistoryEvent.class));
 
       for (int i = 0 ; i < 100 ; i++) {
-        queueEvent(jheh, new JobHistoryEvent(t.jobId, new JobStartedEvent(
-            t.jobId)));
+        queueEvent(jheh,
+            new JobHistoryEvent(t.jobId, createTaskFailureEvent()));
       }
-      queueEvent(jheh, new JobHistoryEvent(t.jobId, new JobCompletedEvent(
-          t.jobId)));
+      queueEvent(jheh,
+          new JobHistoryEvent(t.jobId, createJobCompletionEvent()));
 
       handleNextNEvents(jheh, 29);
       verify(mockWriter, times(0)).flush();
@@ -264,6 +259,35 @@ public class JobHistoryEventHandlerTest {
     return mockContext;
   }
 
+  private HistoryEvent createJobCompletionEvent() {
+    JobUnsuccessfulCompletionEvent jice = mock(JobUnsuccessfulCompletionEvent.class);
+
+    when(jice.getEventType()).thenReturn(EventType.JOB_UNSUCCESSFUL_COMPLETION);
+
+    return jice;
+  }
+
+  private HistoryEvent createJobSubmittedEvent() {
+    JobSubmittedEvent jse = mock(JobSubmittedEvent.class);
+
+    when(jse.getEventType()).thenReturn(EventType.JOB_SUBMITTED);
+
+    return jse;
+  }
+
+  private HistoryEvent createJobInitedEvent() {
+    JobInitedEvent jie = mock(JobInitedEvent.class);
+
+    when(jie.getEventType()).thenReturn(EventType.JOB_INITED);
+
+    return jie;
+  }
+
+  private HistoryEvent createTaskFailureEvent() {
+    TaskFailedEvent tfe = mock(TaskFailedEvent.class);
+    when(tfe.getEventType()).thenReturn(EventType.TASK_FAILED);
+    return tfe;
+  }
 
   private class TestParams {
     String workDir = setupTestWorkDir();

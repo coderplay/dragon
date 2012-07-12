@@ -18,23 +18,30 @@
 package org.apache.hadoop.realtime.jobhistory;
 
 import com.esotericsoftware.kryo.Kryo;
-import org.apache.hadoop.realtime.jobhistory.event.JobCompletedEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.*;
 import org.objenesis.strategy.StdInstantiatorStrategy;
 
 /**
- * class description goes here.
+ * create and setup kryo utils
+ *
  */
 public class KryoUtils {
 
   public static Kryo createHistoryEventKryo() {
     Kryo kryo = new Kryo();
+
+    // we need support arguments constructor
     kryo.setInstantiatorStrategy(new StdInstantiatorStrategy());
 
+    // register all history event
+    kryo.register(JobInfoChangeEvent.class);
     kryo.register(JobInitedEvent.class);
-    kryo.register(JobStartedEvent.class);
-    kryo.register(JobCompletedEvent.class);
+    kryo.register(JobSubmittedEvent.class);
+    kryo.register(JobUnsuccessfulCompletionEvent.class);
+    kryo.register(TaskFailedEvent.class);
+    kryo.register(TaskStartedEvent.class);
+    kryo.register(TaskAttemptStartedEvent.class);
+    kryo.register(TaskAttemptUnsuccessfulCompletionEvent.class);
 
     return kryo;
   }

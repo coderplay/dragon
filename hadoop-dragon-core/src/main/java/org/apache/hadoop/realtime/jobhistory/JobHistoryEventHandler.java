@@ -41,7 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
- * class description goes here.
+ * The job history events get routed to this class. This class writes the Job
+ * history events to the DFS directly.
  */
 public class JobHistoryEventHandler extends AbstractService
     implements EventHandler<JobHistoryEvent> {
@@ -253,7 +254,7 @@ public class JobHistoryEventHandler extends AbstractService
   }
 
   private boolean isJobCompletionEvent(HistoryEvent historyEvent) {
-    return (EnumSet.of(EventType.JOB_COMPLETED, EventType.INTERNAL_ERROR_OCCUR).
+    return (EnumSet.of(EventType.JOB_UNSUCCESSFUL_COMPLETION).
         contains(historyEvent.getEventType()));
   }
 
@@ -412,7 +413,9 @@ public class JobHistoryEventHandler extends AbstractService
     }
 
     void processEventForFlush(HistoryEvent historyEvent) throws IOException {
-      if (EnumSet.of(EventType.JOB_COMPLETED).contains(historyEvent.getEventType())) {
+      if (EnumSet.of(EventType.JOB_UNSUCCESSFUL_COMPLETION,
+          EventType.TASK_ATTEMPT_COMPLETED, EventType.TASK_FAILED).
+          contains(historyEvent.getEventType())) {
         numUnflushedCompletionEvents++;
         if (!isTimerActive) {
           resetFlushTimer();

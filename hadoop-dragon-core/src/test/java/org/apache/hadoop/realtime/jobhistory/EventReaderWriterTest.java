@@ -18,15 +18,11 @@
 package org.apache.hadoop.realtime.jobhistory;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.realtime.jobhistory.event.JobCompletedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobInfoChangeEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobStartedEvent;
-import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.jobhistory.event.JobSubmittedEvent;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -42,19 +38,15 @@ import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 
 /**
- * class description goes here.
- *
- * @author xiaofeng_metis
+ * test serialize and deserialize event
  */
 public class EventReaderWriterTest {
 
   FSDataOutputStream outputStream = mock(FSDataOutputStream.class);
 
-  ApplicationId appId = BuilderUtils.newApplicationId(200, 1);
-
-  HistoryEvent event1 = new JobInitedEvent(BuilderUtils.newApplicationAttemptId(appId, 1));
-  HistoryEvent event2 = new JobStartedEvent(DragonBuilderUtils.newJobId(appId, 1));
-  HistoryEvent event3 = new JobCompletedEvent(DragonBuilderUtils.newJobId(appId, 1));
+  HistoryEvent event1 = mock(JobSubmittedEvent.class);
+  HistoryEvent event2 = mock(JobInfoChangeEvent.class);
+  HistoryEvent event3 = mock(JobInitedEvent.class);
 
   ByteBuffer buffer = ByteBuffer.allocate(4096);
 
@@ -94,9 +86,9 @@ public class EventReaderWriterTest {
     assertTrue(reader.hasNext());
     HistoryEvent newEvent3 = reader.nextEvent();
 
-    assertTrue(newEvent1 instanceof JobInitedEvent);
-    assertTrue(newEvent2 instanceof JobStartedEvent);
-    assertTrue(newEvent3 instanceof JobCompletedEvent);
+    assertTrue(newEvent1 instanceof JobSubmittedEvent);
+    assertTrue(newEvent2 instanceof JobInfoChangeEvent);
+    assertTrue(newEvent3 instanceof JobInitedEvent);
 
     reader.close();
   }
