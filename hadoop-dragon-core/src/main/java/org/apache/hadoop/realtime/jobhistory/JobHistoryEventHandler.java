@@ -86,8 +86,6 @@ public class JobHistoryEventHandler extends AbstractService
 
   @Override
   public void init(Configuration conf) {
-    LOG.error("enter event handler init");
-
     String stagingDirStr = null;
     String historyDirStr = null;
     try {
@@ -337,8 +335,6 @@ public class JobHistoryEventHandler extends AbstractService
     String jobName = context.getJob(jobId).getName();
     EventWriter writer = (oldFi == null) ? null : oldFi.writer;
 
-    Path historyConfPath =
-        JobHistoryUtils.getHistoryConfFile(historyFilePath, jobId, attemptId);
     if (writer == null) {
       try {
         writer = createEventWriter(historyFilePath);
@@ -349,6 +345,9 @@ public class JobHistoryEventHandler extends AbstractService
             + "[" + jobName + "]");
         throw ioe;
       }
+
+      Path historyConfPath =
+          JobHistoryUtils.getHistoryConfFile(historyDirPath, jobId, attemptId);
 
       //Write out conf only if the writer isn't already setup.
       if (conf != null) {
@@ -370,7 +369,7 @@ public class JobHistoryEventHandler extends AbstractService
 
     // then copy job description file
     Path jobDescriptionFilePath = JobHistoryUtils.getStagingJobDescriptionFile(stagingDirPath, jobId);
-    Path historyDescriptionFilePath = JobHistoryUtils.getHistoryJobDescriptionFile(historyFilePath, jobId, attemptId);
+    Path historyDescriptionFilePath = JobHistoryUtils.getHistoryJobDescriptionFile(historyDirPath, jobId, attemptId);
     FileUtil.copy(stagingDirFS, jobDescriptionFilePath, historyDirFS, historyDescriptionFilePath, true, conf);
 
     // create meta info and put to file map
