@@ -64,8 +64,11 @@ public class JobHistoryEventHandler extends AbstractService
   private final int attemptId;
   private final AppContext context;
 
-  private Path logDirPath;
-  private FileSystem logDirFS;
+  private Path stagingDirPath;
+  private FileSystem stagingDirFS;
+
+  private Path historyDirPath;
+  private FileSystem historyDirFS;
 
   private int numUnflushedCompletionEvents = 0;
   private boolean isTimerActive;
@@ -83,9 +86,11 @@ public class JobHistoryEventHandler extends AbstractService
 
   @Override
   public void init(Configuration conf) {
-    String logDirStr = null;
+    String stagingDirStr = null;
+    String historyDirStr = null;
     try {
-      logDirStr = JobHistoryUtils.getConfiguredHistoryStagingDirPrefix(conf);
+      stagingDirStr = JobHistoryUtils.getConfiguredStagingDirPrefix(conf);
+      historyDirStr = JobHistoryUtils.getConfiguredHistoryDirPrefix(conf);
     } catch (IOException e) {
       LOG.error("Failed while getting the configured log directories", e);
       throw new YarnException(e);
@@ -93,14 +98,18 @@ public class JobHistoryEventHandler extends AbstractService
 
     //Check for the existence of the history staging dir. Maybe create it.
     try {
-      logDirPath =
-          FileSystem.get(conf).makeQualified(new Path(logDirStr));
-      logDirFS = FileSystem.get(logDirPath.toUri(), conf);
-      mkdir(logDirFS, logDirPath, new FsPermission(
+      stagingDirPath =
+          FileSystem.get(conf).makeQualified(new Path(stagingDirStr));
+      stagingDirFS = FileSystem.get(stagingDirPath.toUri(), conf);
+
+      historyDirPath =
+          FileSystem.get(conf).makeQualified(new Path(historyDirStr));
+      historyDirFS = FileSystem.get(historyDirPath.toUri(), conf);
+      mkdir(historyDirFS, historyDirPath, new FsPermission(
           JobHistoryUtils.HISTORY_DIR_PERMISSIONS));
     } catch (IOException e) {
       LOG.error("Failed while checking for/creating  history staging path: ["
-          + logDirPath + "]", e);
+          + historyDirPath + "]", e);
       throw new YarnException(e);
     }
 
@@ -274,7 +283,7 @@ public class JobHistoryEventHandler extends AbstractService
 
       // For all events
       // (1) Write it out
-      // (2) Process it for JobSummary
+      // (2) Close writer
       MetaInfo mi = fileMap.get(event.getJobId());
       try {
         HistoryEvent historyEvent = event.getHistoryEvent();
@@ -282,6 +291,11 @@ public class JobHistoryEventHandler extends AbstractService
         if (LOG.isDebugEnabled()) {
           LOG.debug("In HistoryEventHandler "
               + event.getHistoryEvent().getEventType());
+        }
+
+        if (EnumSet.of(EventType.JOB_UNSUCCESSFUL_COMPLETION).
+          contains(event.getHistoryEvent().getEventType())) {
+          closeEventWriter(event.getJobId());
         }
       } catch (IOException e) {
         LOG.error("Error writing History Event: " + event.getHistoryEvent(),
@@ -301,10 +315,17 @@ public class JobHistoryEventHandler extends AbstractService
    */
   protected void setupEventWriter(JobId jobId) throws IOException {
 
-    MetaInfo oldFi = fileMap.get(jobId);
+    if (historyDirPath == null) {
+      LOG.error("Log Directory is null, returning");
+      throw new IOException("Missing Log Directory for History");
+    }
 
-    Path historyFile = JobHistoryUtils.getJobHistoryFile(
-        logDirPath, jobId, attemptId);
+    MetaInfo oldFi = fileMap.get(jobId);
+    Configuration conf = getConfig();
+
+    // TODO Ideally this should be written out to the job dir
+    // (.staging/jobid/files - RecoveryService will need to be patched)
+    Path historyFilePath = JobHistoryUtils.getJobHistoryFile(historyDirPath, jobId, attemptId);
     String user = UserGroupInformation.getCurrentUser().getShortUserName();
     if (user == null) {
       throw new IOException(
@@ -314,25 +335,50 @@ public class JobHistoryEventHandler extends AbstractService
     String jobName = context.getJob(jobId).getName();
     EventWriter writer = (oldFi == null) ? null : oldFi.writer;
 
+    Path historyConfPath =
+        JobHistoryUtils.getHistoryConfFile(historyFilePath, jobId, attemptId);
     if (writer == null) {
       try {
-        writer = createEventWriter(historyFile);
+        writer = createEventWriter(historyFilePath);
         LOG.info("Event Writer setup for JobId: " + jobId + ", File: "
-            + historyFile);
+            + historyFilePath);
       } catch (IOException ioe) {
-        LOG.info("Could not create log file: [" + historyFile + "] + for job "
+        LOG.info("Could not create log file: [" + historyFilePath + "] + for job "
             + "[" + jobName + "]");
         throw ioe;
       }
+
+      //Write out conf only if the writer isn't already setup.
+      if (conf != null) {
+        // TODO Ideally this should be written out to the job dir
+        // (.staging/jobid/files - RecoveryService will need to be patched)
+        FSDataOutputStream jobFileOut = null;
+        try {
+          if (historyConfPath != null) {
+            jobFileOut = historyDirFS.create(historyConfPath, true);
+            conf.writeXml(jobFileOut);
+            jobFileOut.close();
+          }
+        } catch (IOException e) {
+          LOG.info("Failed to write the job configuration file", e);
+          throw e;
+        }
+      }
     }
 
-    MetaInfo fi = new MetaInfo(historyFile, writer);
+    // then copy job description file
+    Path jobDescriptionFilePath = JobHistoryUtils.getStagingJobDescriptionFile(stagingDirPath, jobId);
+    Path historyDescriptionFilePath = JobHistoryUtils.getHistoryJobDescriptionFile(historyFilePath, jobId, attemptId);
+    FileUtil.copy(stagingDirFS, jobDescriptionFilePath, historyDirFS, historyDescriptionFilePath, true, conf);
+
+    // create meta info and put to file map
+    MetaInfo fi = new MetaInfo(historyFilePath, writer);
     fileMap.put(jobId, fi);
   }
 
   @VisibleForTesting
   EventWriter createEventWriter(Path historyFile) throws IOException {
-    FSDataOutputStream out = logDirFS.create(historyFile, true);
+    FSDataOutputStream out = historyDirFS.create(historyFile, true);
     return new EventWriter(out);
   }
 
@@ -351,8 +397,7 @@ public class JobHistoryEventHandler extends AbstractService
     }
   }
 
-  @VisibleForTesting
-  void closeEventWriter(JobId jobId) throws IOException {
+  protected void closeEventWriter(JobId jobId) throws IOException {
     final MetaInfo mi = fileMap.get(jobId);
     if (mi == null) {
       throw new IOException("No MetaInfo found for JobId: [" + jobId + "]");

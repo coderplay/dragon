@@ -19,7 +19,9 @@ package org.apache.hadoop.realtime.jobhistory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.JobSubmissionFiles;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -35,24 +37,70 @@ public class JobHistoryUtils {
   /**
    * Job History File extension.
    */
-  public static final String JOB_HISTORY_FILE_EXTENSION = ".jhist";
+  public static final String JOB_HISTORY_FILE = "job.jhist";
 
-  public static Path getJobHistoryFile(Path logDir, JobId jobId, int attempt) {
-    Path jobFilePath = null;
-    if (logDir != null) {
-      jobFilePath = new Path(
-          logDir, jobId.toString() + "_" + attempt + JOB_HISTORY_FILE_EXTENSION);
-    }
-    return jobFilePath;
-  }
+  /**
+   * Suffix for configuration files.
+   */
+  public static final String CONF_FILE_NAME = "job.xml";
+  private static final String DESCR_FILE_NAME = "job.desc";
 
-  public static String getConfiguredHistoryStagingDirPrefix(Configuration conf) throws IOException {
+  public static String getConfiguredHistoryDirPrefix(Configuration conf) throws IOException {
     String user = UserGroupInformation.getCurrentUser().getShortUserName();
 
     Path path = new Path(
         conf.get(DragonJobConfig.JOB_HISTORY_DIR) +
             Path.SEPARATOR + user + Path.SEPARATOR);
+    String historyDir = path.toString();
+    return historyDir;
+  }
+
+  /**
+   * Gets the configured directory prefix for In Progress history files.
+   * @param conf
+   * @return A string representation of the prefix.
+   */
+  public static String getConfiguredStagingDirPrefix(Configuration conf)
+      throws IOException {
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    Path path = DragonApps.getStagingAreaDir(conf, user);
     String logDir = path.toString();
     return logDir;
+  }
+
+  public static Path getJobHistoryFile(Path historyDir, JobId jobId, int attempt) {
+    Path jobFilePath = null;
+    if (historyDir != null) {
+      jobFilePath = new Path(
+          historyDir,
+          jobId.toString() + Path.SEPARATOR +
+              attempt + Path.SEPARATOR + JOB_HISTORY_FILE);
+    }
+
+    return jobFilePath;
+  }
+
+  public static Path getHistoryConfFile(Path historyDir, JobId jobId, int attemptId) {
+    Path jobFilePath = null;
+    if (historyDir != null) {
+      jobFilePath = new Path(historyDir, jobId.toString()  +
+          Path.SEPARATOR + attemptId + Path.SEPARATOR + CONF_FILE_NAME);
+    }
+    return jobFilePath;
+  }
+
+  public static Path getHistoryJobDescriptionFile(
+      Path historyDir, JobId jobId, int attemptId) {
+    Path jobFilePath = null;
+    if (historyDir != null) {
+      jobFilePath = new Path(historyDir, jobId.toString()  +
+         Path.SEPARATOR + attemptId+ Path.SEPARATOR + DESCR_FILE_NAME);
+    }
+    return jobFilePath;
+  }
+
+  public static Path getStagingJobDescriptionFile(Path stagingDirPath, JobId jobId) {
+    Path submitJobDir = new Path(stagingDirPath, jobId.toString());
+    return JobSubmissionFiles.getJobDescriptionFile(submitJobDir);
   }
 }
