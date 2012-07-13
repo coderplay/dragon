@@ -323,11 +323,11 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   }
 
   @Override
-  protected void setupEventWriter(JobId jobId) throws IOException {
+  protected void closeEventWriter(JobId jobId) {
   }
 
   @Override
-  protected void closeEventWriter(JobId jobId) {
+  protected void copyJobDescriptionFile(final JobId jobId) throws IOException {
   }
 
   public EventWriter getEventWriter() {

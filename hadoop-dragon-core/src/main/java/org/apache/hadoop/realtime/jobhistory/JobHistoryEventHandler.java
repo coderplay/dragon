@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.realtime.jobhistory;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -274,6 +273,7 @@ public class JobHistoryEventHandler extends AbstractService
       if (event.getHistoryEvent().getEventType() == EventType.JOB_INITED) {
         try {
           setupEventWriter(event.getJobId());
+          copyJobDescriptionFile(event.getJobId());
         } catch (IOException ioe) {
           LOG.error("Error JobHistoryEventHandler in handleEvent: " + event,
               ioe);
@@ -306,6 +306,17 @@ public class JobHistoryEventHandler extends AbstractService
   }
 
   /**
+   * copy job description file to job history directory
+   */
+  protected void copyJobDescriptionFile(final JobId jobId) throws IOException {
+    final Path jobDescriptionFilePath = JobHistoryUtils.getStagingJobDescriptionFile(stagingDirPath, jobId);
+    final Path historyDescriptionFilePath = JobHistoryUtils.getHistoryJobDescriptionFile(historyDirPath, jobId, attemptId);
+    final Configuration conf = getConfig();
+
+    FileUtil.copy(stagingDirFS, jobDescriptionFilePath, historyDirFS, historyDescriptionFilePath, true, conf);
+  }
+
+  /**
    * Create an event writer for the Job represented by the jobID.
    * Writes out the job configuration to the log directory.
    * This should be the first call to history for a job
@@ -314,7 +325,6 @@ public class JobHistoryEventHandler extends AbstractService
    * @throws IOException
    */
   protected void setupEventWriter(JobId jobId) throws IOException {
-
     if (historyDirPath == null) {
       LOG.error("Log Directory is null, returning");
       throw new IOException("Missing Log Directory for History");
@@ -367,18 +377,12 @@ public class JobHistoryEventHandler extends AbstractService
       }
     }
 
-    // then copy job description file
-    Path jobDescriptionFilePath = JobHistoryUtils.getStagingJobDescriptionFile(stagingDirPath, jobId);
-    Path historyDescriptionFilePath = JobHistoryUtils.getHistoryJobDescriptionFile(historyDirPath, jobId, attemptId);
-    FileUtil.copy(stagingDirFS, jobDescriptionFilePath, historyDirFS, historyDescriptionFilePath, true, conf);
-
     // create meta info and put to file map
     MetaInfo fi = new MetaInfo(historyFilePath, writer);
     fileMap.put(jobId, fi);
   }
 
-  @VisibleForTesting
-  EventWriter createEventWriter(Path historyFile) throws IOException {
+  protected EventWriter createEventWriter(Path historyFile) throws IOException {
     FSDataOutputStream out = historyDirFS.create(historyFile, true);
     return new EventWriter(out);
   }
