@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.realtime.app.rm.launcher;
 
-import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;

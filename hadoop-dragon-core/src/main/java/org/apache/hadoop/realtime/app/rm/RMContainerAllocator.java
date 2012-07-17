@@ -36,7 +36,6 @@ import org.apache.hadoop.realtime.job.app.event.JobEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptContainerAssignedEvent;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.server.ClientService;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -52,6 +51,8 @@ public class RMContainerAllocator extends RMContainerRequestor implements
   private static final Log LOG = LogFactory.getLog(RMContainerAllocator.class);
   private long retryInterval;
   private long retrystartTime;
+  
+  private int totalContainer;
 
   private int containersAllocated = 0;
   private int containersReleased = 0;
@@ -133,11 +134,13 @@ public class RMContainerAllocator extends RMContainerRequestor implements
   protected synchronized void heartbeat() throws Exception {
     // LOG.info("Before Scheduling: " + getStat());
     List<Container> allocatedContainers = getResources();
+    if(allocatedContainers!=null){
     // LOG.info("After Scheduling: " + getStat());
-    if (allocatedContainers.size() > 0) {
-      LOG.info("Before Assign: " + getStat());
-      scheduledRequests.assign(allocatedContainers);
-      LOG.info("After Assign: " + getStat());
+      if (allocatedContainers.size() > 0) {
+        LOG.info("Before Assign: " + getStat());
+        scheduledRequests.assign(allocatedContainers);
+        LOG.info("After Assign: " + getStat());
+      }
     }
   }
 
@@ -165,6 +168,8 @@ public class RMContainerAllocator extends RMContainerRequestor implements
      */
     try {
       response = makeRemoteRequest();
+      if(response == null)
+        return null;
       // Reset retry count if no exception occurred.
       retrystartTime = System.currentTimeMillis();
     } catch (Exception e) {

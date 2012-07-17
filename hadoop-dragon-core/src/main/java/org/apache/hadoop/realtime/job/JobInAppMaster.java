@@ -79,7 +79,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Clock;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
@@ -208,6 +207,9 @@ public class JobInAppMaster implements Job,
               JobEventType.JOB_TASK_RESCHEDULED,
               new TaskRescheduledTransition())
           .addTransition(JobState.RUNNING, JobState.RUNNING,
+              JobEventType.JOB_TASK_ASSIGNED,
+              new TaskAssignedTransition())
+          .addTransition(JobState.RUNNING, JobState.RUNNING,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
           .addTransition(JobState.RUNNING, JobState.RUNNING,
@@ -285,6 +287,7 @@ public class JobInAppMaster implements Job,
   // changing fields while the job is running
   private int numTasks;
   private int completedTaskCount = 0;
+  private int assignedTasks =0;
   private boolean hasTaskFailure = false;
   private int killedTaskCount = 0;
   private long startTime;
@@ -893,6 +896,21 @@ public class JobInAppMaster implements Job,
       job.setFinishTime();
       job.abortJob(JobState.FAILED);
       return job.finished(JobState.FAILED);
+    }
+  }
+  
+  private static class TaskAssignedTransition implements
+      SingleArcTransition<JobInAppMaster, JobEvent> {
+    @Override
+    public void transition(JobInAppMaster job, JobEvent event) {
+      // succeeded map task is restarted back
+      if(++job.assignedTasks>=job.numTasks){
+        for (Task task : job.tasks.values()) {
+          job.eventHandler.handle(
+              new TaskEvent(task.getID(), TaskEventType.T_SCHEDULED));
+        }
+      }
+        
     }
   }
 

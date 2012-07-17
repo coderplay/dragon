@@ -15,24 +15,20 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-
 package org.apache.hadoop.realtime.job.app.event;
 
-/**
- * Event types handled by Task.
- */
-public enum TaskEventType {
+import org.apache.hadoop.realtime.records.TaskId;
 
-  //Producer:Client, Job
-  T_KILL,
+public class JobTaskAssignedEvent extends JobEvent {
 
-  //Producer:Job
-  T_SCHEDULE,
-  T_SCHEDULED,
+  private TaskId taskID;
 
-  //Producer:TaskAttempt
-  T_ATTEMPT_ASSIGNED,
-  T_ATTEMPT_LAUNCHED,
-  T_ATTEMPT_FAILED,
-  T_ATTEMPT_KILLED
+  public JobTaskAssignedEvent(TaskId taskID) {
+    super(taskID.getJobId(), JobEventType.JOB_TASK_ASSIGNED);
+    this.taskID = taskID;
+  }
+
+  public TaskId getTaskID() {
+    return taskID;
+  }
 }
