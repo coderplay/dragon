@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.realtime.job;
 
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -45,6 +42,9 @@ import org.apache.hadoop.realtime.job.app.event.TaskAttemptEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskTAttemptEvent;
+import org.apache.hadoop.realtime.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.realtime.jobhistory.event.TaskFailedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.TaskStartedEvent;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
@@ -92,7 +92,9 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   
   private final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
-  
+
+
+  private boolean historyTaskStartGenerated = false;
 
   private Credentials credentials;
   private Token<JobTokenIdentifier> jobToken;
@@ -310,6 +312,12 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
     public void transition(TaskInAppMaster task, TaskEvent event) {
       task.addAndScheduleAttempt();
       task.scheduledTime = task.clock.getTime();
+
+      TaskStartedEvent tse = new TaskStartedEvent(
+          task.taskId, task.getLaunchTime(), task.getLabel());
+      task.eventHandler
+          .handle(new JobHistoryEvent(task.taskId.getJobId(), tse));
+      task.historyTaskStartGenerated = true;
     }
   }
 
@@ -398,6 +406,15 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       SingleArcTransition<TaskInAppMaster, TaskEvent> {
     @Override
     public void transition(TaskInAppMaster task, TaskEvent event) {
+      if (task.historyTaskStartGenerated) {
+        TaskFailedEvent taskFailedEvent = createTaskFailedEvent(task, null,
+            TaskState.KILLED, null); // TODO Verify failedAttemptId is null
+        task.eventHandler.handle(new JobHistoryEvent(task.taskId.getJobId(),
+            taskFailedEvent));
+      }else {
+        LOG.debug("Not generating HistoryFinish event since start event not" +
+            " generated for task: " + task.getID());
+      }
 
       task.eventHandler.handle(new JobTaskEvent(task.taskId, TaskState.KILLED));
       task.metrics.endWaitingTask(task);
@@ -426,6 +443,19 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
           task.addAndScheduleAttempt();
         }
       } else {
+        TaskTAttemptEvent ev = (TaskTAttemptEvent) event;
+        TaskAttemptId taId = ev.getTaskAttemptID();
+
+        if (task.historyTaskStartGenerated) {
+          TaskFailedEvent taskFailedEvent = createTaskFailedEvent(task, attempt.getDiagnostics(),
+              TaskState.FAILED, taId);
+          task.eventHandler.handle(new JobHistoryEvent(task.taskId.getJobId(),
+              taskFailedEvent));
+        } else {
+          LOG.debug("Not generating HistoryFinish event since start event not" +
+              " generated for task: " + task.getID());
+        }
+
         task.eventHandler
             .handle(new JobTaskEvent(task.taskId, TaskState.FAILED));
         task.finishTime = System.currentTimeMillis();
@@ -455,6 +485,16 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
     public TaskState transition(TaskInAppMaster task, TaskEvent event) {
       // check whether all attempts are finished
       if (task.finishedAttempts == task.attempts.size()) {
+        if (task.historyTaskStartGenerated) {
+          TaskFailedEvent taskFailedEvent = createTaskFailedEvent(task, null,
+              finalState, null); // TODO JH verify failedAttempt null
+          task.eventHandler.handle(new JobHistoryEvent(task.taskId.getJobId(),
+              taskFailedEvent));
+        } else {
+          LOG.debug("Not generating HistoryFinish event since start event not" +
+              " generated for task: " + task.getID());
+        }
+
         task.eventHandler.handle(new JobTaskEvent(task.taskId, finalState));
         return finalState;
       }
@@ -545,5 +585,23 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
         "Invalid event " + type + " on Task " + this.taskId));
     eventHandler.handle(new JobEvent(this.taskId.getJobId(),
         JobEventType.INTERNAL_ERROR));
+  }
+
+  private static TaskFailedEvent createTaskFailedEvent(
+      TaskInAppMaster task, List<String> diag, TaskState taskState,
+      TaskAttemptId taId) {
+    StringBuilder errorSb = new StringBuilder();
+    if (diag != null) {
+      for (String d : diag) {
+        errorSb.append(", ").append(d);
+      }
+    }
+    TaskFailedEvent taskFailedEvent = new TaskFailedEvent(
+        task.taskId,
+        task.getLabel(),
+        errorSb.toString(),
+        taskState.toString(),
+        taId);
+    return taskFailedEvent;
   }
 }

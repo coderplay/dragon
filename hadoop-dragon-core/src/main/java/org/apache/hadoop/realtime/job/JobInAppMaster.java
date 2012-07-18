@@ -61,6 +61,11 @@ import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskEventType;
+import org.apache.hadoop.realtime.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobInfoChangeEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobSubmittedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobUnsuccessfulCompletionEvent;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
@@ -79,7 +84,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.Clock;
-import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.state.InvalidStateTransitonException;
@@ -565,15 +569,14 @@ public class JobInAppMaster implements Job,
         setup(job);
         job.fs = job.getFileSystem(job.conf);
 
-//        //log to job history
-//        JobSubmittedEvent jse = new JobSubmittedEvent(job.oldJobId,
-//              job.conf.get(DragonJobConfig.JOB_NAME, "test"), 
-//            job.conf.get(DragonJobConfig.USER_NAME, "dragon"),
-//            job.appSubmitTime,
-//            job.remoteJobConfFile.toString(),
-//            job.queueName);
-//        job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
-        //TODO JH Verify jobACLs, UserName via UGI?
+        //log to job history  TODO JH Verify jobACLs, UserName via UGI?
+        JobSubmittedEvent jse = new JobSubmittedEvent(job.getID(),
+              job.conf.get(DragonJobConfig.JOB_NAME, "<missing job name>"),
+            job.conf.get(DragonJobConfig.USER_NAME, "dragon"),
+            job.appSubmitTime,
+            job.remoteJobConfFile.toString(),
+            job.queueName);
+        job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
 
         job.jobGraph = createJobGraph(job);
         if (job.jobGraph != null) {
@@ -590,7 +593,6 @@ public class JobInAppMaster implements Job,
         LOG.warn("Job init failed", e);
         job.addDiagnostic("Job init failed : "
             + StringUtils.stringifyException(e));
-        job.abortJob(JobState.FAILED);
         return job.finished(JobState.FAILED);
       }
     }
@@ -697,9 +699,19 @@ public class JobInAppMaster implements Job,
     public void transition(JobInAppMaster job, JobEvent event) {
       job.startTime = job.clock.getTime();
       job.scheduleTasks(job.taskIds);  // schedule (i.e., start) the maps
-//      JobInfoChangeEvent jice = new JobInfoChangeEvent(job.oldJobId,
-//          job.appSubmitTime, job.startTime);
-//      job.eventHandler.handle(new JobHistoryEvent(job.jobId, jice));
+
+      JobInitedEvent jie =
+          new JobInitedEvent(job.jobId,
+              job.startTime,
+              job.numTasks,
+              job.getState().toString());
+      //Will transition to state running. Currently in INITED
+      job.eventHandler.handle(new JobHistoryEvent(job.jobId, jie));
+
+      JobInfoChangeEvent jice = new JobInfoChangeEvent(job.jobId,
+          job.appSubmitTime, job.startTime);
+      job.eventHandler.handle(new JobHistoryEvent(job.jobId, jice));
+
       job.metrics.runningJob(job);
       
       // If we have no tasks, just transition to job completed
@@ -710,8 +722,8 @@ public class JobInAppMaster implements Job,
     }
   }
 
-  private void abortJob(JobState finalState) {
-    if (finishTime == 0) setFinishTime();
+//  private void abortJob(JobState finalState) {
+//    if (finishTime == 0) setFinishTime();
 //    JobUnsuccessfulCompletionEvent unsuccessfulJobEvent =
 //      new JobUnsuccessfulCompletionEvent(oldJobId,
 //          finishTime,
@@ -719,7 +731,7 @@ public class JobInAppMaster implements Job,
 //          succeededReduceTaskCount,
 //          finalState.toString());
 //    eventHandler.handle(new JobHistoryEvent(jobId, unsuccessfulJobEvent));
-  }
+//  }
     
 //  // JobFinishedEvent triggers the move of the history file out of the staging
 //  // area. May need to create a new event type for this if JobFinished should 
@@ -776,11 +788,10 @@ public class JobInAppMaster implements Job,
     @Override
     public void transition(JobInAppMaster job, JobEvent event) {
       job.setFinishTime();
-//      JobUnsuccessfulCompletionEvent failedEvent =
-//          new JobUnsuccessfulCompletionEvent(job.oldJobId,
-//              job.finishTime, 0, 0,
-//              JobState.KILLED.toString());
-//      job.eventHandler.handle(new JobHistoryEvent(job.jobId, failedEvent));
+      JobUnsuccessfulCompletionEvent failedEvent =
+          new JobUnsuccessfulCompletionEvent(job.jobId, job.finishTime,
+              JobState.KILLED.toString());
+      job.eventHandler.handle(new JobHistoryEvent(job.jobId, failedEvent));
       job.finished(JobState.KILLED);
     }
   }
@@ -789,7 +800,6 @@ public class JobInAppMaster implements Job,
   implements SingleArcTransition<JobInAppMaster, JobEvent> {
     @Override
     public void transition(JobInAppMaster job, JobEvent event) {
-      job.abortJob(JobState.KILLED);
       job.addDiagnostic("Job received Kill in INITED state.");
       job.finished(JobState.KILLED);
     }
@@ -864,7 +874,6 @@ public class JobInAppMaster implements Job,
         String diagnosticMsg = "Job failed as tasks failed. ";
         LOG.info(diagnosticMsg);
         job.addDiagnostic(diagnosticMsg);
-        job.abortJob(JobState.FAILED);
         return job.finished(JobState.FAILED);
       }
 
@@ -891,7 +900,6 @@ public class JobInAppMaster implements Job,
     @Override
     public JobState transition(JobInAppMaster job, JobEvent event) {
       job.setFinishTime();
-      job.abortJob(JobState.FAILED);
       return job.finished(JobState.FAILED);
     }
   }
@@ -911,7 +919,6 @@ public class JobInAppMaster implements Job,
     protected JobState checkJobForCompletion(JobInAppMaster job) {
       if (job.completedTaskCount == job.tasks.size()) {
         job.setFinishTime();
-        job.abortJob(JobState.KILLED);
         return job.finished(JobState.KILLED);
       }
       // return the current state, Job not finished yet
@@ -951,11 +958,10 @@ public class JobInAppMaster implements Job,
     public void transition(JobInAppMaster job, JobEvent event) {
       //TODO Is this JH event required.
       job.setFinishTime();
-//      JobUnsuccessfulCompletionEvent failedEvent =
-//          new JobUnsuccessfulCompletionEvent(job.oldJobId,
-//              job.finishTime, 0, 0,
-//              JobState.ERROR.toString());
-//      job.eventHandler.handle(new JobHistoryEvent(job.jobId, failedEvent));
+      JobUnsuccessfulCompletionEvent failedEvent =
+          new JobUnsuccessfulCompletionEvent(job.jobId, job.finishTime,
+              JobState.ERROR.toString());
+      job.eventHandler.handle(new JobHistoryEvent(job.jobId, failedEvent));
       job.finished(JobState.ERROR);
     }
   }

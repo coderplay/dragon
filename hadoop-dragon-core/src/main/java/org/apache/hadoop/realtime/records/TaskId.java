@@ -133,4 +133,8 @@ public abstract class TaskId implements Comparable<TaskId> {
       return taskIndexComp;
     return this.getId() - other.getId();
   }
+
+  public static TaskId forName(String taskName) {
+    return null;  //To change body of created methods use File | Settings | File Templates.
+  }
 }
