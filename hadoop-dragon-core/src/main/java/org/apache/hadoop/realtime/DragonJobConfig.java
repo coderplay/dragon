@@ -268,4 +268,27 @@ public class DragonJobConfig {
 
   public static final String COUNTER_GROUPS_MAX_KEY = "dragon.job.counters.groups.max";
   public static final int COUNTER_GROUPS_MAX_DEFAULT = 50;
+
+  public static final String JOB_HISTORY_DIR = "dragon.history.dir";
+  public static final String DEFAULT_JOB_HISTORY_DIR = "/dragon-history";
+
+  public static final String JOB_HISTORY_COMPLETE_EVENT_FLUSH_TIMEOUT_MS =
+      "dragon.history.complete-event-flush-timeout";
+  public static final long DEFAULT_JOB_HISTORY_COMPLETE_EVENT_FLUSH_TIMEOUT_MS =
+      30 * 1000l;
+
+  public static final String JOB_HISTORY_MAX_UNFLUSHED_COMPLETE_EVENTS = 
+      "dragon.history.max-unflushed-events";
+  public static final int DEFAULT_JOB_HISTORY_MAX_UNFLUSHED_COMPLETE_EVENTS =
+      200;
+
+  public static final String JOB_HISTORY_JOB_COMPLETE_UNFLUSHED_MULTIPLIER =
+      "dragon.history.job-complete-unflushed-multiplier";
+  public static final int DEFAULT_JOB_HISTORY_JOB_COMPLETE_UNFLUSHED_MULTIPLIER =
+      30;
+
+  public static final String JOB_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD =
+      "dragon.history.use-batched-flush.queue-size.threshold";
+  public static final int DEFAULT_JOB_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD =
+      50;
 }

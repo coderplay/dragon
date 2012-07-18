@@ -15,16 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.webapp;
-
-import org.apache.hadoop.yarn.webapp.WebApp;
+package org.apache.hadoop.realtime.jobhistory;
 
 /**
- * class description goes here.
+ * Job history event type
+ *
  */
-public class DragonWebApp extends WebApp {
-  @Override
-  public void setup() {
+public enum EventType {
 
-  }
+  //Job
+  JOB_SUBMITTED,
+  JOB_INITED,
+  JOB_UNSUCCESSFUL_COMPLETION,
+  JOB_INFO_CHANGED,
+
+  //Task
+  TASK_STARTED,
+  TASK_FAILED,
+
+  //task attempt
+  TASK_ATTEMPT_COMPLETED,
+  TASK_ATTEMPT_STARTED;
 }
