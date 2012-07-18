@@ -85,8 +85,6 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
         JobId.jobIdFormat.get().format(
             getTaskId().getJobId().getAppId().getId()));
     builder.append(SEPARATOR).append(
-        TaskId.taskIndexFormat.get().format(taskId.getIndex()));
-    builder.append(SEPARATOR).append(
         TaskId.taskIdFormat.get().format(taskId.getId()));
     builder.append(SEPARATOR);
     builder.append(getId());

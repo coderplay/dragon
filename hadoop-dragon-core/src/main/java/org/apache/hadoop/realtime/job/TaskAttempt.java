@@ -76,4 +76,6 @@ public interface TaskAttempt {
   
   
   int getPartition();
+  
+  Class<?> getMapOrReduceClass();
 }

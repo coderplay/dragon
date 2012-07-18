@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.realtime.job;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -28,7 +32,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.DragonVertex;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.app.rm.ContainerFailedEvent;
 import org.apache.hadoop.realtime.client.app.AppContext;
@@ -76,7 +79,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   private static final Log LOG = LogFactory.getLog(TaskInAppMaster.class);
 
   private final Configuration conf;
-  private final DragonVertex taskVertex;
+  private final Class<?> clazz;
   private final Path jobFile;
   private final int partition;
   private final EventHandler eventHandler;
@@ -180,13 +183,13 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
           // create the topology tables
           .installTopology();
 
-  public TaskInAppMaster(JobId jobId, int taskIndex, int partition,
+  public TaskInAppMaster(JobId jobId, int partition,
       EventHandler eventHandler, Path remoteJobConfFile, Configuration conf,
-      DragonVertex vertex, Token<JobTokenIdentifier> jobToken,
+      Class<?> clazz, Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock, int startCount,
       DragonAppMetrics metrics, AppContext appContext) {
     this.conf = conf;
-    this.taskVertex = vertex;
+    this.clazz = clazz;
     this.clock = clock;
     this.jobFile = remoteJobConfFile;
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -197,7 +200,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
     // have a convention that none of the overrides depends on any
     // fields that need initialization.
     maxAttempts = getMaxAttempts();
-    taskId = DragonBuilderUtils.newTaskId(jobId, taskIndex, partition);
+    taskId = DragonBuilderUtils.newTaskId(jobId,partition);
     this.partition = partition;
     this.eventHandler = eventHandler;
     this.credentials = credentials;
@@ -327,7 +330,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   // TODO: createAttempt
   protected TaskAttempt createAttempt() {
     return new TaskAttemptInAppMaster(taskId, nextAttemptNumber, eventHandler,
-        jobFile, partition, conf, taskVertex, jobToken, credentials, clock,
+        jobFile, partition, conf, clazz, jobToken, credentials, clock,
         appContext);
   }
 

@@ -41,4 +41,6 @@ public interface ChildExecutionContext {
   String getUser();
 
   void setUser(String user);
+  
+  void setClass(Class<?> clazz);
 }

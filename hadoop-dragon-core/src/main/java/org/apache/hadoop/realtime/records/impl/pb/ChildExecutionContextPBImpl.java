@@ -168,4 +168,8 @@ public class ChildExecutionContextPBImpl extends
     return ((TaskAttemptIdPBImpl) t).getProto();
   }
 
+  @Override
+  public void setClass(Class<?> clazz) {  
+  }
+
 }

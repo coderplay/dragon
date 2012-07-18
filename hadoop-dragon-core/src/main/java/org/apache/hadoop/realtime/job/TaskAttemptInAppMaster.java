@@ -48,7 +48,6 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.DragonVertex;
 import org.apache.hadoop.realtime.JobSubmissionFiles;
 import org.apache.hadoop.realtime.app.counter.CountersManager;
 import org.apache.hadoop.realtime.app.rm.ContainerAllocator;
@@ -131,7 +130,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   private final int partition;
   private final TaskAttemptId attemptId;
   private final Configuration conf;
-  private final DragonVertex taskVertex;
+  private final Class<?> clazz;
   private final Path jobFile;
   private Token<JobTokenIdentifier> jobToken;
 
@@ -394,7 +393,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   private final StateMachine<TaskAttemptState, TaskAttemptEventType, TaskAttemptEvent> stateMachine;
 
   TaskAttemptInAppMaster(TaskId taskId, int attempt, EventHandler eventHandler,
-      Path jobFile, int partition, Configuration conf, DragonVertex vertex,
+      Path jobFile, int partition, Configuration conf, Class<?> clazz,
       Token<JobTokenIdentifier> jobToken, Credentials credentials, Clock clock,
       AppContext appContext) {
     this.attemptId = recordFactory.newRecordInstance(TaskAttemptId.class);
@@ -402,7 +401,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     this.attemptId.setId(attempt);
     this.jobId = taskId.getJobId();
     this.conf = conf;
-    this.taskVertex = vertex;
+    this.clazz = clazz;
     this.jobFile = jobFile;
     this.partition = partition;
     this.appContext = appContext;
@@ -576,6 +575,11 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
         TaskAttemptInAppMaster.this, user);
   }
   
+  @Override
+  public Class<?> getMapOrReduceClass(){
+    return clazz;
+  }
+  
   private static class ContainerAssignedTransition implements
       SingleArcTransition<TaskAttemptInAppMaster, TaskAttemptEvent> {
     @SuppressWarnings("unchecked")
@@ -617,8 +621,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       // create the container object to be launched for a given Task attempt
       ContainerLaunchContext launchContext =
           createContainerLaunchContext(cEvent.getApplicationACLs(),
-              taskAttempt.containerID, taskAttempt.conf,
-              taskAttempt.taskVertex, taskAttempt.jobToken,
+              taskAttempt.containerID, taskAttempt.conf,taskAttempt.jobToken,
               taskAttempt.attemptId, taskAttempt.jobId,
               taskAttempt.assignedCapability, taskAttempt.credentials,
               taskAttempt.appContext);
@@ -631,7 +634,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
 
   static ContainerLaunchContext createContainerLaunchContext(
       Map<ApplicationAccessType, String> applicationACLs,
-      ContainerId containerId, Configuration conf, DragonVertex vertex,
+      ContainerId containerId, Configuration conf,
       Token<JobTokenIdentifier> jobToken, TaskAttemptId attemptId,
       final JobId jobId, Resource assignedCapability, Credentials credentials,
       AppContext context) {
@@ -639,7 +642,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     synchronized (commonContainerSpecLock) {
       if (commonContainerSpec == null) {
         commonContainerSpec =
-            createCommonContainerLaunchContext(applicationACLs, conf, vertex,
+            createCommonContainerLaunchContext(applicationACLs, conf,
                 jobToken, jobId, credentials);
       }
     }
@@ -684,7 +687,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
    */
   private static ContainerLaunchContext createCommonContainerLaunchContext(
       Map<ApplicationAccessType, String> applicationACLs, Configuration conf,
-      DragonVertex vertex, Token<JobTokenIdentifier> jobToken,
+      Token<JobTokenIdentifier> jobToken,
       final JobId jobId, Credentials credentials) {
 
     // Application resources
@@ -743,7 +746,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       // files
       Path remoteFileDir =
           JobSubmissionFiles.getJobDistCacheFiles(remoteJobSubmitDir);
-      for (String file : vertex.getFiles()) {
+      for (String file : conf.getStringCollection(DragonJobConfig.JOB_DiST_CACHE_FILES)) {
         Path remoteFilePath = new Path(remoteFileDir, file);
         localResources.put(
             file,
@@ -754,7 +757,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       // archives
       Path remoteArchiveDir =
           JobSubmissionFiles.getJobDistCacheArchives(remoteJobSubmitDir);
-      for (String archive : vertex.getArchives()) {
+      for (String archive : conf.getStringCollection(DragonJobConfig.JOB_DIST_CACHE_ARCHIVES)) {
         Path remoteArchivePath = new Path(remoteArchiveDir, archive);
         localResources.put(
             archive,
@@ -975,7 +978,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
 
       TaskAttemptStartedEvent tase =
           new TaskAttemptStartedEvent(taskAttempt.attemptId,
-              taskAttempt.attemptId.getTaskId().getIndex(),
               taskAttempt.launchTime,
               nodeHttpInetAddr.getHostName(), nodeHttpInetAddr.getPort(),
               taskAttempt.shufflePort, taskAttempt.containerID);
@@ -1211,7 +1213,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     TaskAttemptUnsuccessfulCompletionEvent tauce =
         new TaskAttemptUnsuccessfulCompletionEvent(
             taskAttempt.attemptId,
-            taskAttempt.attemptId.getTaskId().getIndex(),
             attemptState.toString(),
             taskAttempt.finishTime,
             taskAttempt.containerNodeId == null ? "UNKNOWN"

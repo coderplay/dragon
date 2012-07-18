@@ -66,10 +66,9 @@ public class DragonBuilderUtils {
         + " is not properly formed");
   }
 
-  public static TaskId newTaskId(JobId jobId, int index, int id) {
+  public static TaskId newTaskId(JobId jobId, int id) {
     TaskId taskId = Records.newRecord(TaskId.class);
     taskId.setJobId(jobId);
-    taskId.setIndex(index);
     taskId.setId(id);
     return taskId;
   }
@@ -82,12 +81,11 @@ public class DragonBuilderUtils {
       if (parts.length == 5 && parts[0].equals(TaskId.TASK)) {
         long clusterTimeStamp = Long.parseLong(parts[1]);
         int jobId = Integer.parseInt(parts[2]);
-        int taskIndex = Integer.parseInt(parts[3]);
-        int taskId = Integer.parseInt(parts[4]);
+        int taskId = Integer.parseInt(parts[3]);
         ApplicationId app =
             BuilderUtils.newApplicationId(clusterTimeStamp, jobId);
         JobId job = newJobId(app, jobId);
-        return newTaskId(job, taskIndex, taskId);
+        return newTaskId(job, taskId);
       }
     } catch (Exception ex) {
       // fall through
@@ -112,13 +110,12 @@ public class DragonBuilderUtils {
       if (parts.length == 6 && parts[0].equals(TaskAttemptId.TASKATTEMPT)) {
         long clusterTimeStamp = Long.parseLong(parts[1]);
         int jobId = Integer.parseInt(parts[2]);
-        int taskIndex = Integer.parseInt(parts[3]);
-        int taskId = Integer.parseInt(parts[4]);
-        int attemptId = Integer.parseInt(parts[5]);
+        int taskId = Integer.parseInt(parts[3]);
+        int attemptId = Integer.parseInt(parts[4]);
         ApplicationId app =
             BuilderUtils.newApplicationId(clusterTimeStamp, jobId);
         JobId job = newJobId(app, jobId);
-        TaskId task = newTaskId(job, taskIndex, taskId);
+        TaskId task = newTaskId(job, taskId);
         return newTaskAttemptId(task, attemptId);
       }
     } catch (Exception ex) {
@@ -185,6 +182,7 @@ public class DragonBuilderUtils {
     context.setTaskAttemptId(attempt.getID());
     context.setPartition(attempt.getPartition());
     context.setUser(user);
+    context.setClass(attempt.getMapOrReduceClass());
     return context;
   }
   
