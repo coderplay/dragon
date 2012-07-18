@@ -46,4 +46,6 @@ public interface DragonConfig {
   
   public static final String RESOURCE_CALCULATOR_PLUGIN = 
       "dragon.job.resourcecalculatorplugin";
+  
+  public static final String WATCH_SERVICE_CLASS = "dragon.fs.watchservice.class";
 }

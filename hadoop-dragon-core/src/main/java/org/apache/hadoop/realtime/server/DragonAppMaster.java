@@ -54,6 +54,8 @@ import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskEventType;
+import org.apache.hadoop.realtime.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.realtime.jobhistory.JobHistoryEventHandler;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
@@ -157,13 +159,20 @@ public class DragonAppMaster extends CompositeService {
     clientService = createClientService(context);
     addIfService(clientService);
 
+    //service to log job history events
+    EventHandler<JobHistoryEvent> historyHandlerService =
+        createJobHistoryHandler(context);
+    dispatcher.register(org.apache.hadoop.realtime.jobhistory.EventType.class,
+        historyHandlerService);
+
     // Initialize the JobEventDispatcher
     this.jobEventDispatcher = new JobEventDispatcher();
 
     // register the event dispatchers
     dispatcher.register(JobEventType.class, jobEventDispatcher);
     dispatcher.register(TaskEventType.class, new TaskEventDispatcher());
-    dispatcher.register(TaskAttemptEventType.class, new TaskAttemptEventDispatcher());
+    dispatcher.register(TaskAttemptEventType.class,
+        new TaskAttemptEventDispatcher());
 
     // service to handle requests to TaskUmbilicalProtocol
     childService = createChildService(context);
@@ -179,6 +188,14 @@ public class DragonAppMaster extends CompositeService {
     containerLauncher = createContainerLauncher(context);
     addIfService(containerLauncher);
     dispatcher.register(ContainerLauncher.EventType.class, containerLauncher);
+
+    // Add the JobHistoryEventHandler last so that it is properly stopped first.
+    // This will guarantee that all history-events are flushed before AM goes
+    // ahead with shutdown.
+    // Note: Even though JobHistoryEventHandler is started last, if any
+    // component creates a JobHistoryEvent in the meanwhile, it will be just be
+    // queued inside the JobHistoryEventHandler
+    addIfService(historyHandlerService);
 
     super.init(conf);
   }
@@ -303,6 +320,16 @@ public class DragonAppMaster extends CompositeService {
 
   protected Dispatcher createDispatcher() {
     return new AsyncDispatcher();
+  }
+
+  protected EventHandler<JobHistoryEvent> createJobHistoryHandler(AppContext context) {
+    JobHistoryEventHandler eventHandler = new JobHistoryEventHandler(context,
+        getStartCount());
+    return eventHandler;
+  }
+
+  private int getStartCount() {
+     return appAttemptId.getAttemptId();
   }
 
   private class RunningAppContext implements AppContext {

@@ -75,6 +75,9 @@ import org.apache.hadoop.realtime.job.app.event.TaskAttemptStatusUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptStatusUpdateEvent.TaskAttemptStatus;
 import org.apache.hadoop.realtime.job.app.event.TaskEventType;
 import org.apache.hadoop.realtime.job.app.event.TaskTAttemptEvent;
+import org.apache.hadoop.realtime.jobhistory.JobHistoryEvent;
+import org.apache.hadoop.realtime.jobhistory.event.TaskAttemptStartedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.TaskAttemptUnsuccessfulCompletionEvent;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
@@ -871,6 +874,17 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
             taskAttempt.attemptId, TaskEventType.T_ATTEMPT_KILLED));
         break;
       }
+
+      if (taskAttempt.getLaunchTime() != 0) {
+        TaskAttemptUnsuccessfulCompletionEvent tauce =
+            createTaskAttemptUnsuccessfulCompletionEvent(taskAttempt,
+                finalState);
+        taskAttempt.eventHandler.handle(new JobHistoryEvent(
+            taskAttempt.attemptId.getTaskId().getJobId(), tauce));
+      } else {
+        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
+            + taskAttempt.getID());
+      }
     }
   }
 
@@ -958,6 +972,16 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       LOG.info("TaskAttempt: [" + taskAttempt.attemptId
           + "] using containerId: [" + taskAttempt.containerID + " on NM: ["
           + taskAttempt.containerMgrAddress + "]");
+
+      TaskAttemptStartedEvent tase =
+          new TaskAttemptStartedEvent(taskAttempt.attemptId,
+              taskAttempt.attemptId.getTaskId().getIndex(),
+              taskAttempt.launchTime,
+              nodeHttpInetAddr.getHostName(), nodeHttpInetAddr.getPort(),
+              taskAttempt.shufflePort, taskAttempt.containerID);
+      taskAttempt.eventHandler.handle
+          (new JobHistoryEvent(taskAttempt.attemptId.getTaskId().getJobId(), tase));
+
       // make remoteTask reference as null as it is no more needed
       // and free up the memory
       taskAttempt.remoteTask = null;
@@ -994,6 +1018,20 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
         TaskAttemptEvent event) {
       // set the finish time
       taskAttempt.setFinishTime();
+
+      if (taskAttempt.getLaunchTime() != 0) {
+        TaskAttemptUnsuccessfulCompletionEvent tauce =
+            createTaskAttemptUnsuccessfulCompletionEvent(taskAttempt,
+                TaskAttemptState.FAILED);
+        taskAttempt.eventHandler.handle(new JobHistoryEvent(
+            taskAttempt.attemptId.getTaskId().getJobId(), tauce));
+        // taskAttempt.logAttemptFinishedEvent(TaskAttemptState.FAILED); Not
+        // handling failed map/reduce events.
+      }else {
+        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
+            + taskAttempt.getID());
+      }
+
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
           taskAttempt.attemptId, TaskEventType.T_ATTEMPT_FAILED));
     }
@@ -1008,6 +1046,17 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
         TaskAttemptEvent event) {
       // set the finish time
       taskAttempt.setFinishTime();
+      if (taskAttempt.getLaunchTime() != 0) {
+        TaskAttemptUnsuccessfulCompletionEvent tauce =
+            createTaskAttemptUnsuccessfulCompletionEvent(taskAttempt,
+                TaskAttemptState.KILLED);
+        taskAttempt.eventHandler.handle(new JobHistoryEvent(
+            taskAttempt.attemptId.getTaskId().getJobId(), tauce));
+      }else {
+        LOG.debug("Not generating HistoryFinish event since start event not generated for taskAttempt: "
+            + taskAttempt.getID());
+      }
+
       // taskAttempt.logAttemptFinishedEvent(TaskAttemptState.KILLED); Not
       // logging Map/Reduce attempts in case of failure.
       taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
@@ -1154,5 +1203,26 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   public int getPartition() {
     return partition;
   }
+
+  private static
+  TaskAttemptUnsuccessfulCompletionEvent
+  createTaskAttemptUnsuccessfulCompletionEvent(TaskAttemptInAppMaster taskAttempt,
+                                               TaskAttemptState attemptState) {
+    TaskAttemptUnsuccessfulCompletionEvent tauce =
+        new TaskAttemptUnsuccessfulCompletionEvent(
+            taskAttempt.attemptId,
+            taskAttempt.attemptId.getTaskId().getIndex(),
+            attemptState.toString(),
+            taskAttempt.finishTime,
+            taskAttempt.containerNodeId == null ? "UNKNOWN"
+                : taskAttempt.containerNodeId.getHost(),
+            taskAttempt.containerNodeId == null ? -1
+                : taskAttempt.containerNodeId.getPort(),
+            taskAttempt.nodeRackName == null ? "UNKNOWN"
+                : taskAttempt.nodeRackName,
+            taskAttempt.getDiagnostics().toString());
+    return tauce;
+  }
+
 
 }

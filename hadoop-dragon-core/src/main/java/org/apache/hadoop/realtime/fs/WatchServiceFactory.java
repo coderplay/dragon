@@ -15,16 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.webapp;
+package org.apache.hadoop.realtime.fs;
 
-import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.realtime.DragonConfig;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
- * class description goes here.
+ * Factory that can create {@link WatchService} from the configuration.
  */
-public class DragonWebApp extends WebApp {
-  @Override
-  public void setup() {
+public class WatchServiceFactory {
 
+  public static WatchService newWatchService(Configuration conf) {
+    Class<? extends WatchService> clazz =
+        conf.getClass(DragonConfig.WATCH_SERVICE_CLASS,
+            DefaultWatchService.class, WatchService.class);
+    WatchService service = ReflectionUtils.newInstance(clazz, conf);
+    return service;
   }
 }

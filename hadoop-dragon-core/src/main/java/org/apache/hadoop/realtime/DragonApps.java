@@ -19,12 +19,7 @@
 package org.apache.hadoop.realtime;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Vector;
+import java.util.*;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -35,6 +30,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.job.TaskLog;
 import org.apache.hadoop.realtime.job.TaskLog.LogName;
+import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.TaskAttemptState;
+import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.ContainerLogAppender;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -53,6 +51,9 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.util.Apps;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
+import static org.apache.hadoop.yarn.util.StringHelper._join;
+import static org.apache.hadoop.yarn.util.StringHelper._split;
+
 /**
  * Helper class for Dragon applications
  */
@@ -62,6 +63,8 @@ public class DragonApps extends Apps {
 
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
+
+  public static final String JOB = "job";
 
   public static void setClasspath(Map<String, String> environment,
       Configuration conf) {
@@ -157,7 +160,8 @@ public class DragonApps extends Apps {
    * Add the JVM system properties necessary to configure
    * {@link ContainerLogAppender}.
    * 
-   * @param conf
+   * @param logLevel
+   * @param logSize
    * @param vargs
    */
   public static void addLog4jSystemProperties(String logLevel, long logSize,
@@ -183,4 +187,54 @@ public class DragonApps extends Apps {
     return ApplicationConstants.LOG_DIR_EXPANSION_VAR + Path.SEPARATOR
         + filter.toString();
   }
+
+  public static String toString(JobId jid) {
+    return _join(JOB, jid.getAppId().getClusterTimestamp(), jid.getAppId().getId(), jid.getId());
+  }
+
+  public static String toString(TaskId tid) {
+    return _join("task", tid.getJobId().getAppId().getClusterTimestamp(), tid.getJobId().getAppId().getId(),
+        tid.getJobId().getId(), tid.getId());
+  }
+
+  public static JobId toJobID(String jid) {
+    Iterator<String> it = _split(jid).iterator();
+    return toJobID(JOB, jid, it);
+  }
+
+  // mostly useful for parsing task/attempt id like strings
+  public static JobId toJobID(String prefix, String s, Iterator<String> it) {
+    ApplicationId appId = toAppID(prefix, s, it);
+    shouldHaveNext(prefix, s, it);
+    JobId jobId = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(JobId.class);
+    jobId.setAppId(appId);
+    jobId.setId(Integer.parseInt(it.next()));
+    return jobId;
+  }
+
+  public static enum TaskAttemptStateUI {
+    NEW(
+        new TaskAttemptState[] { TaskAttemptState.NEW,
+            TaskAttemptState.UNASSIGNED, TaskAttemptState.ASSIGNED }),
+    RUNNING(
+        new TaskAttemptState[] { TaskAttemptState.RUNNING,
+            TaskAttemptState.SUCCESS_CONTAINER_CLEANUP,
+            TaskAttemptState.FAIL_CONTAINER_CLEANUP,
+            TaskAttemptState.FAIL_TASK_CLEANUP,
+            TaskAttemptState.KILL_CONTAINER_CLEANUP,
+            TaskAttemptState.KILL_TASK_CLEANUP }),
+    FAILED(new TaskAttemptState[] { TaskAttemptState.FAILED}),
+    KILLED(new TaskAttemptState[] { TaskAttemptState.KILLED});
+
+    private final List<TaskAttemptState> correspondingStates;
+
+    private TaskAttemptStateUI(TaskAttemptState[] correspondingStates) {
+      this.correspondingStates = Arrays.asList(correspondingStates);
+    }
+
+    public boolean correspondsTo(TaskAttemptState state) {
+      return this.correspondingStates.contains(state);
+    }
+  }
+
 }

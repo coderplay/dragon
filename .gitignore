@@ -5,6 +5,7 @@
 
 # IntelliJ IDEA meta-information 
 .idea
+*.iml
 
 # Build directory
 target/
