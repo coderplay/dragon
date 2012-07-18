@@ -33,6 +33,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.app.AppContext;
+import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.server.ClientService;
 import org.apache.hadoop.yarn.YarnException;
@@ -59,6 +61,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
 
   private int lastResponseID;
   private Resource availableResources;
+  
+  private int totalContainers = 0;
 
   private final RecordFactory recordFactory =
       RecordFactoryProvider.getRecordFactory(null);
@@ -144,29 +148,37 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
 
   protected AMResponse makeRemoteRequest() throws YarnRemoteException {
-    AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
-        applicationAttemptId, lastResponseID, 0.0f,
-        new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
-            release));
-    AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
-    AMResponse response = allocateResponse.getAMResponse();
-    lastResponseID = response.getResponseId();
-    availableResources = response.getAvailableResources();
-    lastClusterNmCount = clusterNmCount;
-    clusterNmCount = allocateResponse.getNumClusterNodes();
-
-    if (ask.size() > 0 || release.size() > 0) {
-      LOG.info("getResources() for " + applicationId + ":" + " ask="
-          + ask.size() + " release= " + release.size() + " newContainers="
-          + response.getAllocatedContainers().size() + " finishedContainers="
-          + response.getCompletedContainersStatuses().size()
-          + " resourcelimit=" + availableResources + " knownNMs="
-          + clusterNmCount);
+    if(totalContainers == 0){
+      for(Job job:getContext().getAllJobs().values()){
+        totalContainers+=job.getTasks().size();
+      }
     }
-
-    ask.clear();
-    release.clear();
-    return response;
+    if(ask.size() >= totalContainers){
+      AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
+          applicationAttemptId, lastResponseID, 0.0f,
+          new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
+              release));
+      AllocateResponse allocateResponse = scheduler.allocate(allocateRequest);
+      AMResponse response = allocateResponse.getAMResponse();
+      lastResponseID = response.getResponseId();
+      availableResources = response.getAvailableResources();
+      lastClusterNmCount = clusterNmCount;
+      clusterNmCount = allocateResponse.getNumClusterNodes();
+  
+      if (ask.size() > 0 || release.size() > 0) {
+        LOG.info("getResources() for " + applicationId + ":" + " ask="
+            + ask.size() + " release= " + release.size() + " newContainers="
+            + response.getAllocatedContainers().size() + " finishedContainers="
+            + response.getCompletedContainersStatuses().size()
+            + " resourcelimit=" + availableResources + " knownNMs="
+            + clusterNmCount);
+      }
+  
+      ask.clear();
+      release.clear();
+      return response;
+    }
+    return null;
   }
 
   // May be incorrect if there's multiple NodeManagers running on a single host.
@@ -262,33 +274,10 @@ public abstract class RMContainerRequestor extends RMCommunicator {
   }
   
   protected void addContainerReq(ContainerRequest req) {
-    // Create resource requests
-    for (String host : req.hosts) {
-      // Data-local
-      if (!isNodeBlacklisted(host)) {
-        addResourceRequest(req.priority, host, req.capability);
-      }      
-    }
-
-    // Nothing Rack-local for now
-    for (String rack : req.racks) {
-      addResourceRequest(req.priority, rack, req.capability);
-    }
-
-    // Off-switch
     addResourceRequest(req.priority, ANY, req.capability); 
   }
 
   protected void decContainerReq(ContainerRequest req) {
-    // Update resource requests
-    for (String hostName : req.hosts) {
-      decResourceRequest(req.priority, hostName, req.capability);
-    }
-    
-    for (String rack : req.racks) {
-      decResourceRequest(req.priority, rack, req.capability);
-    }
-   
     decResourceRequest(req.priority, ANY, req.capability);
   }
 

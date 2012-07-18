@@ -170,6 +170,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
 
   private final CountersManager countersManager = new CountersManager();
   
+  private TaskAttemptContainerAssignedEvent containerEvent;
   private final static RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
 
@@ -213,6 +214,9 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
               new DeallocateContainerTransition(TaskAttemptState.FAILED, true))
 
           // Transitions from the ASSIGNED state.
+          .addTransition(TaskAttemptState.ASSIGNED, TaskAttemptState.ASSIGNED,
+              TaskAttemptEventType.TA_LAUNCH,
+              new ContainerLaunchTransition())   
           .addTransition(TaskAttemptState.ASSIGNED, TaskAttemptState.RUNNING,
               TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
               new LaunchedContainerTransition())
@@ -571,15 +575,29 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     return DragonBuilderUtils.newTaskAttemptExecutionContext(
         TaskAttemptInAppMaster.this, user);
   }
-
+  
   private static class ContainerAssignedTransition implements
+      SingleArcTransition<TaskAttemptInAppMaster, TaskAttemptEvent> {
+    @SuppressWarnings("unchecked")
+    @Override
+    public void transition(TaskAttemptInAppMaster taskAttempt,
+        TaskAttemptEvent event) {
+      // tell the Task that attempt has started
+      taskAttempt.containerEvent = (TaskAttemptContainerAssignedEvent) event;
+      taskAttempt.eventHandler.handle(new TaskTAttemptEvent(
+          taskAttempt.attemptId, TaskEventType.T_ATTEMPT_ASSIGNED));
+    }
+  }
+
+  private static class ContainerLaunchTransition implements
       SingleArcTransition<TaskAttemptInAppMaster, TaskAttemptEvent> {
     @SuppressWarnings({ "unchecked" })
     @Override
     public void transition(final TaskAttemptInAppMaster taskAttempt,
         TaskAttemptEvent event) {
+      
       final TaskAttemptContainerAssignedEvent cEvent =
-          (TaskAttemptContainerAssignedEvent) event;
+          taskAttempt.containerEvent;
       taskAttempt.containerID = cEvent.getContainer().getId();
       taskAttempt.containerNodeId = cEvent.getContainer().getNodeId();
       taskAttempt.containerMgrAddress = taskAttempt.containerNodeId.toString();
@@ -911,7 +929,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
             .createContainerRequestEventForFailedContainer(
                 taskAttempt.attemptId, taskAttempt.resourceCapability));
       } else {
-              Set<String> racks = new HashSet<String>();
+        Set<String> racks = new HashSet<String>();
         racks.add(NetworkTopology.DEFAULT_RACK);
         taskAttempt.eventHandler.handle(new ContainerRequestEvent(
             taskAttempt.attemptId, taskAttempt.resourceCapability, taskAttempt

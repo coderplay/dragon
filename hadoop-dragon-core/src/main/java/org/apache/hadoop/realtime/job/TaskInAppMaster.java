@@ -35,6 +35,7 @@ import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.job.app.event.JobDiagnosticsUpdateEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEvent;
 import org.apache.hadoop.realtime.job.app.event.JobEventType;
+import org.apache.hadoop.realtime.job.app.event.JobTaskAssignedEvent;
 import org.apache.hadoop.realtime.job.app.event.JobTaskEvent;
 import org.apache.hadoop.realtime.job.app.event.JobTaskRescheduledEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskAttemptEvent;
@@ -130,8 +131,10 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
           // Transitions from SCHEDULED state
           // when the first attempt is launched, the task state is set to
           // RUNNING
+          .addTransition(TaskState.SCHEDULED, TaskState.SCHEDULED,
+              TaskEventType.T_ATTEMPT_ASSIGNED, new AssignTransition())
           .addTransition(TaskState.SCHEDULED, TaskState.RUNNING,
-              TaskEventType.T_ATTEMPT_LAUNCHED, new LaunchTransition())
+              TaskEventType.T_SCHEDULED, new LaunchTransition())
           .addTransition(TaskState.SCHEDULED, TaskState.KILL_WAIT,
               TaskEventType.T_KILL, KILL_TRANSITION)
           .addTransition(TaskState.SCHEDULED, TaskState.SCHEDULED,
@@ -392,11 +395,22 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       task.addAndScheduleAttempt();
     }
   }
+  
+  static class AssignTransition implements
+      SingleArcTransition<TaskInAppMaster, TaskEvent> {
+    @Override
+    public void transition(TaskInAppMaster task, TaskEvent event) {
+      task.eventHandler.handle(new JobTaskAssignedEvent(task.taskId));
+    }
+  }
 
   static class LaunchTransition implements
       SingleArcTransition<TaskInAppMaster, TaskEvent> {
     @Override
     public void transition(TaskInAppMaster task, TaskEvent event) {
+      for (TaskAttemptId attemptId : task.attempts.keySet())
+        task.eventHandler.handle(new TaskAttemptEvent(attemptId,
+            TaskAttemptEventType.TA_LAUNCH));
       task.metrics.launchedTask(task);
       task.metrics.runningTask(task);
     }
