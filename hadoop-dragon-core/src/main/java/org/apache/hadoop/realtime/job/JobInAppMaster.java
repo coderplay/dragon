@@ -68,6 +68,7 @@ import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.realtime.records.TaskState;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
@@ -119,9 +120,6 @@ public class JobInAppMaster implements Job,
   private final String queueName;
   private final long appSubmitTime;
   private final AppContext appContext;
-  
-  private final Class<?> mapClass;
-  private final Class<?> reduceClass;
 
   private final CountersManager countersInApp = new CountersManager();
   
@@ -320,8 +318,6 @@ public class JobInAppMaster implements Job,
     this.fsTokens = appContext.getFsTokens();
     this.jobTokenSecretManager = appContext.getJobTokenSecretManager();
     this.username = conf.get(DragonJobConfig.USER_NAME);
-    this.mapClass=conf.getClass(DragonJobConfig.JOB_MAP_CLASS,Mapper.class);
-    this.reduceClass=conf.getClass(DragonJobConfig.JOB_REDUCE_CLASS,Reducer.class);
     this.mapNumTasks= conf.getInt(DragonJobConfig.MAP_PARALLELISM, 1);
     this.reduceNumTasks=conf.getInt(DragonJobConfig.REDUCE_PARALLELISM, 1);
     // This "this leak" is okay because the retained pointer is in an
@@ -639,7 +635,7 @@ public class JobInAppMaster implements Job,
         for (int i = 0; i < job.mapNumTasks; i++) {
           Task task =
               new TaskInAppMaster(job.jobId, i, job.eventHandler,
-                  job.remoteJobConfFile, job.conf, job.mapClass, job.jobToken,
+                  job.remoteJobConfFile, job.conf, TaskType.MAP, job.jobToken,
                   job.fsTokens, job.clock,
                   job.applicationAttemptId.getAttemptId(), job.metrics,
                   job.appContext);
@@ -648,7 +644,7 @@ public class JobInAppMaster implements Job,
         for (int i = 0; i < job.reduceNumTasks; i++) {
           Task task =
               new TaskInAppMaster(job.jobId, i, job.eventHandler,
-                  job.remoteJobConfFile, job.conf, job.reduceClass, job.jobToken,
+                  job.remoteJobConfFile, job.conf, TaskType.REDUCE, job.jobToken,
                   job.fsTokens, job.clock,
                   job.applicationAttemptId.getAttemptId(), job.metrics,
                   job.appContext);
@@ -982,15 +978,5 @@ public class JobInAppMaster implements Job,
   @Override
   public Task getTask(TaskId taskID) {
     return tasks.get(taskID);
-  }
-
-  @Override
-  public Class<?> getMapClass() {
-    return mapClass;
-  }
-
-  @Override
-  public Class<?> getReduceClass() {
-    return reduceClass;
   }
 }

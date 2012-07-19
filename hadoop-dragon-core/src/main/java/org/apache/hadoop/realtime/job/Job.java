@@ -72,10 +72,6 @@ public interface Job {
    * @return the shared configuration object
    */
   public Configuration getConfiguration();
-  
-  public Class<?> getMapClass();
-  
-  public Class<?> getReduceClass();
 
   /**
    * Get the reported username for this job.

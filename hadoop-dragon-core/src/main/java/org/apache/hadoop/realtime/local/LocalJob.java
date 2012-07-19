@@ -120,16 +120,4 @@ public class LocalJob implements Job {
     return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
-  @Override
-  public Class<?> getMapClass() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  public Class<?> getReduceClass() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
 }

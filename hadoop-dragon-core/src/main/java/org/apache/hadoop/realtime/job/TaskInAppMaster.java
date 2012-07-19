@@ -56,6 +56,7 @@ import org.apache.hadoop.realtime.records.TaskAttemptState;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.records.TaskState;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
@@ -79,7 +80,6 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   private static final Log LOG = LogFactory.getLog(TaskInAppMaster.class);
 
   private final Configuration conf;
-  private final Class<?> clazz;
   private final Path jobFile;
   private final int partition;
   private final EventHandler eventHandler;
@@ -113,6 +113,8 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   // counts the number of attempts that are either running or in a state where
   // they will come to be running when they get a Container
   private int numberUncompletedAttempts = 0;
+
+  private final TaskType type;
 
   private static final SingleArcTransition<TaskInAppMaster, TaskEvent> ATTEMPT_KILLED_TRANSITION =
       new AttemptKilledTransition();
@@ -185,11 +187,11 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
 
   public TaskInAppMaster(JobId jobId, int partition,
       EventHandler eventHandler, Path remoteJobConfFile, Configuration conf,
-      Class<?> clazz, Token<JobTokenIdentifier> jobToken,
+      TaskType type, Token<JobTokenIdentifier> jobToken,
       Credentials credentials, Clock clock, int startCount,
       DragonAppMetrics metrics, AppContext appContext) {
     this.conf = conf;
-    this.clazz = clazz;
+    this.type = type;
     this.clock = clock;
     this.jobFile = remoteJobConfFile;
     ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -330,7 +332,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
   // TODO: createAttempt
   protected TaskAttempt createAttempt() {
     return new TaskAttemptInAppMaster(taskId, nextAttemptNumber, eventHandler,
-        jobFile, partition, conf, clazz, jobToken, credentials, clock,
+        jobFile, partition, conf, type , jobToken, credentials, clock,
         appContext);
   }
 

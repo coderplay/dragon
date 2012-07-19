@@ -126,5 +126,11 @@ public class DragonBuilderUtilsTest {
   public void tearDown() {
     app = null;
   }
+  
+  public static void main(String args[]){
+    DragonBuilderUtilsTest a = new DragonBuilderUtilsTest();
+    a.setUp();
+    a.testTaskAttemptId();
+  }
 
 }

@@ -79,6 +79,7 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
   public String toString() {
     StringBuilder builder = new StringBuilder(TASKATTEMPT);
     TaskId taskId = getTaskId();
+    System.out.println(taskId.getJobId().getAppId()==null);
     builder.append(SEPARATOR).append(
         taskId.getJobId().getAppId().getClusterTimestamp());
     builder.append(SEPARATOR).append(

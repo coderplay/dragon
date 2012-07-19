@@ -20,30 +20,12 @@ package org.apache.hadoop.realtime.records;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.realtime.records.TaskType;
 
 /**
- * <p>
- * <code>ChildExectionContext</code> represents all of the information
- * needed by the <code>DragonChild</code> to execute a task attempt.
- * </p>
+ * Enum for map, reduce task types.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
-public interface ChildExecutionContext {
-  TaskAttemptId getTaskAttemptId();
-
-  void setTaskAttemptId(TaskAttemptId attemptId);
-
-  int getPartition();
-
-  void setPartition(int partition);
-
-  String getUser();
-
-  void setUser(String user);
-  
-  void setTaskType(TaskType type);
-
-  TaskType getTaskType();
+@InterfaceStability.Stable
+public enum TaskType {
+  MAP, REDUCE
 }

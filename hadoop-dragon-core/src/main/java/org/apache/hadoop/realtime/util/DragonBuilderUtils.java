@@ -78,7 +78,7 @@ public class DragonBuilderUtils {
       return null;
     try {
       String[] parts = str.split(Character.toString(JobId.SEPARATOR));
-      if (parts.length == 5 && parts[0].equals(TaskId.TASK)) {
+      if (parts.length == 4 && parts[0].equals(TaskId.TASK)) {
         long clusterTimeStamp = Long.parseLong(parts[1]);
         int jobId = Integer.parseInt(parts[2]);
         int taskId = Integer.parseInt(parts[3]);
@@ -107,7 +107,7 @@ public class DragonBuilderUtils {
       return null;
     try {
       String[] parts = str.split(Character.toString(JobId.SEPARATOR));
-      if (parts.length == 6 && parts[0].equals(TaskAttemptId.TASKATTEMPT)) {
+      if (parts.length == 5 && parts[0].equals(TaskAttemptId.TASKATTEMPT)) {
         long clusterTimeStamp = Long.parseLong(parts[1]);
         int jobId = Integer.parseInt(parts[2]);
         int taskId = Integer.parseInt(parts[3]);
@@ -182,7 +182,7 @@ public class DragonBuilderUtils {
     context.setTaskAttemptId(attempt.getID());
     context.setPartition(attempt.getPartition());
     context.setUser(user);
-    context.setClass(attempt.getMapOrReduceClass());
+    context.setTaskType(attempt.getTaskType());
     return context;
   }
   

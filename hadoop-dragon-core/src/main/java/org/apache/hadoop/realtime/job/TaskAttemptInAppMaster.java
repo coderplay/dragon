@@ -83,6 +83,7 @@ import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskAttemptReport;
 import org.apache.hadoop.realtime.records.TaskAttemptState;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
@@ -130,7 +131,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   private final int partition;
   private final TaskAttemptId attemptId;
   private final Configuration conf;
-  private final Class<?> clazz;
   private final Path jobFile;
   private Token<JobTokenIdentifier> jobToken;
 
@@ -392,8 +392,10 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
 
   private final StateMachine<TaskAttemptState, TaskAttemptEventType, TaskAttemptEvent> stateMachine;
 
+  private final TaskType type;
+
   TaskAttemptInAppMaster(TaskId taskId, int attempt, EventHandler eventHandler,
-      Path jobFile, int partition, Configuration conf, Class<?> clazz,
+      Path jobFile, int partition, Configuration conf, TaskType type,
       Token<JobTokenIdentifier> jobToken, Credentials credentials, Clock clock,
       AppContext appContext) {
     this.attemptId = recordFactory.newRecordInstance(TaskAttemptId.class);
@@ -401,7 +403,7 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     this.attemptId.setId(attempt);
     this.jobId = taskId.getJobId();
     this.conf = conf;
-    this.clazz = clazz;
+    this.type = type;
     this.jobFile = jobFile;
     this.partition = partition;
     this.appContext = appContext;
@@ -575,10 +577,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
         TaskAttemptInAppMaster.this, user);
   }
   
-  @Override
-  public Class<?> getMapOrReduceClass(){
-    return clazz;
-  }
   
   private static class ContainerAssignedTransition implements
       SingleArcTransition<TaskAttemptInAppMaster, TaskAttemptEvent> {
@@ -1223,6 +1221,11 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
                 : taskAttempt.nodeRackName,
             taskAttempt.getDiagnostics().toString());
     return tauce;
+  }
+
+  @Override
+  public TaskType getTaskType() {
+    return type;
   }
 
 
