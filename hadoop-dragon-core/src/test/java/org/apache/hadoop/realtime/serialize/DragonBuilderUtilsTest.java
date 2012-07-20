@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -35,6 +36,7 @@ public class DragonBuilderUtilsTest {
   // application id = job id
   private static final int jobId = 1;
   private static final int taskId = 2;
+  private static final TaskType taskType = TaskType.valueOf("MAP");
   private static final int attemptId = 3;
 
   private ApplicationId app;
@@ -64,7 +66,7 @@ public class DragonBuilderUtilsTest {
   @Test
   public void testTaskId() {
     JobId job = DragonBuilderUtils.newJobId(app, jobId);
-    TaskId task1 = DragonBuilderUtils.newTaskId(job, taskId);
+    TaskId task1 = DragonBuilderUtils.newTaskId(job, taskId,taskType);
     assertEquals(task1.getId(), taskId);
 
     TaskId task2 = DragonBuilderUtils.newTaskId(task1.toString());
@@ -82,7 +84,7 @@ public class DragonBuilderUtilsTest {
   @Test
   public void testTaskAttemptId() {
     JobId job = DragonBuilderUtils.newJobId(app, jobId);
-    TaskId task = DragonBuilderUtils.newTaskId(job, taskId);
+    TaskId task = DragonBuilderUtils.newTaskId(job, taskId,taskType);
     TaskAttemptId attempt1 =
         DragonBuilderUtils.newTaskAttemptId(task, attemptId);
     assertEquals(attempt1.getId(), attemptId);
@@ -104,7 +106,7 @@ public class DragonBuilderUtilsTest {
   @Test
   public void testContainerId() {
     JobId job = DragonBuilderUtils.newJobId(app, jobId);
-    TaskId task = DragonBuilderUtils.newTaskId(job, taskId);
+    TaskId task = DragonBuilderUtils.newTaskId(job, taskId,taskType);
     TaskAttemptId attempt1 =
         DragonBuilderUtils.newTaskAttemptId(task, attemptId);
     assertEquals(attempt1.getId(), attemptId);

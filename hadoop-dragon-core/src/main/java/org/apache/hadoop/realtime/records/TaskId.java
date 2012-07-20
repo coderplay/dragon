@@ -113,6 +113,8 @@ public abstract class TaskId implements Comparable<TaskId> {
         JobId.jobIdFormat.get().format(jobId.getAppId().getId()));
     builder.append(SEPARATOR);
     builder.append(taskIdFormat.get().format(getId()));
+    builder.append(SEPARATOR);
+    builder.append(getTaskType());
     return builder.toString();
   }
 
