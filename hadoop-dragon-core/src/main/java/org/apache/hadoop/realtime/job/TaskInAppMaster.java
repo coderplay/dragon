@@ -202,7 +202,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
     // have a convention that none of the overrides depends on any
     // fields that need initialization.
     maxAttempts = getMaxAttempts();
-    taskId = DragonBuilderUtils.newTaskId(jobId,partition);
+    taskId = DragonBuilderUtils.newTaskId(jobId,partition,type);
     this.partition = partition;
     this.eventHandler = eventHandler;
     this.credentials = credentials;
