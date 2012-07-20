@@ -48,8 +48,11 @@ public abstract class TaskId implements Comparable<TaskId> {
 
   public abstract void setJobId(JobId jobId);
 
-
   public abstract void setId(int id);
+  
+  public abstract TaskType getTaskType();
+  
+  public abstract void setTaskType(TaskType taskType);
 
   public static final char SEPARATOR = '_';
   public static final String TASK = "task";

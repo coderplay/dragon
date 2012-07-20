@@ -30,7 +30,7 @@ message JobIdProto {
 
 message TaskIdProto {
   optional JobIdProto job_id = 1;
-  optional int32 index = 2;
+  optional TaskTypeProto task_type = 2;
   optional int32 id = 3;
 }
 
