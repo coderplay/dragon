@@ -20,6 +20,7 @@ package org.apache.hadoop.realtime.records;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.realtime.records.TaskType;
 
 /**
  * <p>
@@ -41,4 +42,8 @@ public interface ChildExecutionContext {
   String getUser();
 
   void setUser(String user);
+  
+  void setTaskType(TaskType type);
+
+  TaskType getTaskType();
 }

@@ -40,10 +40,6 @@ public abstract class TaskId implements Comparable<TaskId> {
    */
   public abstract JobId getJobId();
 
-  /**
-   * @return the topological index of the task in the task DAG
-   */
-  public abstract int getIndex();
 
   /**
    * @return the task number.
@@ -52,9 +48,11 @@ public abstract class TaskId implements Comparable<TaskId> {
 
   public abstract void setJobId(JobId jobId);
 
-  public abstract void setIndex(int index);
-
   public abstract void setId(int id);
+  
+  public abstract TaskType getTaskType();
+  
+  public abstract void setTaskType(TaskType taskType);
 
   public static final char SEPARATOR = '_';
   public static final String TASK = "task";
@@ -85,7 +83,6 @@ public abstract class TaskId implements Comparable<TaskId> {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + getIndex();
     result = prime * result + getId();
     result = prime * result + getJobId().hashCode();
     return result;
@@ -100,8 +97,6 @@ public abstract class TaskId implements Comparable<TaskId> {
     if (getClass() != obj.getClass())
       return false;
     TaskId other = (TaskId) obj;
-    if (getIndex() != other.getIndex())
-      return false;
     if (getId() != other.getId())
       return false;
     if (!getJobId().equals(other.getJobId()))
@@ -117,9 +112,9 @@ public abstract class TaskId implements Comparable<TaskId> {
     builder.append(SEPARATOR).append(
         JobId.jobIdFormat.get().format(jobId.getAppId().getId()));
     builder.append(SEPARATOR);
-    builder.append(taskIndexFormat.get().format(getIndex()));
-    builder.append(SEPARATOR);
     builder.append(taskIdFormat.get().format(getId()));
+    builder.append(SEPARATOR);
+    builder.append(getTaskType());
     return builder.toString();
   }
 
@@ -128,9 +123,6 @@ public abstract class TaskId implements Comparable<TaskId> {
     int jobIdComp = this.getJobId().compareTo(other.getJobId());
     if (jobIdComp != 0)
       return jobIdComp;
-    int taskIndexComp = this.getIndex() - other.getIndex();
-    if (taskIndexComp != 0)
-      return taskIndexComp;
     return this.getId() - other.getId();
   }
 

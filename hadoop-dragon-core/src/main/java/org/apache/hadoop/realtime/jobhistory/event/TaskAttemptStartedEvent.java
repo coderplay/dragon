@@ -28,7 +28,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
  */
 public class TaskAttemptStartedEvent implements HistoryEvent {
   private final TaskAttemptId attempId;
-  private final int taskIndex;
   private final long startTime;
   private final String trackerName;
   private final int httpPort;
@@ -47,10 +46,9 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
    */
   public TaskAttemptStartedEvent(
       TaskAttemptId attemptId,
-      int taskIndex, long startTime, String trackerName,
+       long startTime, String trackerName,
       int httpPort, int shufflePort, ContainerId containerId) {
     this.attempId = attemptId;
-    this.taskIndex = taskIndex;
     this.startTime = startTime;
     this.trackerName = trackerName;
     this.httpPort = httpPort;
@@ -65,10 +63,6 @@ public class TaskAttemptStartedEvent implements HistoryEvent {
 
   public TaskAttemptId getAttempId() {
     return attempId;
-  }
-
-  public int getTaskIndex() {
-    return taskIndex;
   }
 
   public long getStartTime() {

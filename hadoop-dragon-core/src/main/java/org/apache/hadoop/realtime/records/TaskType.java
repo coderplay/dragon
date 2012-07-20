@@ -15,12 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime;
 
-import java.io.Serializable;
+package org.apache.hadoop.realtime.records;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
+ * Enum for map, reduce task types.
  */
-public class DragonEdge implements Serializable {
-
+@InterfaceAudience.Public
+@InterfaceStability.Stable
+public enum TaskType {
+  MAP, REDUCE
 }

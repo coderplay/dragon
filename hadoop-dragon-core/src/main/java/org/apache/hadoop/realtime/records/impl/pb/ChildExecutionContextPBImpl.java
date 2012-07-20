@@ -24,7 +24,9 @@ import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.DragonProtos.ChildExecutionContextProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.ChildExecutionContextProtoOrBuilder;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptIdProto;
-
+import org.apache.hadoop.realtime.records.TaskType;
+import org.apache.hadoop.realtime.util.DragonProtoUtils;
+import org.apache.hadoop.yarn.proto.DragonProtos.TaskTypeProto;
 /**
  * {@link ChildExecutionContext} protobuf implementation.
  */
@@ -38,6 +40,12 @@ public class ChildExecutionContextPBImpl extends
   boolean viaProto = false;
 
   private TaskAttemptId attemptId = null;
+
+  private TaskType taskType = null;
+
+  private int partition = 0;
+
+  private String user = null;
 
   public ChildExecutionContextPBImpl() {
     builder = ChildExecutionContextProto.newBuilder(proto);
@@ -59,8 +67,11 @@ public class ChildExecutionContextPBImpl extends
     if (this.attemptId != null
         && !((TaskAttemptIdPBImpl) this.attemptId).getProto().equals(
             builder.getAttemptId())) {
-      builder.setAttemptId(convertToProtoFormat(this.attemptId));
-    }
+          setTaskAttemptId(this.attemptId);
+      setTaskType(this.taskType);
+      setUser(this.user);
+      setPartition(this.partition);
+     }
   }
 
   private synchronized void mergeLocalToProto() {
@@ -167,5 +178,32 @@ public class ChildExecutionContextPBImpl extends
   private TaskAttemptIdProto convertToProtoFormat(TaskAttemptId t) {
     return ((TaskAttemptIdPBImpl) t).getProto();
   }
+
+  @Override
+  public void setTaskType(TaskType taskType) {
+    maybeInitBuilder();
+    if (taskType == null) {
+      builder.clearTaskType();
+      return;
+    }
+    builder.setTaskType(convertToProtoFormat(taskType));
+  }
+
+  @Override
+  public synchronized TaskType getTaskType() {
+    ChildExecutionContextProtoOrBuilder p = viaProto ? proto : builder;
+    if (!p.hasTaskType()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getTaskType());
+  }
+  private TaskTypeProto convertToProtoFormat(TaskType e) {
+    return DragonProtoUtils.convertToProtoFormat(e);
+  }
+
+  private TaskType convertFromProtoFormat(TaskTypeProto e) {
+    return DragonProtoUtils.convertFromProtoFormat(e);
+  }
+  
 
 }

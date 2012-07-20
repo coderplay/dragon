@@ -29,7 +29,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 public class JobInitedEvent implements HistoryEvent {
   private final JobId jobId;
   private final long startTime;
-  private final int numTasks;
   private final String jobState;
 
 
@@ -41,10 +40,9 @@ public class JobInitedEvent implements HistoryEvent {
    * @param numTasks
    * @param jobState
    */
-  public JobInitedEvent(JobId jobId, long startTime, int numTasks, String jobState) {
+  public JobInitedEvent(JobId jobId, long startTime, String jobState) {
     this.jobId = jobId;
     this.startTime = startTime;
-    this.numTasks = numTasks;
     this.jobState = jobState;
   }
 
@@ -58,10 +56,6 @@ public class JobInitedEvent implements HistoryEvent {
 
   public String getJobState() {
     return jobState;
-  }
-
-  public int getNumTasks() {
-    return numTasks;
   }
 
   @Override

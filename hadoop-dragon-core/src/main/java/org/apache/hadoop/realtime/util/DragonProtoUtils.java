@@ -26,6 +26,8 @@ import org.apache.hadoop.yarn.proto.DragonProtos.JobStateProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptCompletionEventStatusProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptStateProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskStateProto;
+import org.apache.hadoop.yarn.proto.DragonProtos.TaskTypeProto;
+import org.apache.hadoop.realtime.records.TaskType;
 
 public class DragonProtoUtils {
 
@@ -72,5 +74,13 @@ public class DragonProtoUtils {
   public static TaskAttemptCompletionEventStatus convertFromProtoFormat(TaskAttemptCompletionEventStatusProto e) {
     return TaskAttemptCompletionEventStatus.valueOf(e.name().replace(TACE_PREFIX, ""));
   }
-  
+  /*
+   * TaskType
+   */
+  public static TaskTypeProto convertToProtoFormat(TaskType e) {
+    return TaskTypeProto.valueOf(e.name());
+  }
+  public static TaskType convertFromProtoFormat(TaskTypeProto e) {
+    return TaskType.valueOf(e.name());
+  }  
 }
