@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.realtime.job;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,16 +36,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.DragonJobGraph;
-import org.apache.hadoop.realtime.DragonVertex;
-import org.apache.hadoop.realtime.JobSubmissionFiles;
 import org.apache.hadoop.realtime.app.counter.CountersManager;
 import org.apache.hadoop.realtime.app.metrics.DragonAppMetrics;
 import org.apache.hadoop.realtime.client.app.AppContext;
@@ -63,8 +58,8 @@ import org.apache.hadoop.realtime.job.app.event.TaskEvent;
 import org.apache.hadoop.realtime.job.app.event.TaskEventType;
 import org.apache.hadoop.realtime.jobhistory.JobHistoryEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobInfoChangeEvent;
-import org.apache.hadoop.realtime.jobhistory.event.JobSubmittedEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobInitedEvent;
+import org.apache.hadoop.realtime.jobhistory.event.JobSubmittedEvent;
 import org.apache.hadoop.realtime.jobhistory.event.JobUnsuccessfulCompletionEvent;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.Counters;
@@ -73,11 +68,11 @@ import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.realtime.records.TaskState;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
-import org.apache.hadoop.realtime.serialize.HessianSerializer;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -128,7 +123,6 @@ public class JobInAppMaster implements Job,
 
   private final CountersManager countersInApp = new CountersManager();
   
-  private DragonJobGraph jobGraph;
   private boolean lazyTasksCopyNeeded = false;
   volatile Map<TaskId, Task> tasks = new LinkedHashMap<TaskId, Task>();
   
@@ -212,6 +206,9 @@ public class JobInAppMaster implements Job,
               JobEventType.JOB_TASK_RESCHEDULED,
               new TaskRescheduledTransition())
           .addTransition(JobState.RUNNING, JobState.RUNNING,
+              JobEventType.JOB_TASK_ASSIGNED,
+              new TaskAssignedTransition())
+          .addTransition(JobState.RUNNING, JobState.RUNNING,
               JobEventType.JOB_DIAGNOSTIC_UPDATE,
               DIAGNOSTIC_UPDATE_TRANSITION)
           .addTransition(JobState.RUNNING, JobState.RUNNING,
@@ -287,8 +284,11 @@ public class JobInAppMaster implements Job,
   private final StateMachine<JobState, JobEventType, JobEvent> stateMachine;
 
   // changing fields while the job is running
-  private int numTasks;
+  private int mapNumTasks;
+  private int reduceNumTasks;
+  
   private int completedTaskCount = 0;
+  private int assignedTasks =0;
   private boolean hasTaskFailure = false;
   private int killedTaskCount = 0;
   private long startTime;
@@ -318,6 +318,8 @@ public class JobInAppMaster implements Job,
     this.fsTokens = appContext.getFsTokens();
     this.jobTokenSecretManager = appContext.getJobTokenSecretManager();
     this.username = conf.get(DragonJobConfig.USER_NAME);
+    this.mapNumTasks= conf.getInt(DragonJobConfig.MAP_PARALLELISM, 1);
+    this.reduceNumTasks=conf.getInt(DragonJobConfig.REDUCE_PARALLELISM, 1);
     // This "this leak" is okay because the retained pointer is in an
     // instance variable.
     stateMachine = stateMachineFactory.make(this);
@@ -526,8 +528,12 @@ public class JobInAppMaster implements Job,
     return remoteJobConfFile;
   }
   
-  public void setNumTasks(int num){
-    this.numTasks = num;
+  public void setMapNumTasks(int num){
+    this.mapNumTasks = num;
+  }
+  
+  public void setReduceNumTasks(int num){
+    this.reduceNumTasks = num;
   }
   
   @Override
@@ -577,17 +583,9 @@ public class JobInAppMaster implements Job,
             job.remoteJobConfFile.toString(),
             job.queueName);
         job.eventHandler.handle(new JobHistoryEvent(job.jobId, jse));
-
-        job.jobGraph = createJobGraph(job);
-        if (job.jobGraph != null) {
-          job.numTasks = getTaskCount(job.jobGraph);
-          if (job.numTasks == 0) {
-            job.addDiagnostic("No of tasks are 0 " + job.jobId);
-          }
-          checkTaskLimits();
-          // create the Tasks but don't start them yet
-          createTasks(job);
-        }
+        checkTaskLimits();
+        // create the Tasks but don't start them yet
+        createTasks(job);
         return JobState.INITED;
       } catch (IOException e) {
         LOG.warn("Job init failed", e);
@@ -633,51 +631,25 @@ public class JobInAppMaster implements Job,
         tokenStorage.addAll(job.fsTokens);
       }
     }
-
-    private int getTaskCount(DragonJobGraph graph) {
-      int count = 0;
-      for (DragonVertex vertex : graph.vertexSet()) {
-        count += vertex.getTasks();
-      }
-      return count;
-    }
-
     protected void createTasks(JobInAppMaster job) {
-      int index = 0;
-      final DragonJobGraph graph = job.jobGraph;
-      for (DragonVertex vertex : graph.vertexSet()) {
-        for (int i = 0; i < vertex.getTasks(); i++) {
+        for (int i = 0; i < job.mapNumTasks; i++) {
           Task task =
-              new TaskInAppMaster(job.jobId, index, i, job.eventHandler,
-                  job.remoteJobConfFile, job.conf, vertex, job.jobToken,
+              new TaskInAppMaster(job.jobId, i, job.eventHandler,
+                  job.remoteJobConfFile, job.conf, TaskType.MAP, job.jobToken,
                   job.fsTokens, job.clock,
                   job.applicationAttemptId.getAttemptId(), job.metrics,
                   job.appContext);
           job.addTask(task);
         }
-        index++;
-      }
-      LOG.info("Tasks number for job " + job.jobId + " = " + job.numTasks);
-    }
-
-    private DragonJobGraph createJobGraph(JobInAppMaster job) {
-      Path descFile =
-          JobSubmissionFiles.getJobDescriptionFile(job.remoteJobSubmitDir);
-      try {
-        FSDataInputStream in = job.fs.open(descFile);
-        HessianSerializer<DragonJobGraph> serializer =
-            new HessianSerializer<DragonJobGraph>();
-        DragonJobGraph djg = serializer.deserialize(in);
-        in.close();
-        return djg;
-      }catch(FileNotFoundException fnfe){
-        LOG.warn("Don't have the job desc .");
-      } catch (IOException ioe) {
-        LOG.error("Get the job desc failed , job will end.",ioe);
-        job.eventHandler.handle(new JobEvent(job.getID(),
-            JobEventType.INTERNAL_ERROR));
-      }
-      return null;
+        for (int i = 0; i < job.reduceNumTasks; i++) {
+          Task task =
+              new TaskInAppMaster(job.jobId, i, job.eventHandler,
+                  job.remoteJobConfFile, job.conf, TaskType.REDUCE, job.jobToken,
+                  job.fsTokens, job.clock,
+                  job.applicationAttemptId.getAttemptId(), job.metrics,
+                  job.appContext);
+          job.addTask(task);
+        }
     }
 
     /**
@@ -703,7 +675,6 @@ public class JobInAppMaster implements Job,
       JobInitedEvent jie =
           new JobInitedEvent(job.jobId,
               job.startTime,
-              job.numTasks,
               job.getState().toString());
       //Will transition to state running. Currently in INITED
       job.eventHandler.handle(new JobHistoryEvent(job.jobId, jie));
@@ -714,11 +685,6 @@ public class JobInAppMaster implements Job,
 
       job.metrics.runningJob(job);
       
-      // If we have no tasks, just transition to job completed
-      if (job.numTasks == 0) {
-        job.eventHandler.handle(new JobEvent(job.jobId,
-            JobEventType.JOB_COMPLETED));
-      }
     }
   }
 
@@ -903,6 +869,21 @@ public class JobInAppMaster implements Job,
       return job.finished(JobState.FAILED);
     }
   }
+  
+  private static class TaskAssignedTransition implements
+      SingleArcTransition<JobInAppMaster, JobEvent> {
+    @Override
+    public void transition(JobInAppMaster job, JobEvent event) {
+      // succeeded map task is restarted back
+      if(++job.assignedTasks>=(job.mapNumTasks+job.reduceNumTasks)){
+        for (Task task : job.tasks.values()) {
+          job.eventHandler.handle(
+              new TaskEvent(task.getID(), TaskEventType.T_SCHEDULED));
+        }
+      }
+        
+    }
+  }
 
   private static class TaskRescheduledTransition implements
       SingleArcTransition<JobInAppMaster, JobEvent> {
@@ -997,10 +978,5 @@ public class JobInAppMaster implements Job,
   @Override
   public Task getTask(TaskId taskID) {
     return tasks.get(taskID);
-  }
-
-  @Override
-  public DragonJobGraph getJobGraph() {
-    return jobGraph;
   }
 }

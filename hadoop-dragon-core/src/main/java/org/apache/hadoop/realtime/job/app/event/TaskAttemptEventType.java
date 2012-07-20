@@ -28,6 +28,7 @@ public enum TaskAttemptEventType {
   TA_RESCHEDULE,
 
   //Producer:Client, Task
+  TA_LAUNCH,
   TA_KILL,
 
   //Producer:ContainerAllocator
@@ -49,6 +50,7 @@ public enum TaskAttemptEventType {
   TA_CLEANUP_DONE,
 
   //Producer:Job
+  
   // FIXME: Dragon should produce TA_TOO_MANY_SEND_FAILURE ^_^
   TA_TOO_MANY_FETCH_FAILURE,
 }

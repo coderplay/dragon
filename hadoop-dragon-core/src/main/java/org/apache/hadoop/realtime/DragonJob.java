@@ -29,9 +29,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.conf.DragonConfiguration;
-import org.apache.hadoop.realtime.dag.DirectedAcyclicGraph;
-import org.apache.hadoop.realtime.job.JobCounter;
-import org.apache.hadoop.realtime.records.Counter;
 import org.apache.hadoop.realtime.records.CounterGroup;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
@@ -42,66 +39,6 @@ import org.apache.hadoop.realtime.records.TaskState;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 
-/**
- * A {@link DragonJob} is the basic computing unit of Dragon. It allows the 
- * user to configure the job, submit it, control its execution, and query 
- * the state. The set methods only work until the job is submitted, 
- * otherwises they will throw an IllegalStateException. </p>
- *
- * <p>
- * The key component of a {@link DragonJob} is a {@link DragonJobGraph},
- * which is formed by a collection of {@link DragonVertex}s and directed 
- * {@link DragonEdge}s.
- * Normally user creates the application, describes various facets of the job 
- * , sets {@link DragonJobGraph} via {@link DragonJob} , and then 
- * submits the job and monitor its progress.
- * </p>
- * 
- * <p>Here is an example on how to submit a {@link DragonJob}:</p>
- * <p><blockquote><pre>
- *   Configuration conf = getConf();
- *   conf.setInt(INT_PROPERTY, 1);
- *   conf.set(STRING_PROPERTY, "VALUE");
- *   conf.set(DragonJobConfig.PROPERTY, "GRAPHJOB_VALUE");
- *   DragonJob job = DragonJob.getInstance(conf);
- *   job.setJobName("First Graph Job");
- *   
- *   DragonVertex source = new DragonVertex.Builder("source")
- *                                         .producer(EventProducer.class)
- *                                         .processor(EventProcessor.class)
- *                                         .tasks(10)
- *                                         .build();
- *   DragonVertex m1 = new DragonVertex.Builder("intermediate1")
- *                                     .processor(EventProcessor.class)
- *                                     .addFile("file.txt")
- *                                     .addFile("dict.dat")
- *                                     .addArchive("archive.zip")
- *                                     .tasks(10)
- *                                     .build();
- *   DragonVertex m2 = new DragonVertex.Builder("intermediate2")
- *                                     .processor(EventProcessor.class)
- *                                     .addFile("aux")
- *                                     .tasks(10)
- *                                     .build();
- *   DragonVertex dest = new DragonVertex.Builder("dest")
- *                                       .processor(EventProcessor.class)
- *                                       .tasks(10)
- *                                       .build();
- *   DragonJobGraph g = new DragonJobGraph();
- *   // check if the graph is cyclic when adding edge
- *   g.addEdge(source, m1).parition(HashPartitioner.class);
- *   g.addEdge(source, m2).parition(HashPartitioner.class);
- *   g.addEdge(m1, dest).parition(CustomPartitioner.class);
- *   g.addEdge(m2, dest).parition(CustomPartitioner.class);
- *   job.setJobGraph(g);
- *   // check all source vertex hold event producers when submitting
- *   job.submit();
- * </pre></blockquote></p>
- * 
- * @see DirectedAcyclicGraph
- * @see DragonVertex
- * @see DragonEdge
- */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class DragonJob {
@@ -122,8 +59,6 @@ public class DragonJob {
   private DragonJobService jobService;
   
   private JobId jobId;
-
-  private DragonJobGraph jobGraph;
 
   protected final Credentials credentials;
   
@@ -260,14 +195,6 @@ public class DragonJob {
     return null;
   }
   
-  public void setJobGraph(DragonJobGraph jobGraph) {
-    this.jobGraph =  jobGraph;
-  }
-  
-  DragonJobGraph getJobGraph() {
-    return jobGraph;
-  }
-  
   /**
    * Monitor a job and print status in real-time as progress is made and tasks
    * fail.
@@ -393,5 +320,13 @@ public class DragonJob {
       LOG.warn("Got an exception wheng getting state of a job", e);
     }
     return null;
+  }
+  
+  public void setMapper(Class<?> clazz){
+    conf.setClass(DragonJobConfig.JOB_MAP_CLASS, clazz, Object.class);
+  }
+  
+  public void setReducer(Class<?> clazz){
+    conf.setClass(DragonJobConfig.JOB_REDUCE_CLASS, clazz, Object.class);
   }
 }

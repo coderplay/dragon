@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -34,9 +35,9 @@ public class DragonBuilderUtilsTest {
 
   // application id = job id
   private static final int jobId = 1;
-  private static final int taskIndex = 2;
-  private static final int taskId = 3;
-  private static final int attemptId = 4;
+  private static final int taskId = 2;
+  private static final TaskType taskType = TaskType.valueOf("MAP");
+  private static final int attemptId = 3;
 
   private ApplicationId app;
 
@@ -65,12 +66,10 @@ public class DragonBuilderUtilsTest {
   @Test
   public void testTaskId() {
     JobId job = DragonBuilderUtils.newJobId(app, jobId);
-    TaskId task1 = DragonBuilderUtils.newTaskId(job, taskIndex, taskId);
-    assertEquals(task1.getIndex(), taskIndex);
+    TaskId task1 = DragonBuilderUtils.newTaskId(job, taskId,taskType);
     assertEquals(task1.getId(), taskId);
 
     TaskId task2 = DragonBuilderUtils.newTaskId(task1.toString());
-    assertEquals(task2.getIndex(), taskIndex);
     assertEquals(task2.getId(), taskId);
 
     boolean exception = false;
@@ -85,7 +84,7 @@ public class DragonBuilderUtilsTest {
   @Test
   public void testTaskAttemptId() {
     JobId job = DragonBuilderUtils.newJobId(app, jobId);
-    TaskId task = DragonBuilderUtils.newTaskId(job, taskIndex, taskId);
+    TaskId task = DragonBuilderUtils.newTaskId(job, taskId,taskType);
     TaskAttemptId attempt1 =
         DragonBuilderUtils.newTaskAttemptId(task, attemptId);
     assertEquals(attempt1.getId(), attemptId);
@@ -107,7 +106,7 @@ public class DragonBuilderUtilsTest {
   @Test
   public void testContainerId() {
     JobId job = DragonBuilderUtils.newJobId(app, jobId);
-    TaskId task = DragonBuilderUtils.newTaskId(job, taskIndex, taskId);
+    TaskId task = DragonBuilderUtils.newTaskId(job, taskId,taskType);
     TaskAttemptId attempt1 =
         DragonBuilderUtils.newTaskAttemptId(task, attemptId);
     assertEquals(attempt1.getId(), attemptId);
@@ -128,6 +127,12 @@ public class DragonBuilderUtilsTest {
   @After
   public void tearDown() {
     app = null;
+  }
+  
+  public static void main(String args[]){
+    DragonBuilderUtilsTest a = new DragonBuilderUtilsTest();
+    a.setUp();
+    a.testTaskAttemptId();
   }
 
 }

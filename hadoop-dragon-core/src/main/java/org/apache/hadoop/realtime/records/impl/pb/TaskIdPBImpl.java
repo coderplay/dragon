@@ -20,9 +20,12 @@ package org.apache.hadoop.realtime.records.impl.pb;
 
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskType;
+import org.apache.hadoop.realtime.util.DragonProtoUtils;
 import org.apache.hadoop.yarn.proto.DragonProtos.JobIdProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskIdProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskIdProtoOrBuilder;
+import org.apache.hadoop.yarn.proto.DragonProtos.TaskTypeProto;
 
 public class TaskIdPBImpl extends TaskId {
   TaskIdProto proto = TaskIdProto.getDefaultInstance();
@@ -101,17 +104,24 @@ public class TaskIdPBImpl extends TaskId {
       builder.clearJobId();
     this.jobId = jobId;
   }
-
+  
   @Override
-  public synchronized int getIndex() {
+  public synchronized TaskType getTaskType() {
     TaskIdProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getIndex());
+    if (!p.hasTaskType()) {
+      return null;
+    }
+    return convertFromProtoFormat(p.getTaskType());
   }
 
   @Override
-  public synchronized void setIndex(int index) {
+  public synchronized void setTaskType(TaskType taskType) {
     maybeInitBuilder();
-    builder.setIndex(index);
+    if (taskType == null) {
+      builder.clearTaskType();
+      return;
+    }
+    builder.setTaskType(convertToProtoFormat(taskType));
   }
 
   private JobIdPBImpl convertFromProtoFormat(JobIdProto p) {
@@ -120,6 +130,14 @@ public class TaskIdPBImpl extends TaskId {
 
   private JobIdProto convertToProtoFormat(JobId t) {
     return ((JobIdPBImpl)t).getProto();
+  }
+  
+  private TaskTypeProto convertToProtoFormat(TaskType e) {
+    return DragonProtoUtils.convertToProtoFormat(e);
+  }
+
+  private TaskType convertFromProtoFormat(TaskTypeProto e) {
+    return DragonProtoUtils.convertFromProtoFormat(e);
   }
 
 }

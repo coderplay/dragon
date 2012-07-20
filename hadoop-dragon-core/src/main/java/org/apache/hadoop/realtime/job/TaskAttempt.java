@@ -25,7 +25,7 @@ import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskAttemptReport;
 import org.apache.hadoop.realtime.records.TaskAttemptState;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-
+import org.apache.hadoop.realtime.records.TaskType;
 
 /**
  * Read only view of TaskAttempt.
@@ -76,4 +76,6 @@ public interface TaskAttempt {
   
   
   int getPartition();
+  
+  TaskType getTaskType();
 }

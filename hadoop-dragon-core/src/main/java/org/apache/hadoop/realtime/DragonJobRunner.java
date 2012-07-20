@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -39,10 +38,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
@@ -56,7 +53,6 @@ import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.realtime.serialize.HessianSerializer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -204,7 +200,8 @@ public class DragonJobRunner implements DragonJobService {
 
       populateTokenCache(conf, job.getCredentials());
 
-      copyFilesFromLocal(job.getJobGraph(), submitFs, submitJobDir, replication);
+      copyFilesFromLocal(submitFs, submitJobDir, replication);
+      
       copyJobJar(job, conf, submitJobDir, submitFs, replication);
 
       // write "queue admins of the queue to which job is being submitted"
@@ -219,9 +216,6 @@ public class DragonJobRunner implements DragonJobService {
 
       // Write job file to submit dir
       writeConf(conf, submitFs, submitJobDir);
-
-      // Write the serialized job description dag to submit dir
-      writeJobDescription(job.getJobGraph(), submitFs, submitJobDir);
 
       //
       // Now, actually submit the job (using the submit name)
@@ -480,22 +474,6 @@ public class DragonJobRunner implements DragonJobService {
     }
   }
 
-  private void writeJobDescription(final DragonJobGraph graph,
-      final FileSystem submitFs, final Path submitJobDir) throws IOException {
-    // Write job description to job service provider's fs
-    Path descFile = JobSubmissionFiles.getJobDescriptionFile(submitJobDir);
-    FSDataOutputStream out =
-        FileSystem.create(submitFs, descFile, new FsPermission(
-            JobSubmissionFiles.JOB_FILE_PERMISSION));
-    try {
-      HessianSerializer<DragonJobGraph> serializer =
-          new HessianSerializer<DragonJobGraph>();
-      serializer.serialize(out, graph);
-    } finally {
-      out.close();
-    }
-  }
-
   // get secret keys and tokens and store them into TokenCache
   @SuppressWarnings("unchecked")
   private void populateTokenCache(Configuration conf, Credentials credentials)
@@ -554,11 +532,8 @@ public class DragonJobRunner implements DragonJobService {
     }
   }
 
-  private void copyFilesFromLocal(final DragonJobGraph jobGraph,
-                                  final FileSystem submitFs,
-                                  final Path submitJobDir,
-                                  final short replication) 
-      throws IOException {
+  private void copyFilesFromLocal(final FileSystem submitFs,
+      final Path submitJobDir, final short replication) throws IOException {
     if (submitFs.exists(submitJobDir)) {
       throw new IOException("Not submitting job. Job directory " + submitJobDir
           + " already exists!! This is unexpected.Please check what's there in"
@@ -568,31 +543,33 @@ public class DragonJobRunner implements DragonJobService {
         new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
     FileSystem.mkdirs(submitFs, submitJobDir, sysPerms);
     // add all the command line files/ jars and archive
+    
     // first copy them to dragon job service provider's
     // filesystem
-    for (DragonVertex vertex : jobGraph.vertexSet()) {
-      List<String> files = vertex.getFiles();
-      if (files.size() > 0) {
-        Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
-        FileSystem.mkdirs(submitFs, filesDir, sysPerms);
-        for (String file : files) {
-          Path newPath = new Path(filesDir, file);
-          submitFs.copyFromLocalFile(false, true, new Path(file), newPath);
-          submitFs.setReplication(newPath, replication);
-        }
+    List<String> files =
+        (List<String>) conf
+            .getStringCollection(DragonJobConfig.JOB_DiST_CACHE_FILES);
+    if (files.size() > 0) {
+      Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
+      FileSystem.mkdirs(submitFs, filesDir, sysPerms);
+      for (String file : files) {
+        Path newPath = new Path(filesDir, file);
+        submitFs.copyFromLocalFile(false, true, new Path(file), newPath);
+        submitFs.setReplication(newPath, replication);
       }
+    }
 
-      List<String> archives = vertex.getArchives();
-      if (archives.size() > 0) {
-        Path archivesDir =
-            JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
-        FileSystem.mkdirs(submitFs, archivesDir, sysPerms);
-        for (String archive : archives) {
-          Path newPath = new Path(archivesDir, archive);
-          submitFs.copyFromLocalFile(false, true, new Path(archive),
-              newPath);
-          submitFs.setReplication(newPath, replication);
-        }
+    List<String> archives =
+        (List<String>) conf
+            .getStringCollection(DragonJobConfig.JOB_DIST_CACHE_ARCHIVES);
+    if (archives.size() > 0) {
+      Path archivesDir =
+          JobSubmissionFiles.getJobDistCacheArchives(submitJobDir);
+      FileSystem.mkdirs(submitFs, archivesDir, sysPerms);
+      for (String archive : archives) {
+        Path newPath = new Path(archivesDir, archive);
+        submitFs.copyFromLocalFile(false, true, new Path(archive), newPath);
+        submitFs.setReplication(newPath, replication);
       }
     }
   }

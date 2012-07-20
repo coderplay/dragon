@@ -27,7 +27,6 @@ import org.apache.hadoop.realtime.records.TaskAttemptId;
  */
 public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
   private final TaskAttemptId attemptId;
-  private final int taskIndex;
   private final String status;
   private final long finishTime;
   private final String hostname;
@@ -46,12 +45,11 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
    * @param error Error string
    */
   public TaskAttemptUnsuccessfulCompletionEvent(
-    TaskAttemptId id, int taskIndex,
+    TaskAttemptId id,
     String status, long finishTime,
     String hostname, int port,
     String rackName, String error) {
     this.attemptId = id;
-    this.taskIndex = taskIndex;
     this.status = status;
     this.finishTime = finishTime;
     this.hostname = hostname;
@@ -66,10 +64,6 @@ public class TaskAttemptUnsuccessfulCompletionEvent implements HistoryEvent {
 
   public TaskAttemptId getAttemptId() {
     return attemptId;
-  }
-
-  public int getTaskIndex() {
-    return taskIndex;
   }
 
   public String getStatus() {
