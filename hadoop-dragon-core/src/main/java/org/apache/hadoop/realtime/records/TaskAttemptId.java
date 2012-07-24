@@ -18,6 +18,17 @@
 
 package org.apache.hadoop.realtime.records;
 
+import com.google.common.base.Splitter;
+import org.apache.hadoop.realtime.records.impl.pb.JobIdPBImpl;
+import org.apache.hadoop.realtime.records.impl.pb.TaskAttemptIdPBImpl;
+import org.apache.hadoop.realtime.records.impl.pb.TaskIdPBImpl;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
+import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
+
+import java.util.Iterator;
+
 /**
  * <p>
  * <code>TaskAttemptId</code> represents the unique identifier for a task
@@ -101,5 +112,49 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
     } else {
       return taskIdComp;
     }
+  }
+
+  /** Construct a TaskAttemptID object from given string
+   * @return constructed TaskAttemptID object or null if the given String is null
+   * @throws IllegalArgumentException if the given string is malformed
+   */
+  public static TaskAttemptId forName(String str)
+      throws IllegalArgumentException {
+    if(str == null)
+      return null;
+
+    try {
+      final Iterator<String> idIt = Splitter.on(SEPARATOR).split(str).iterator();
+      idIt.next(); // ignore attempt
+
+      final int clusterTimestamp = Integer.parseInt(idIt.next());
+      final int appIdInteger = Integer.parseInt(idIt.next());
+      final int taskIndexInteger = Integer.parseInt(idIt.next());
+      final int taskIdInteger = Integer.parseInt(idIt.next());
+      final int taskAttemptIdInteger = Integer.parseInt(idIt.next());
+
+      final ApplicationId appId =
+          BuilderUtils.newApplicationId(clusterTimestamp, appIdInteger);
+
+      final JobId jobId = Records.newRecord(JobId.class);
+      jobId.setAppId(appId);
+
+
+      final TaskId taskId = Records.newRecord(TaskId.class);
+      taskId.setId(taskIdInteger);
+      taskId.setIndex(taskIndexInteger);
+      taskId.setJobId(jobId);
+
+      final TaskAttemptId taskAttemptId = Records.newRecord(TaskAttemptId.class);
+      taskAttemptId.setId(taskAttemptIdInteger);
+      taskAttemptId.setTaskId(taskId);
+
+      return taskAttemptId;
+    } catch (Exception ex) {
+      // below here will throw illegal argument exception
+    }
+
+    throw new IllegalArgumentException("TaskAttemptId string : " + str
+        + " is not properly formed");
   }
 }
