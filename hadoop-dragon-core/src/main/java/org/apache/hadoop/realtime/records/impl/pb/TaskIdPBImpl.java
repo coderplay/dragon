@@ -20,6 +20,7 @@ package org.apache.hadoop.realtime.records.impl.pb;
 
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.yarn.proto.DragonProtos.JobIdProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskIdProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskIdProtoOrBuilder;
@@ -109,9 +110,19 @@ public class TaskIdPBImpl extends TaskId {
   }
 
   @Override
+  public TaskType getTaskType() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
   public synchronized void setIndex(int index) {
     maybeInitBuilder();
     builder.setIndex(index);
+  }
+
+  @Override
+  public void setTaskType(TaskType taskType) {
+    //To change body of implemented methods use File | Settings | File Templates.
   }
 
   private JobIdPBImpl convertFromProtoFormat(JobIdProto p) {

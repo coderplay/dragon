@@ -30,11 +30,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.job.TaskLog;
 import org.apache.hadoop.realtime.job.TaskLog.LogName;
-import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.realtime.records.TaskAttemptState;
-import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.records.*;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.ContainerLogAppender;
+import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
@@ -65,6 +64,8 @@ public class DragonApps extends Apps {
       .getRecordFactory(null);
 
   public static final String JOB = "job";
+  public static final String TASK = "task";
+  public static final String ATTEMPT = "attempt";
 
   public static void setClasspath(Map<String, String> environment,
       Configuration conf) {
@@ -192,11 +193,6 @@ public class DragonApps extends Apps {
     return _join(JOB, jid.getAppId().getClusterTimestamp(), jid.getAppId().getId(), jid.getId());
   }
 
-  public static String toString(TaskId tid) {
-    return _join("task", tid.getJobId().getAppId().getClusterTimestamp(), tid.getJobId().getAppId().getId(),
-        tid.getJobId().getId(), tid.getId());
-  }
-
   public static JobId toJobID(String jid) {
     Iterator<String> it = _split(jid).iterator();
     return toJobID(JOB, jid, it);
@@ -211,6 +207,65 @@ public class DragonApps extends Apps {
     jobId.setId(Integer.parseInt(it.next()));
     return jobId;
   }
+
+  public static String toString(TaskId tid) {
+    return _join("task", tid.getJobId().getAppId().getClusterTimestamp(),
+        tid.getJobId().getAppId().getId(), tid.getJobId().getId(),
+        taskSymbol(tid.getTaskType()), tid.getId());
+  }
+
+  public static TaskId toTaskID(String tid) {
+    Iterator<String> it = _split(tid).iterator();
+    return toTaskID(TASK, tid, it);
+  }
+
+  public static TaskId toTaskID(String prefix, String s, Iterator<String> it) {
+    JobId jid = toJobID(prefix, s, it);
+    shouldHaveNext(prefix, s, it);
+    TaskId tid = RecordFactoryProvider.getRecordFactory(null).newRecordInstance(TaskId.class);
+    tid.setJobId(jid);
+    tid.setTaskType(taskType(it.next()));
+    shouldHaveNext(prefix, s, it);
+    tid.setId(Integer.parseInt(it.next()));
+    return tid;
+  }
+
+  public static String toString(TaskAttemptId taid) {
+    return _join("attempt",
+        taid.getTaskId().getJobId().getAppId().getClusterTimestamp(),
+        taid.getTaskId().getJobId().getAppId().getId(),
+        taid.getTaskId().getJobId().getId(),
+        taskSymbol(taid.getTaskId().getTaskType()),
+        taid.getTaskId().getId(),
+        taid.getId());
+  }
+
+  public static String taskSymbol(TaskType type) {
+    switch (type) {
+      case MAP:           return "m";
+      case REDUCE:        return "r";
+    }
+    throw new YarnException("Unknown task type: "+ type.toString());
+  }
+
+  public static TaskType taskType(String symbol) {
+    // JDK 7 supports switch on strings
+    if (symbol.equals("m")) return TaskType.MAP;
+    if (symbol.equals("r")) return TaskType.REDUCE;
+    throw new YarnException("Unknown task symbol: "+ symbol);
+  }
+
+  public static TaskAttemptId toTaskAttemptID(String taid) {
+    Iterator<String> it = _split(taid).iterator();
+    TaskId tid = toTaskID(ATTEMPT, taid, it);
+    shouldHaveNext(ATTEMPT, taid, it);
+    TaskAttemptId taId = RecordFactoryProvider.
+        getRecordFactory(null).newRecordInstance(TaskAttemptId.class);
+    taId.setTaskId(tid);
+    taId.setId(Integer.parseInt(it.next()));
+    return taId;
+  }
+
 
   public static enum TaskAttemptStateUI {
     NEW(

@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.realtime.conf.DragonConfiguration;
+import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.JobPriority;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
@@ -331,14 +332,33 @@ public final class DragonCLI extends Configured implements Tool {
         exitCode = 0;
       } else if (displayTasks) {
 
-      } else if(killTask) {
-        final TaskAttemptId taskId = TaskAttemptId.forName(taskid);
-        service.killTask(taskId, false);
-        exitCode = 0;
-      } else if(failTask) {
-        final TaskAttemptId taskId = TaskAttemptId.forName(taskid);
-        service.killTask(taskId, true);
-        exitCode = 0;
+      } else if (killTask) {
+        final TaskAttemptId taskAttemptId = DragonApps.toTaskAttemptID(taskid);
+        final JobReport report =
+            service.getJobReport(taskAttemptId.getTaskId().getJobId());
+        if (report == null) {
+          System.out.println("Could not find job " + jobid);
+        } else if (service.killTask(taskAttemptId, false)) {
+          System.out.println("Killed task " + taskid);
+          exitCode = 0;
+        } else {
+          System.out.println("Could not kill task " + taskid);
+          exitCode = -1;
+        }
+      } else if (failTask) {
+        final TaskAttemptId taskAttemptId = DragonApps.toTaskAttemptID(taskid);
+        final JobReport report =
+            service.getJobReport(taskAttemptId.getTaskId().getJobId());
+        if (report == null) {
+          System.out.println("Could not find job " +
+              taskAttemptId.getTaskId().getJobId());
+        } else if(service.killTask(taskAttemptId, true)) {
+          System.out.println("Killed task " + taskAttemptId + " by failing it");
+          exitCode = 0;
+        } else {
+          System.out.println("Could not fail task " + taskid);
+          exitCode = -1;
+        }
       } else if (logs) {
       }
     } catch (RemoteException re) {

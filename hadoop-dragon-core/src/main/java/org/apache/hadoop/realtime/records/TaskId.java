@@ -46,6 +46,12 @@ public abstract class TaskId implements Comparable<TaskId> {
   public abstract int getIndex();
 
   /**
+   *
+   * @return
+   */
+  public abstract TaskType getTaskType();
+
+  /**
    * @return the task number.
    */
   public abstract int getId();
@@ -53,6 +59,8 @@ public abstract class TaskId implements Comparable<TaskId> {
   public abstract void setJobId(JobId jobId);
 
   public abstract void setIndex(int index);
+
+  public abstract void setTaskType(TaskType taskType);
 
   public abstract void setId(int id);
 
@@ -108,20 +116,6 @@ public abstract class TaskId implements Comparable<TaskId> {
       return false;
     return true;
   }
-      
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder(TASK);
-    JobId jobId = getJobId();
-    builder.append(SEPARATOR).append(jobId.getAppId().getClusterTimestamp());
-    builder.append(SEPARATOR).append(
-        JobId.jobIdFormat.get().format(jobId.getAppId().getId()));
-    builder.append(SEPARATOR);
-    builder.append(taskIndexFormat.get().format(getIndex()));
-    builder.append(SEPARATOR);
-    builder.append(taskIdFormat.get().format(getId()));
-    return builder.toString();
-  }
 
   @Override
   public int compareTo(TaskId other) {
@@ -132,9 +126,5 @@ public abstract class TaskId implements Comparable<TaskId> {
     if (taskIndexComp != 0)
       return taskIndexComp;
     return this.getId() - other.getId();
-  }
-
-  public static TaskId forName(String taskName) {
-    return null;  //To change body of created methods use File | Settings | File Templates.
   }
 }

@@ -21,6 +21,7 @@ package org.apache.hadoop.realtime.util;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.job.TaskAttempt;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
@@ -109,7 +110,7 @@ public class DragonBuilderUtils {
       return null;
     try {
       String[] parts = str.split(Character.toString(JobId.SEPARATOR));
-      if (parts.length == 6 && parts[0].equals(TaskAttemptId.TASKATTEMPT)) {
+      if (parts.length == 6 && parts[0].equals(DragonApps.ATTEMPT)) {
         long clusterTimeStamp = Long.parseLong(parts[1]);
         int jobId = Integer.parseInt(parts[2]);
         int taskIndex = Integer.parseInt(parts[3]);

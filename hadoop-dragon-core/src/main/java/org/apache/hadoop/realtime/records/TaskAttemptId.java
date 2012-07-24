@@ -57,9 +57,6 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
 
   public abstract void setId(int id);
 
-  public static final char SEPARATOR = '_';
-  public static final String TASKATTEMPT = "attempt";
-
   @Override
   public int hashCode() {
     final int prime = 31;
@@ -87,24 +84,6 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
   }
 
   @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder(TASKATTEMPT);
-    TaskId taskId = getTaskId();
-    builder.append(SEPARATOR).append(
-        taskId.getJobId().getAppId().getClusterTimestamp());
-    builder.append(SEPARATOR).append(
-        JobId.jobIdFormat.get().format(
-            getTaskId().getJobId().getAppId().getId()));
-    builder.append(SEPARATOR).append(
-        TaskId.taskIndexFormat.get().format(taskId.getIndex()));
-    builder.append(SEPARATOR).append(
-        TaskId.taskIdFormat.get().format(taskId.getId()));
-    builder.append(SEPARATOR);
-    builder.append(getId());
-    return builder.toString();
-  }
-
-  @Override
   public int compareTo(TaskAttemptId other) {
     int taskIdComp = this.getTaskId().compareTo(other.getTaskId());
     if (taskIdComp == 0) {
@@ -112,49 +91,5 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
     } else {
       return taskIdComp;
     }
-  }
-
-  /** Construct a TaskAttemptID object from given string
-   * @return constructed TaskAttemptID object or null if the given String is null
-   * @throws IllegalArgumentException if the given string is malformed
-   */
-  public static TaskAttemptId forName(String str)
-      throws IllegalArgumentException {
-    if(str == null)
-      return null;
-
-    try {
-      final Iterator<String> idIt = Splitter.on(SEPARATOR).split(str).iterator();
-      idIt.next(); // ignore attempt
-
-      final int clusterTimestamp = Integer.parseInt(idIt.next());
-      final int appIdInteger = Integer.parseInt(idIt.next());
-      final int taskIndexInteger = Integer.parseInt(idIt.next());
-      final int taskIdInteger = Integer.parseInt(idIt.next());
-      final int taskAttemptIdInteger = Integer.parseInt(idIt.next());
-
-      final ApplicationId appId =
-          BuilderUtils.newApplicationId(clusterTimestamp, appIdInteger);
-
-      final JobId jobId = Records.newRecord(JobId.class);
-      jobId.setAppId(appId);
-
-
-      final TaskId taskId = Records.newRecord(TaskId.class);
-      taskId.setId(taskIdInteger);
-      taskId.setIndex(taskIndexInteger);
-      taskId.setJobId(jobId);
-
-      final TaskAttemptId taskAttemptId = Records.newRecord(TaskAttemptId.class);
-      taskAttemptId.setId(taskAttemptIdInteger);
-      taskAttemptId.setTaskId(taskId);
-
-      return taskAttemptId;
-    } catch (Exception ex) {
-      // below here will throw illegal argument exception
-    }
-
-    throw new IllegalArgumentException("TaskAttemptId string : " + str
-        + " is not properly formed");
   }
 }
