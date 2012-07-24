@@ -40,7 +40,7 @@ import org.apache.hadoop.realtime.protocol.records.StatusUpdateRequest;
 import org.apache.hadoop.realtime.protocol.records.StatusUpdateResponse;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.records.TaskReport;
+import org.apache.hadoop.realtime.records.TaskAttemptReport;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
 import org.apache.hadoop.security.Credentials;
@@ -87,7 +87,7 @@ public class ChildServiceDelegate {
     return task;
   }
 
-  public boolean statusUpdate(TaskAttemptId jobId, TaskReport taskReport)
+  public boolean statusUpdate(TaskAttemptId jobId, TaskAttemptReport taskReport)
       throws YarnRemoteException {
     StatusUpdateRequest request =
         recordFactory.newRecordInstance(StatusUpdateRequest.class);

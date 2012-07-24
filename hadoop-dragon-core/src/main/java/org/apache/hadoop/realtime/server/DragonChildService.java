@@ -65,7 +65,7 @@ import org.apache.hadoop.realtime.protocol.records.StatusUpdateRequest;
 import org.apache.hadoop.realtime.protocol.records.StatusUpdateResponse;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.records.TaskReport;
+import org.apache.hadoop.realtime.records.TaskAttemptReport;
 import org.apache.hadoop.realtime.security.authorize.DragonAMPolicyProvider;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -257,7 +257,7 @@ public class DragonChildService extends CompositeService implements
     public StatusUpdateResponse statusUpdate(StatusUpdateRequest request)
         throws YarnRemoteException {
       TaskAttemptId attemptId = request.getTaskAttemptId();
-      TaskReport report = request.getTaskReport();
+      TaskAttemptReport report = request.getTaskAttemptReport();
       LOG.info("Status update from " + attemptId.toString());
       taskHeartbeatHandler.receivedPing(attemptId);
       TaskAttemptStatus taskAttemptStatus = new TaskAttemptStatus();
@@ -267,7 +267,7 @@ public class DragonChildService extends CompositeService implements
       LOG.info("Progress of TaskAttempt " + attemptId + " is : "
           + report.getProgress());
 
-      taskAttemptStatus.stateString = report.getTaskState().toString();
+      taskAttemptStatus.stateString = report.getStateString();
 
       taskAttemptStatus.counters = report.getCounters();
 
