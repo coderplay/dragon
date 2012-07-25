@@ -18,53 +18,28 @@
 package org.apache.hadoop.realtime.event;
 
 import java.io.IOException;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.realtime.job.TaskAttempt;
+import java.util.concurrent.TimeUnit;
 
 /**
- * An {@link EventProducer} that continuously produce {@link Event}
- * from {@link SequenceFile}s by reading key, value pairs.
  */
-public class SequenceFileEventProduer<KEY, VALUE> implements
-    EventProducer<KEY, VALUE> {
-
-  private SequenceFile.Reader in;
-  protected Configuration conf;
-
-  public SequenceFileEventProduer(Configuration conf, Path path)
-      throws IOException {
-    FileSystem fs = path.getFileSystem(conf);
-
-  }
-
-  public SequenceFileEventProduer(Configuration conf, Path path, long offset)
-      throws IOException {
-
-  }
+public class DirectEventEmitter<KEY, VALUE> implements EventEmitter<KEY, VALUE> {
 
   @Override
-  public void initialize(TaskAttempt context) throws IOException,
+  public boolean emitEvent(Event<KEY, VALUE> event) throws IOException,
       InterruptedException {
-
-  }
-
-  @Override
-  public boolean nextEvent() throws IOException, InterruptedException {
     return false;
   }
 
   @Override
-  public Event<KEY, VALUE> getCurrentEvent() throws IOException,
-      InterruptedException {
-    return null;
+  public boolean
+      emitEvent(Event<KEY, VALUE> event, long timeout, TimeUnit unit)
+          throws IOException, InterruptedException {
+    return false;
   }
 
   @Override
   public void close() throws IOException {
+
   }
 
 }

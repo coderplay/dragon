@@ -22,6 +22,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.Path;
+
 /**
  * A watch service that <em>watches</em> registered objects for changes and
  * events. For example a file manager may use a watch service to monitor a
@@ -119,6 +121,14 @@ public interface WatchService
      */
     @Override
     void close() throws IOException;
+    
+    
+    /**
+     * Register the given object with this watch service
+     */
+    WatchKey register(Path path, WatchEvent.Kind<?>... events)
+        throws IOException;
+
 
     /**
      * Retrieves and removes the next watch key, or {@code null} if none are
