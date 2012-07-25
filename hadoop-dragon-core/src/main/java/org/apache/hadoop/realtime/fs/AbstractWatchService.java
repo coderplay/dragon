@@ -52,12 +52,6 @@ abstract class AbstractWatchService implements WatchService {
   protected AbstractWatchService() {
   }
 
-  /**
-   * Register the given object with this watch service
-   */
-  abstract WatchKey register(Path path, WatchEvent.Kind<?>... events)
-      throws IOException;
-
   // used by AbstractWatchKey to enqueue key
   final void enqueueKey(WatchKey key) {
     pendingKeys.offer(key);
