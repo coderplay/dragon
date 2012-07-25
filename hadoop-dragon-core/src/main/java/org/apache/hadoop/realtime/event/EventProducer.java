@@ -2,8 +2,9 @@ package org.apache.hadoop.realtime.event;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.realtime.job.TaskAttempt;
+import org.apache.hadoop.realtime.records.ChildExecutionContext;
 
 /**
  * 
@@ -17,7 +18,8 @@ public interface EventProducer<KEY, VALUE> extends Closeable {
    * @throws IOException
    * @throws InterruptedException
    */
-  public void initialize(TaskAttempt context) throws IOException, InterruptedException;
+  public void initialize(ChildExecutionContext context) throws IOException,
+      InterruptedException;
 
   /**
    * Read the next event.
@@ -26,20 +28,20 @@ public interface EventProducer<KEY, VALUE> extends Closeable {
    * @throws IOException
    * @throws InterruptedException
    */
-  public boolean nextEvent() throws IOException, InterruptedException;
+  public Event<KEY, VALUE> pollEvent() throws IOException, InterruptedException;
 
   /**
-   * Get the current event.
+   * Read the next event.
    * 
-   * @return the object that was read
+   * @return true if a key/value pair was read
    * @throws IOException
    * @throws InterruptedException
    */
-  public Event<KEY,VALUE> getCurrentEvent() throws IOException, InterruptedException;
-
+  public Event<KEY, VALUE> pollEvent(long timeout, TimeUnit unit)
+      throws IOException, InterruptedException;
 
   /**
-   * Close the record reader.
+   * Close the event producer.
    */
   public void close() throws IOException;
 }

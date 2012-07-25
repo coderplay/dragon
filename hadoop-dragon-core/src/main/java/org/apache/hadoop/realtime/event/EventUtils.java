@@ -18,8 +18,7 @@
 package org.apache.hadoop.realtime.event;
 
 /**
- * Receives and persists the terminal {@link Event}
  */
-public interface EventSink {
-  public void sunk();
+public class EventUtils {
+
 }

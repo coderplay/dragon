@@ -17,9 +17,26 @@
  */
 package org.apache.hadoop.realtime.event;
 
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
+
 /**
- * Receives and persists the terminal {@link Event}
  */
-public interface EventSource {
-  public void nextEvent();
+public interface EventEmitter<KEY, VALUE> {
+  /**
+   * Generate an output event
+   */
+  public boolean emitEvent(Event<KEY, VALUE> event) throws IOException,
+      InterruptedException;
+
+  /**
+   * Generate an output event
+   */
+  public boolean emitEvent(Event<KEY, VALUE> event, long timeout,
+      TimeUnit unit) throws IOException, InterruptedException;
+
+  /**
+   * Close the event emitter.
+   */
+  public void close() throws IOException;
 }
