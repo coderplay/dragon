@@ -295,8 +295,7 @@ public class JobHistoryEventHandlerTest {
     ApplicationAttemptId appAttemptId =
         BuilderUtils.newApplicationAttemptId(appId, 1);
     ContainerId containerId = BuilderUtils.newContainerId(appAttemptId, 1);
-    TaskId taskID = TaskId.forName("task_200707121733_0003_m_000005");
-    JobId jobId = DragonBuilderUtils.newJobId(appId, 1);
+    JobId jobId = JobId.newJobId(appId, 1);
     AppContext mockAppContext = mockAppContext(jobId);
   }
 }
@@ -324,10 +323,6 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
 
   @Override
   protected void closeEventWriter(JobId jobId) {
-  }
-
-  @Override
-  protected void copyJobDescriptionFile(final JobId jobId) throws IOException {
   }
 
   public EventWriter getEventWriter() {

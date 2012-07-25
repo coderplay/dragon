@@ -273,7 +273,6 @@ public class JobHistoryEventHandler extends AbstractService
       if (event.getHistoryEvent().getEventType() == EventType.JOB_INITED) {
         try {
           setupEventWriter(event.getJobId());
-          copyJobDescriptionFile(event.getJobId());
         } catch (IOException ioe) {
           LOG.error("Error JobHistoryEventHandler in handleEvent: " + event,
               ioe);
@@ -303,17 +302,6 @@ public class JobHistoryEventHandler extends AbstractService
         throw new YarnException(e);
       }
     }
-  }
-
-  /**
-   * copy job description file to job history directory
-   */
-  protected void copyJobDescriptionFile(final JobId jobId) throws IOException {
-    final Path jobDescriptionFilePath = JobHistoryUtils.getStagingJobDescriptionFile(stagingDirPath, jobId);
-    final Path historyDescriptionFilePath = JobHistoryUtils.getHistoryJobDescriptionFile(historyDirPath, jobId, attemptId);
-    final Configuration conf = getConfig();
-
-    FileUtil.copy(stagingDirFS, jobDescriptionFilePath, historyDirFS, historyDescriptionFilePath, true, conf);
   }
 
   /**
