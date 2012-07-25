@@ -18,6 +18,14 @@
 
 package org.apache.hadoop.realtime.records;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+/**
+ * Enum for map, reduce task types.
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public enum TaskType {
   MAP, REDUCE
 }

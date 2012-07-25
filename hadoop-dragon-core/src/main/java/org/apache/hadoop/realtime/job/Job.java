@@ -21,8 +21,12 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.realtime.DragonJobGraph;
-import org.apache.hadoop.realtime.records.*;
+import org.apache.hadoop.realtime.records.AMInfo;
+import org.apache.hadoop.realtime.records.Counters;
+import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.JobReport;
+import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.security.Credentials;
 
 /**
@@ -68,15 +72,6 @@ public interface Job {
    * @return the shared configuration object
    */
   public Configuration getConfiguration();
-  
-  
-  /**
-   * Return the job graph for the job
-   * 
-   * @return the graph describes job's task topology
-   * @return
-   */
-  public DragonJobGraph getJobGraph();
 
   /**
    * Get the reported username for this job.

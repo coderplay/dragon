@@ -19,12 +19,12 @@
 package org.apache.hadoop.realtime.util;
 
 import org.apache.hadoop.realtime.records.*;
-import org.apache.hadoop.yarn.proto.DragonProtos;
 import org.apache.hadoop.yarn.proto.DragonProtos.JobStateProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptCompletionEventStatusProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptStateProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskStateProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskTypeProto;
+import org.apache.hadoop.realtime.records.TaskType;
 
 public class DragonProtoUtils {
 
@@ -82,4 +82,5 @@ public class DragonProtoUtils {
   public static TaskTypeProto convertToProtoFormat(TaskType taskType) {
     return TaskTypeProto.valueOf(TASK_TYPE_PREFIX + taskType.name());
   }
+
 }

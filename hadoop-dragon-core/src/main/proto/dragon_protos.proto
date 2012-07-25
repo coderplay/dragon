@@ -36,7 +36,7 @@ enum TaskTypeProto {
 
 message TaskIdProto {
   optional JobIdProto job_id = 1;
-  optional int32 index = 2;
+  optional TaskTypeProto task_type = 2;
   optional int32 id = 3;
   optional TaskTypeProto task_type = 4;
 }
@@ -178,4 +178,5 @@ message ChildExecutionContextProto{
   optional TaskAttemptIdProto attempt_id = 1;
   optional int32 partition = 2;
   optional string user = 3;
+  optional TaskTypeProto task_type = 4;
 }

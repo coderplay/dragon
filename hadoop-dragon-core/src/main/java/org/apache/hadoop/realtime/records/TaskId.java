@@ -40,10 +40,6 @@ public abstract class TaskId implements Comparable<TaskId> {
    */
   public abstract JobId getJobId();
 
-  /**
-   * @return the topological index of the task in the task DAG
-   */
-  public abstract int getIndex();
 
   /**
    *
@@ -57,8 +53,6 @@ public abstract class TaskId implements Comparable<TaskId> {
   public abstract int getId();
 
   public abstract void setJobId(JobId jobId);
-
-  public abstract void setIndex(int index);
 
   public abstract void setTaskType(TaskType taskType);
 
@@ -93,7 +87,6 @@ public abstract class TaskId implements Comparable<TaskId> {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + getIndex();
     result = prime * result + getId();
     result = prime * result + getJobId().hashCode();
     return result;
@@ -108,8 +101,6 @@ public abstract class TaskId implements Comparable<TaskId> {
     if (getClass() != obj.getClass())
       return false;
     TaskId other = (TaskId) obj;
-    if (getIndex() != other.getIndex())
-      return false;
     if (getId() != other.getId())
       return false;
     if (!getJobId().equals(other.getJobId()))
@@ -122,9 +113,6 @@ public abstract class TaskId implements Comparable<TaskId> {
     int jobIdComp = this.getJobId().compareTo(other.getJobId());
     if (jobIdComp != 0)
       return jobIdComp;
-    int taskIndexComp = this.getIndex() - other.getIndex();
-    if (taskIndexComp != 0)
-      return taskIndexComp;
     return this.getId() - other.getId();
   }
 }
