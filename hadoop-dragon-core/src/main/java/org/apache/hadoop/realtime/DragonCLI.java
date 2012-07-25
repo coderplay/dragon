@@ -108,31 +108,6 @@ public final class DragonCLI extends Configured implements Tool {
     }
   }
 
-  /** Construct a JobId object from given string */
-  private JobId jobIdForName(String name) throws IllegalArgumentException {
-    if (name == null)
-      return null;
-    try {
-      String[] parts = name.split("_");
-      if (parts.length == 3) {
-        if (parts[0].equals("job")) {
-          long clusterTimeStamp = Long.parseLong(parts[1]);
-          int id = Integer.parseInt(parts[2]);
-          JobId jobId = Records.newRecord(JobId.class);
-          jobId.setId(id);
-          ApplicationId appId = Records.newRecord(ApplicationId.class);
-          appId.setId(id);
-          appId.setClusterTimestamp(clusterTimeStamp);
-          jobId.setAppId(appId);
-          return jobId;
-        }
-      }
-    } catch (Exception ex) {// fall below
-    }
-    throw new IllegalArgumentException("JobId string : " + name
-        + " is not properly formed");
-  }
-
   @Override
   public int run(String[] args) throws Exception {
     int exitCode = -1;
@@ -293,7 +268,7 @@ public final class DragonCLI extends Configured implements Tool {
         System.out.println("Created job " + job.getID());
         exitCode = 0;
       } else if (getStatus) {
-        JobId jobId = jobIdForName(jobid);
+        JobId jobId = JobId.parseJobId(jobid);
         JobReport report = service.getJobReport(jobId);
         if (report == null) {
           System.out.println("Could not find job " + jobid);
@@ -303,7 +278,7 @@ public final class DragonCLI extends Configured implements Tool {
       } else if (getCounter) {
 
       } else if (killJob) {
-        JobId jobId = jobIdForName(jobid);
+        JobId jobId = JobId.parseJobId(jobid);
         JobReport report = service.getJobReport(jobId);
         if (report == null) {
           System.out.println("Could not find job " + jobid);
@@ -313,7 +288,7 @@ public final class DragonCLI extends Configured implements Tool {
           exitCode = 0;
         }
       } else if (setJobPriority) {
-        JobId jobId = jobIdForName(jobid);
+        JobId jobId = JobId.parseJobId(jobid);
         JobReport report = service.getJobReport(jobId);
         if (report == null) {
           System.out.println("Could not find job " + jobid);

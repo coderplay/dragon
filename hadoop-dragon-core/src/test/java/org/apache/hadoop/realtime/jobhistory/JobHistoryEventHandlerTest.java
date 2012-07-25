@@ -325,10 +325,6 @@ class JHEvenHandlerForTest extends JobHistoryEventHandler {
   protected void closeEventWriter(JobId jobId) {
   }
 
-  @Override
-  protected void copyJobDescriptionFile(final JobId jobId) throws IOException {
-  }
-
   public EventWriter getEventWriter() {
     return this.eventWriter;
   }
