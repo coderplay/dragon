@@ -71,7 +71,7 @@ class DefaultWatchService extends AbstractWatchService implements Configurable {
    * Register the given file with this watch service
    */
   @Override
-  WatchKey register(final Path path, WatchEvent.Kind<?>... events)
+  public WatchKey register(final Path path, WatchEvent.Kind<?>... events)
       throws IOException {
     // check events - CCE will be thrown if there are invalid elements
     if (events.length == 0)
@@ -265,7 +265,7 @@ class DefaultWatchService extends AbstractWatchService implements Configurable {
           }
         };
         this.poller =
-            scheduledExecutor.scheduleAtFixedRate(thunk, period, period,
+            scheduledExecutor.scheduleAtFixedRate(thunk, 0, period,
                 TimeUnit.MILLISECONDS);
       }
     }
