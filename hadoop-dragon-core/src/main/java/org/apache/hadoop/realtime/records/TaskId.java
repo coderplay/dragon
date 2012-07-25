@@ -18,7 +18,14 @@
 
 package org.apache.hadoop.realtime.records;
 
+import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
+
 import java.text.NumberFormat;
+
+import static org.apache.hadoop.yarn.util.StringHelper._join;
 
 /**
  * <p>
@@ -42,19 +49,22 @@ public abstract class TaskId implements Comparable<TaskId> {
 
 
   /**
+   *
+   * @return
+   */
+  public abstract TaskType getTaskType();
+
+  /**
    * @return the task number.
    */
   public abstract int getId();
 
   public abstract void setJobId(JobId jobId);
 
-  public abstract void setId(int id);
-  
-  public abstract TaskType getTaskType();
-  
   public abstract void setTaskType(TaskType taskType);
 
-  public static final char SEPARATOR = '_';
+  public abstract void setId(int id);
+
   public static final String TASK = "task";
 
   static final ThreadLocal<NumberFormat> taskIndexFormat =
@@ -103,20 +113,6 @@ public abstract class TaskId implements Comparable<TaskId> {
       return false;
     return true;
   }
-      
-  @Override
-  public String toString() {
-    StringBuilder builder = new StringBuilder(TASK);
-    JobId jobId = getJobId();
-    builder.append(SEPARATOR).append(jobId.getAppId().getClusterTimestamp());
-    builder.append(SEPARATOR).append(
-        JobId.jobIdFormat.get().format(jobId.getAppId().getId()));
-    builder.append(SEPARATOR);
-    builder.append(taskIdFormat.get().format(getId()));
-    builder.append(SEPARATOR);
-    builder.append(getTaskType());
-    return builder.toString();
-  }
 
   @Override
   public int compareTo(TaskId other) {
@@ -126,7 +122,42 @@ public abstract class TaskId implements Comparable<TaskId> {
     return this.getId() - other.getId();
   }
 
-  public static TaskId forName(String taskName) {
-    return null;  //To change body of created methods use File | Settings | File Templates.
+  @Override
+  public String toString() {
+    return _join(TASK, getJobId().getAppId().getClusterTimestamp(),
+        getJobId().getAppId().getId(), getJobId().getId(),
+        getTaskType(), getId());
   }
+
+  public static TaskId parseTaskId(String str) {
+    if (str == null)
+      return null;
+    try {
+      String[] parts = str.split(Character.toString(JobId.SEPARATOR));
+      if (parts.length == 6 && parts[0].equals(TaskId.TASK)) {
+        long clusterTimeStamp = Long.parseLong(parts[1]);
+        int appIdInteger = Integer.parseInt(parts[2]);
+        int jobIdInteger = Integer.parseInt(parts[3]);
+        TaskType taskType = TaskType.valueOf(parts[4]);
+        int taskIdInteger = Integer.parseInt(parts[5]);
+        ApplicationId app =
+            BuilderUtils.newApplicationId(clusterTimeStamp, appIdInteger);
+        JobId jobId = JobId.newJobId(app, jobIdInteger);
+        return newTaskId(jobId, taskIdInteger, taskType);
+      }
+    } catch (Exception ex) {
+      // fall through
+    }
+    throw new IllegalArgumentException("TaskId string : " + str
+        + " is not properly formed");
+  }
+
+  public static TaskId newTaskId(JobId jobId, int id,TaskType taskType) {
+    TaskId taskId = Records.newRecord(TaskId.class);
+    taskId.setJobId(jobId);
+    taskId.setId(id);
+    taskId.setTaskType(taskType);
+    return taskId;
+  }
+
 }

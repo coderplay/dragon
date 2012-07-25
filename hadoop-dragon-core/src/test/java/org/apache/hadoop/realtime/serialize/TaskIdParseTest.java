@@ -24,14 +24,13 @@ import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskType;
-import org.apache.hadoop.realtime.util.DragonBuilderUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class DragonBuilderUtilsTest {
+public class TaskIdParseTest {
 
   // application id = job id
   private static final int jobId = 1;
@@ -39,24 +38,24 @@ public class DragonBuilderUtilsTest {
   private static final TaskType taskType = TaskType.valueOf("MAP");
   private static final int attemptId = 3;
 
-  private ApplicationId app;
+  private ApplicationId appId;
 
   @Before
   public void setUp() {
-    app = BuilderUtils.newApplicationId(System.currentTimeMillis(), jobId);
+    appId = BuilderUtils.newApplicationId(System.currentTimeMillis(), jobId);
   }
 
   @Test
   public void testJobId() {
-    JobId job1 = DragonBuilderUtils.newJobId(app, jobId);
+    JobId job1 = JobId.newJobId(appId, jobId);
     assertEquals(job1.getId(), jobId);
 
-    JobId job2 = DragonBuilderUtils.newJobId(job1.toString());
+    JobId job2 = JobId.parseJobId(job1.toString());
     assertEquals(job2.getId(), jobId);
 
     boolean exception = false;
     try {
-      DragonBuilderUtils.newJobId("bad format");
+      JobId.parseJobId("bad format");
     } catch (IllegalArgumentException ignore) {
       exception = true;
     }
@@ -65,16 +64,16 @@ public class DragonBuilderUtilsTest {
 
   @Test
   public void testTaskId() {
-    JobId job = DragonBuilderUtils.newJobId(app, jobId);
-    TaskId task1 = DragonBuilderUtils.newTaskId(job, taskId,taskType);
+    JobId job = JobId.newJobId(appId, jobId);
+    TaskId task1 = TaskId.newTaskId(job, taskId,taskType);
     assertEquals(task1.getId(), taskId);
 
-    TaskId task2 = DragonBuilderUtils.newTaskId(task1.toString());
+    TaskId task2 = TaskId.parseTaskId(task1.toString());
     assertEquals(task2.getId(), taskId);
 
     boolean exception = false;
     try {
-      DragonBuilderUtils.newTaskId("bad format");
+      TaskId.parseTaskId("bad format");
     } catch (IllegalArgumentException ignore) {
       exception = true;
     }
@@ -83,20 +82,20 @@ public class DragonBuilderUtilsTest {
 
   @Test
   public void testTaskAttemptId() {
-    JobId job = DragonBuilderUtils.newJobId(app, jobId);
-    TaskId task = DragonBuilderUtils.newTaskId(job, taskId,taskType);
+    JobId job = JobId.newJobId(appId, jobId);
+    TaskId task = TaskId.newTaskId(job, taskId,taskType);
     TaskAttemptId attempt1 =
-        DragonBuilderUtils.newTaskAttemptId(task, attemptId);
+        TaskAttemptId.newTaskAttemptId(task, attemptId);
     assertEquals(attempt1.getId(), attemptId);
 
     System.out.println(attempt1.toString());
     TaskAttemptId attempt2 =
-        DragonBuilderUtils.newTaskAttemptId(attempt1.toString());
+        TaskAttemptId.parseTaskAttemptId(attempt1.toString());
     assertEquals(attempt2.getId(), attemptId);
 
     boolean exception = false;
     try {
-      DragonBuilderUtils.newTaskAttemptId("bad format");
+      TaskAttemptId.parseTaskAttemptId("bad format");
     } catch (IllegalArgumentException ignore) {
       exception = true;
     }
@@ -105,19 +104,19 @@ public class DragonBuilderUtilsTest {
   
   @Test
   public void testContainerId() {
-    JobId job = DragonBuilderUtils.newJobId(app, jobId);
-    TaskId task = DragonBuilderUtils.newTaskId(job, taskId,taskType);
+    JobId job = JobId.newJobId(appId, jobId);
+    TaskId task = TaskId.newTaskId(job, taskId,taskType);
     TaskAttemptId attempt1 =
-        DragonBuilderUtils.newTaskAttemptId(task, attemptId);
+        TaskAttemptId.newTaskAttemptId(task, attemptId);
     assertEquals(attempt1.getId(), attemptId);
 
     TaskAttemptId attempt2 =
-        DragonBuilderUtils.newTaskAttemptId(attempt1.toString());
+        TaskAttemptId.parseTaskAttemptId(attempt1.toString());
     assertEquals(attempt2.getId(), attemptId);
 
     boolean exception = false;
     try {
-      DragonBuilderUtils.newTaskAttemptId("bad format");
+      TaskAttemptId.parseTaskAttemptId("bad format");
     } catch (IllegalArgumentException ignore) {
       exception = true;
     }
@@ -126,11 +125,11 @@ public class DragonBuilderUtilsTest {
 
   @After
   public void tearDown() {
-    app = null;
+    appId = null;
   }
   
   public static void main(String args[]){
-    DragonBuilderUtilsTest a = new DragonBuilderUtilsTest();
+    TaskIdParseTest a = new TaskIdParseTest();
     a.setUp();
     a.testTaskAttemptId();
   }

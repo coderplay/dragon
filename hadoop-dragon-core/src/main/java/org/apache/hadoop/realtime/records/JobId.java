@@ -21,6 +21,10 @@ package org.apache.hadoop.realtime.records;
 import java.text.NumberFormat;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.util.BuilderUtils;
+import org.apache.hadoop.yarn.util.Records;
+
+import static org.apache.hadoop.yarn.util.StringHelper._join;
 
 /**
  * <p><code>JobId</code> represents the <em>globally unique</em> 
@@ -66,14 +70,37 @@ public abstract class JobId implements Comparable<JobId> {
         }
       };
 
+  public static JobId parseJobId(String str) {
+    if (str == null)
+      return null;
+    try {
+      String[] parts = str.split(Character.toString(JobId.SEPARATOR));
+      if (parts.length == 4 && parts[0].equals(JobId.JOB)) {
+        long clusterTimeStamp = Long.parseLong(parts[1]);
+        int appIdInteger = Integer.parseInt(parts[2]);
+        int jobIdInteger = Integer.parseInt(parts[3]);
+        ApplicationId appId =
+            BuilderUtils.newApplicationId(clusterTimeStamp, appIdInteger);
+        return newJobId(appId, jobIdInteger);
+      }
+    } catch (Exception ex) {
+      // fall through
+    }
+    throw new IllegalArgumentException("JobId string : " + str
+        + " is not properly formed");
+  }
+
+  public static JobId newJobId(ApplicationId appId, int id) {
+    JobId jobId = Records.newRecord(JobId.class);
+    jobId.setAppId(appId);
+    jobId.setId(id);
+    return jobId;
+  }
+
   @Override
   public String toString() {
-    StringBuilder builder = new StringBuilder(JOB);
-    builder.append(SEPARATOR);
-    builder.append(getAppId().getClusterTimestamp());
-    builder.append(SEPARATOR);
-    builder.append(jobIdFormat.get().format(getId()));
-    return builder.toString();
+    return _join(JOB,
+        getAppId().getClusterTimestamp(), getAppId().getId(), getId());
   }
 
   @Override
