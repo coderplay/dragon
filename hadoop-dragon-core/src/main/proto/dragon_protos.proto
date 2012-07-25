@@ -33,6 +33,7 @@ enum TaskTypeProto {
   TT_REDUCE = 2;
 }
 
+
 message TaskIdProto {
   optional JobIdProto job_id = 1;
   optional int32 index = 2;
