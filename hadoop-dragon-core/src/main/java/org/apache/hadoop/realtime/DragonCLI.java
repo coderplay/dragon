@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.realtime.conf.DragonConfiguration;
-import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.JobPriority;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
@@ -333,7 +332,7 @@ public final class DragonCLI extends Configured implements Tool {
       } else if (displayTasks) {
 
       } else if (killTask) {
-        final TaskAttemptId taskAttemptId = DragonApps.toTaskAttemptID(taskid);
+        final TaskAttemptId taskAttemptId = TaskAttemptId.parseTaskAttemptId(taskid);
         final JobReport report =
             service.getJobReport(taskAttemptId.getTaskId().getJobId());
         if (report == null) {
@@ -346,7 +345,7 @@ public final class DragonCLI extends Configured implements Tool {
           exitCode = -1;
         }
       } else if (failTask) {
-        final TaskAttemptId taskAttemptId = DragonApps.toTaskAttemptID(taskid);
+        final TaskAttemptId taskAttemptId = TaskAttemptId.parseTaskAttemptId(taskid);
         final JobReport report =
             service.getJobReport(taskAttemptId.getTaskId().getJobId());
         if (report == null) {

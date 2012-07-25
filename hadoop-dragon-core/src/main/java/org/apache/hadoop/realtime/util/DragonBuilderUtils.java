@@ -21,7 +21,6 @@ package org.apache.hadoop.realtime.util;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import org.apache.hadoop.realtime.DragonApps;
 import org.apache.hadoop.realtime.job.TaskAttempt;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
@@ -31,104 +30,12 @@ import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.JobReport;
 import org.apache.hadoop.realtime.records.JobState;
-import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.records.TaskId;
-import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 public class DragonBuilderUtils {
-
-  public static JobId newJobId(ApplicationId appId, int id) {
-    JobId jobId = Records.newRecord(JobId.class);
-    jobId.setAppId(appId);
-    jobId.setId(id);
-    return jobId;
-  }
-  
-  public static JobId newJobId(String str) throws IllegalArgumentException {
-    if (str == null)
-      return null;
-    try {
-      String[] parts = str.split(Character.toString(JobId.SEPARATOR));
-      if (parts.length == 3 && parts[0].equals(JobId.JOB)) {
-        long clusterTimeStamp = Long.parseLong(parts[1]);
-        int id = Integer.parseInt(parts[2]);
-        ApplicationId appId =
-            BuilderUtils.newApplicationId(clusterTimeStamp, id);
-        return newJobId(appId, id);
-      }
-    } catch (Exception ex) {
-      // fall through
-    }
-    throw new IllegalArgumentException("TaskAttemptId string : " + str
-        + " is not properly formed");
-  }
-
-  public static TaskId newTaskId(JobId jobId, int id,TaskType taskType) {
-    TaskId taskId = Records.newRecord(TaskId.class);
-    taskId.setJobId(jobId);
-    taskId.setId(id);
-    taskId.setTaskType(taskType);
-    return taskId;
-  }
-  
-  public static TaskId newTaskId(String str) throws IllegalArgumentException {
-    if (str == null)
-      return null;
-    try {
-      String[] parts = str.split(Character.toString(JobId.SEPARATOR));
-      if (parts.length == 5 && parts[0].equals(TaskId.TASK)) {
-        long clusterTimeStamp = Long.parseLong(parts[1]);
-        int jobId = Integer.parseInt(parts[2]);
-        int taskId = Integer.parseInt(parts[3]);
-        TaskType taskType = TaskType.valueOf(parts[4]);
-        ApplicationId app =
-            BuilderUtils.newApplicationId(clusterTimeStamp, jobId);
-        JobId job = newJobId(app, jobId);
-        return newTaskId(job, taskId,taskType);
-      }
-    } catch (Exception ex) {
-      // fall through
-    }
-    throw new IllegalArgumentException("TaskId string : " + str
-        + " is not properly formed");
-  }
-
-  public static TaskAttemptId newTaskAttemptId(TaskId taskId, int attemptId) {
-    TaskAttemptId taskAttemptId = Records.newRecord(TaskAttemptId.class);
-    taskAttemptId.setTaskId(taskId);
-    taskAttemptId.setId(attemptId);
-    return taskAttemptId;
-  }
-
-  public static TaskAttemptId newTaskAttemptId(String str)
-      throws IllegalArgumentException {
-    if (str == null)
-      return null;
-    try {
-      String[] parts = str.split(Character.toString(JobId.SEPARATOR));
-      if (parts.length == 6 && parts[0].equals(DragonApps.ATTEMPT)) {
-        long clusterTimeStamp = Long.parseLong(parts[1]);
-        int jobId = Integer.parseInt(parts[2]);
-        int taskId = Integer.parseInt(parts[3]);
-        TaskType taskType = TaskType.valueOf(parts[4]);
-        int attemptId = Integer.parseInt(parts[5]);
-        ApplicationId app =
-            BuilderUtils.newApplicationId(clusterTimeStamp, jobId);
-        JobId job = newJobId(app, jobId);
-        TaskId task = newTaskId(job, taskId,taskType);
-        return newTaskAttemptId(task, attemptId);
-      }
-    } catch (Exception ex) {
-      // fall through
-    }
-    throw new IllegalArgumentException("TaskAttemptId string : " + str
-        + " is not properly formed");
-  }
 
   public static JobReport newJobReport(JobId jobId, String jobName,
       String userName, JobState state, long submitTime, long startTime,

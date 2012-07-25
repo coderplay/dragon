@@ -18,16 +18,11 @@
 
 package org.apache.hadoop.realtime.records;
 
-import com.google.common.base.Splitter;
-import org.apache.hadoop.realtime.records.impl.pb.JobIdPBImpl;
-import org.apache.hadoop.realtime.records.impl.pb.TaskAttemptIdPBImpl;
-import org.apache.hadoop.realtime.records.impl.pb.TaskIdPBImpl;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationIdPBImpl;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
-import java.util.Iterator;
+import static org.apache.hadoop.yarn.util.StringHelper._join;
 
 /**
  * <p>
@@ -43,6 +38,9 @@ import java.util.Iterator;
  * </p>
  */
 public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
+
+  public static final String ATTEMPT = "attempt";
+
   /**
    * @return the associated TaskId.
    */
@@ -91,5 +89,49 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
     } else {
       return taskIdComp;
     }
+  }
+
+  @Override
+  public String toString() {
+    return _join(ATTEMPT,
+        getTaskId().getJobId().getAppId().getClusterTimestamp(),
+        getTaskId().getJobId().getAppId().getId(),
+        getTaskId().getJobId().getId(),
+        getTaskId().getTaskType(),
+        getTaskId().getId(),
+        getId());
+  }
+
+  public static TaskAttemptId newTaskAttemptId(TaskId taskId, int attemptId) {
+    TaskAttemptId taskAttemptId = Records.newRecord(TaskAttemptId.class);
+    taskAttemptId.setTaskId(taskId);
+    taskAttemptId.setId(attemptId);
+    return taskAttemptId;
+  }
+
+  public static TaskAttemptId parseTaskAttemptId(String str)
+      throws IllegalArgumentException {
+    if (str == null)
+      return null;
+    try {
+      String[] parts = str.split(Character.toString(JobId.SEPARATOR));
+      if (parts.length == 7 && parts[0].equals(ATTEMPT)) {
+        long clusterTimeStamp = Long.parseLong(parts[1]);
+        int appIdInteger = Integer.parseInt(parts[2]);
+        int jobIdInteger = Integer.parseInt(parts[3]);
+        TaskType taskType = TaskType.valueOf(parts[4]);
+        int taskIdInteger = Integer.parseInt(parts[5]);
+        int attemptIdInteger = Integer.parseInt(parts[6]);
+        ApplicationId appId =
+            BuilderUtils.newApplicationId(clusterTimeStamp, appIdInteger);
+        JobId jobId = JobId.newJobId(appId, jobIdInteger);
+        TaskId taskId = TaskId.newTaskId(jobId, taskIdInteger, taskType);
+        return newTaskAttemptId(taskId, attemptIdInteger);
+      }
+    } catch (Exception ex) {
+      // fall through
+    }
+    throw new IllegalArgumentException("TaskAttemptId string : " + str
+        + " is not properly formed");
   }
 }

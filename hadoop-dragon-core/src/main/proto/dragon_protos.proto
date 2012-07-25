@@ -38,7 +38,6 @@ message TaskIdProto {
   optional JobIdProto job_id = 1;
   optional TaskTypeProto task_type = 2;
   optional int32 id = 3;
-  optional TaskTypeProto task_type = 4;
 }
 
 message TaskAttemptIdProto {
