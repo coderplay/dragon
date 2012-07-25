@@ -15,11 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.event;
+package org.apache.hadoop.realtime.child;
+
+import org.apache.hadoop.realtime.records.TaskType;
 
 /**
- * Receives and persists the terminal {@link Event}
  */
-public interface EventSource {
-  public void nextEvent();
+public final class ChildExecutorFactory {
+  public static ChildExecutor newExecutor(TaskType type) {
+    if (type == TaskType.MAP)
+      return new MapChildExecutor();
+    else if (type == TaskType.MAP)
+      return new ReduceChildExecutor();
+    else
+      return null; // or throw an exception?
+  }
 }

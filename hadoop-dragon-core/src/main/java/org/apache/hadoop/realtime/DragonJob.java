@@ -29,6 +29,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.conf.DragonConfiguration;
+import org.apache.hadoop.realtime.mr.Mapper;
+import org.apache.hadoop.realtime.mr.Reducer;
 import org.apache.hadoop.realtime.records.CounterGroup;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
@@ -322,11 +324,25 @@ public class DragonJob {
     return null;
   }
   
-  public void setMapper(Class<?> clazz){
-    conf.setClass(DragonJobConfig.JOB_MAP_CLASS, clazz, Object.class);
+  /**
+   * Set the {@link Mapper} for the job.
+   * @param cls the <code>Mapper</code> to use
+   * @throws IllegalStateException if the job is submitted
+   */
+  public void setMapperClass(Class<? extends Mapper> clazz)
+      throws IllegalStateException {
+    ensureState(JobState.NEW);
+    conf.setClass(DragonJobConfig.JOB_MAP_CLASS, clazz, Mapper.class);
   }
-  
-  public void setReducer(Class<?> clazz){
-    conf.setClass(DragonJobConfig.JOB_REDUCE_CLASS, clazz, Object.class);
+
+  /**
+   * Set the {@link Reducer} for the job.
+   * @param cls the <code>Reducer</code> to use
+   * @throws IllegalStateException if the job is submitted
+   */
+  public void setReducerClass(Class<? extends Reducer> clazz)
+      throws IllegalStateException {
+    ensureState(JobState.NEW);
+    conf.setClass(DragonJobConfig.JOB_REDUCE_CLASS, clazz, Reducer.class);
   }
 }

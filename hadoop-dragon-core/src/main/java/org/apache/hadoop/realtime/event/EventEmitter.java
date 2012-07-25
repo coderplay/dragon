@@ -15,38 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.dag;
+package org.apache.hadoop.realtime.event;
 
-import java.io.Serializable;
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
- * An internal view of edges from a {@link DirectedAcyclicGraph}
  */
-class InternalEdge<V> implements Serializable {
-  private static final long serialVersionUID = 1917792937475311485L;
-
-  V source;
-  V target;
-
-  InternalEdge(V source, V target) {
-    this.source = source;
-    this.target = target;
-  }
-  
+public interface EventEmitter<KEY, VALUE> {
   /**
-   * Get the source vertex of this edge.
-   * @return the source vertex of this edge.
+   * Generate an output event
    */
-  public V getSource() {
-    return source;
-  }
+  public boolean emitEvent(Event<KEY, VALUE> event) throws IOException,
+      InterruptedException;
 
   /**
-   * Get the target vertex of this edge.
-   * @return the target vertex of this edge.
+   * Generate an output event
    */
-  public V getTarget() {
-    return target;
-  }
+  public boolean emitEvent(Event<KEY, VALUE> event, long timeout,
+      TimeUnit unit) throws IOException, InterruptedException;
 
+  /**
+   * Close the event emitter.
+   */
+  public void close() throws IOException;
 }

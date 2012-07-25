@@ -15,11 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.event;
+
+package org.apache.hadoop.realtime.mr;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.realtime.child.Context;
 
 /**
- * Receives and persists the terminal {@link Event}
+ * The context that is given to the {@link Mapper}.
+ * @param <KEYIN> the key input type to the Mapper
+ * @param <VALUEIN> the value input type to the Mapper
+ * @param <KEYOUT> the key output type from the Mapper
+ * @param <VALUEOUT> the value output type from the Mapper
  */
-public interface EventSink {
-  public void sunk();
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public interface MapContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> 
+  extends Context<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
+  
 }
+     

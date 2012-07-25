@@ -292,11 +292,13 @@ public class DragonJobConfig {
   public static final int DEFAULT_JOB_HISTORY_USE_BATCHED_FLUSH_QUEUE_SIZE_THRESHOLD =
       50;
   
-  public static final String JOB_MAP_CLASS = "map.class";
+  public static final String JOB_MAP_CLASS = "dragon.map.class";
 
-  public static final String JOB_REDUCE_CLASS = "reduce.class";
+  public static final String JOB_REDUCE_CLASS = "dragon.reduce.class";
   
-  public static final String MAP_PARALLELISM = "map.parallelism";
+  public static final String JOB_OUTPUT_DIR = "dragon.output.dir";
+  
+  public static final String MAP_PARALLELISM = "dragon.map.tasks";
 
-  public static final String REDUCE_PARALLELISM = "reduce.parallelism";
+  public static final String REDUCE_PARALLELISM = "dragon.reduce.tasks";
 }
