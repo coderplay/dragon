@@ -15,30 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.dag;
+package org.apache.hadoop.realtime.event;
 
 /**
- * Region is an *inclusive* range of indices. Esthetically displeasing, but
- * convenient for our purposes.
  */
-public class Region {
+public class EventUtils {
 
-  public final int start;
-  public final int finish;
-
-  public Region(int start, int finish) {
-    if (start > finish) {
-      throw new IllegalArgumentException("(start > finish): invariant broken");
-    }
-    this.start = start;
-    this.finish = finish;
-  }
-
-  public int getSize() {
-    return (finish - start) + 1;
-  }
-
-  public boolean isIn(int index) {
-    return (index >= start) && (index <= finish);
-  }
 }

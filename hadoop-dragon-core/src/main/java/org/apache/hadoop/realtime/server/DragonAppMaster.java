@@ -148,7 +148,7 @@ public class DragonAppMaster extends CompositeService {
         appAttemptId.getAttemptId());
 
     jobId =
-        DragonBuilderUtils.newJobId(appAttemptId.getApplicationId(),
+        JobId.newJobId(appAttemptId.getApplicationId(),
             appAttemptId.getApplicationId().getId());
 
     // service to hand out event

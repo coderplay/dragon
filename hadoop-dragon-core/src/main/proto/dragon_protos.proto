@@ -28,6 +28,12 @@ message JobIdProto {
   optional int32 id = 2;
 }
 
+enum TaskTypeProto {
+  TT_MAP = 1;
+  TT_REDUCE = 2;
+}
+
+
 message TaskIdProto {
   optional JobIdProto job_id = 1;
   optional TaskTypeProto task_type = 2;
@@ -156,11 +162,6 @@ enum TaskAttemptCompletionEventStatusProto {
   TACE_KILLED = 2;
   TACE_OBSOLETE = 3;
   TACE_TIPFAILED = 4;
-}
-
-enum TaskTypeProto {
-  MAP = 1;
-  REDUCE = 2;
 }
 
 message TaskAttemptCompletionEventProto {

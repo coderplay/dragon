@@ -134,7 +134,7 @@ public class DragonJobRunner implements DragonJobService {
    * <li>
    * Checking the first vertex has specified input data path or not</li>
    * <li>
-   * Computing the {@link InputSplit}s for the job.</li>
+   * Computing the InputSplit s for the job.</li>
    * <li>
    * Fetching a new application id from resource manager</li>
    * <li>
@@ -444,9 +444,8 @@ public class DragonJobRunner implements DragonJobService {
   @Override
   public boolean killTask(TaskAttemptId taskId, boolean shouldFail)
       throws IOException, InterruptedException {
-    clientCache.getClient(taskId.getTaskId().getJobId()).killTask(taskId,
+    return clientCache.getClient(taskId.getTaskId().getJobId()).killTask(taskId,
         shouldFail);
-    return false;
   }
 
   @Override

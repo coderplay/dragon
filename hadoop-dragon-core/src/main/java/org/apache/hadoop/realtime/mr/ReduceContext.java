@@ -15,31 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.realtime.mr;
 
-package org.apache.hadoop.realtime.dag;
-
-import java.io.Serializable;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.realtime.child.Context;
 
 /**
- * An {@link EdgeFactory} for producing edges by using a class as a factory.
  */
-public class EdgeFactory<V, E> implements Serializable {
-  private static final long serialVersionUID = -7890706652865009651L;
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public interface ReduceContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> extends
+    Context<KEYIN, VALUEIN, KEYOUT, VALUEOUT> {
 
-  private final Class<? extends E> edgeClass;
-
-  public EdgeFactory(Class<? extends E> edgeClass) {
-    this.edgeClass = edgeClass;
-  }
-
-  /**
-   * @see EdgeFactory#createEdge(Object, Object)
-   */
-  public E createEdge(V source, V target) {
-    try {
-      return edgeClass.newInstance();
-    } catch (Exception ex) {
-      throw new RuntimeException("Edge factory failed", ex);
-    }
-  }
 }

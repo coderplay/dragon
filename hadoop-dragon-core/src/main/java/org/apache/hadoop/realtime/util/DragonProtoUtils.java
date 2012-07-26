@@ -18,10 +18,7 @@
 
 package org.apache.hadoop.realtime.util;
 
-import org.apache.hadoop.realtime.records.JobState;
-import org.apache.hadoop.realtime.records.TaskAttemptCompletionEventStatus;
-import org.apache.hadoop.realtime.records.TaskAttemptState;
-import org.apache.hadoop.realtime.records.TaskState;
+import org.apache.hadoop.realtime.records.*;
 import org.apache.hadoop.yarn.proto.DragonProtos.JobStateProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptCompletionEventStatusProto;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptStateProto;
@@ -74,13 +71,16 @@ public class DragonProtoUtils {
   public static TaskAttemptCompletionEventStatus convertFromProtoFormat(TaskAttemptCompletionEventStatusProto e) {
     return TaskAttemptCompletionEventStatus.valueOf(e.name().replace(TACE_PREFIX, ""));
   }
+
   /*
    * TaskType
    */
-  public static TaskTypeProto convertToProtoFormat(TaskType e) {
-    return TaskTypeProto.valueOf(e.name());
+  private static String TASK_TYPE_PREFIX = "TT_";
+  public static TaskType convertFromProtoFormat(TaskTypeProto taskTypeProto) {
+    return TaskType.valueOf(taskTypeProto.name().replace(TASK_TYPE_PREFIX, ""));
   }
-  public static TaskType convertFromProtoFormat(TaskTypeProto e) {
-    return TaskType.valueOf(e.name());
-  }  
+  public static TaskTypeProto convertToProtoFormat(TaskType taskType) {
+    return TaskTypeProto.valueOf(TASK_TYPE_PREFIX + taskType.name());
+  }
+
 }

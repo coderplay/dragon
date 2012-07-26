@@ -39,12 +39,12 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.protocol.DragonChildProtocol;
 import org.apache.hadoop.realtime.protocol.records.GetTaskRequest;
 import org.apache.hadoop.realtime.protocol.records.GetTaskResponse;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.realtime.records.TaskReport;
 import org.apache.hadoop.realtime.security.TokenCache;
 import org.apache.hadoop.realtime.security.token.JobTokenIdentifier;
@@ -75,7 +75,7 @@ class DragonChild {
   public static void main(String[] args) throws Throwable {
     LOG.debug("Child starting");
 
-    final Configuration defaultConf = new Configuration();
+    final DragonConfiguration defaultConf = new DragonConfiguration();
     defaultConf.addResource(DragonJobConfig.JOB_CONF_FILE);
     UserGroupInformation.setConfiguration(defaultConf);
 
@@ -150,7 +150,9 @@ class DragonChild {
             defaultConf.set(DragonJobConfig.WORKING_DIR, workDir);
           }
           Path workPath = new Path(workDir);
-          ChildExecutor.run(defaultConf, amProxy, context); // run the task
+          ChildExecutor executor = ChildExecutorFactory.newExecutor(
+              context.getTaskType());
+          executor.execute(defaultConf, amProxy, context); // run the task
           return null;
         }
       });
