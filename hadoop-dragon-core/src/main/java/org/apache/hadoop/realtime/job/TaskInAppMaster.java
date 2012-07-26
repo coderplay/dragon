@@ -239,7 +239,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       report.setFinishTime(finishTime);
       for (TaskAttempt attempt : attempts.values()) {
         if (TaskAttemptState.RUNNING.equals(attempt.getState())) {
-          report.addRunningAttempt(attempt.getID());
+          report.setRunningAttempt(attempt.getID());
         }
       }
 

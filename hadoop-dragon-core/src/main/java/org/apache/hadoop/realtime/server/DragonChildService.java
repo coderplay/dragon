@@ -262,11 +262,6 @@ public class DragonChildService extends CompositeService implements
       taskHeartbeatHandler.receivedPing(attemptId);
       TaskAttemptStatus taskAttemptStatus = new TaskAttemptStatus();
       taskAttemptStatus.id = attemptId;
-
-      taskAttemptStatus.progress = report.getProgress();
-      LOG.info("Progress of TaskAttempt " + attemptId + " is : "
-          + report.getProgress());
-
       taskAttemptStatus.stateString = report.getStateString();
 
       taskAttemptStatus.counters = report.getCounters();

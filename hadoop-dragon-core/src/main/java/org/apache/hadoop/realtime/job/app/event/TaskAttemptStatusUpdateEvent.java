@@ -44,7 +44,6 @@ public class TaskAttemptStatusUpdateEvent extends TaskAttemptEvent {
    */
   public static class TaskAttemptStatus {
     public TaskAttemptId id;
-    public float progress;
     public Counters counters;
     public String stateString;
     public long outputSize;

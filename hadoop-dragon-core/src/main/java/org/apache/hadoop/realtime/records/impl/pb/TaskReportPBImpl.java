@@ -46,9 +46,8 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
   
   private TaskId taskId = null;
   private Counters counters = null;
-  private List<TaskAttemptId> runningAttempts = null;
-  private TaskAttemptId successfulAttemptId = null;
-  private List<String> diagnostics = null;
+  private TaskAttemptId runningAttempt = null;
+  private String diagnostics = null;
   
   
   public TaskReportPBImpl() {
@@ -74,14 +73,11 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
     if (this.counters != null) {
       builder.setCounters(convertToProtoFormat(this.counters));
     }
-    if (this.runningAttempts != null) {
-      addRunningAttemptsToProto();
-    }
-    if (this.successfulAttemptId != null) {
-      builder.setSuccessfulAttempt(convertToProtoFormat(this.successfulAttemptId));
+    if (this.runningAttempt != null) {
+      builder.setRunningAttempt(convertToProtoFormat(this.runningAttempt));
     }
     if (this.diagnostics != null) {
-      addDiagnosticsToProto();
+      builder.setDiagnostics(this.diagnostics);
     }
   }
 
@@ -165,17 +161,7 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
       builder.clearTaskId();
     this.taskId = taskId;
   }
-  @Override
-  public float getProgress() {
-    TaskReportProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getProgress());
-  }
 
-  @Override
-  public void setProgress(float progress) {
-    maybeInitBuilder();
-    builder.setProgress((progress));
-  }
   @Override
   public TaskState getTaskState() {
     TaskReportProtoOrBuilder p = viaProto ? proto : builder;
@@ -195,168 +181,43 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
     builder.setTaskState(convertToProtoFormat(taskState));
   }
   @Override
-  public List<TaskAttemptId> getRunningAttemptsList() {
-    initRunningAttempts();
-    return this.runningAttempts;
-  }
-  @Override
-  public TaskAttemptId getRunningAttempt(int index) {
-    initRunningAttempts();
-    return this.runningAttempts.get(index);
-  }
-  @Override
-  public int getRunningAttemptsCount() {
-    initRunningAttempts();
-    return this.runningAttempts.size();
-  }
-  
-  private void initRunningAttempts() {
-    if (this.runningAttempts != null) {
-      return;
-    }
+  public TaskAttemptId getRunningAttempt() {
     TaskReportProtoOrBuilder p = viaProto ? proto : builder;
-    List<TaskAttemptIdProto> list = p.getRunningAttemptsList();
-    this.runningAttempts = new ArrayList<TaskAttemptId>();
-
-    for (TaskAttemptIdProto c : list) {
-      this.runningAttempts.add(convertFromProtoFormat(c));
-    }
-  }
-  
-  @Override
-  public void addAllRunningAttempts(final List<TaskAttemptId> runningAttempts) {
-    if (runningAttempts == null)
-      return;
-    initRunningAttempts();
-    this.runningAttempts.addAll(runningAttempts);
-  }
-  
-  private void addRunningAttemptsToProto() {
-    maybeInitBuilder();
-    builder.clearRunningAttempts();
-    if (runningAttempts == null)
-      return;
-    Iterable<TaskAttemptIdProto> iterable = new Iterable<TaskAttemptIdProto>() {
-      @Override
-      public Iterator<TaskAttemptIdProto> iterator() {
-        return new Iterator<TaskAttemptIdProto>() {
-
-          Iterator<TaskAttemptId> iter = runningAttempts.iterator();
-
-          @Override
-          public boolean hasNext() {
-            return iter.hasNext();
-          }
-
-          @Override
-          public TaskAttemptIdProto next() {
-            return convertToProtoFormat(iter.next());
-          }
-
-          @Override
-          public void remove() {
-            throw new UnsupportedOperationException();
-
-          }
-        };
-
-      }
-    };
-    builder.addAllRunningAttempts(iterable);
-  }
-  @Override
-  public void addRunningAttempt(TaskAttemptId runningAttempts) {
-    initRunningAttempts();
-    this.runningAttempts.add(runningAttempts);
-  }
-  @Override
-  public void removeRunningAttempt(int index) {
-    initRunningAttempts();
-    this.runningAttempts.remove(index);
-  }
-  @Override
-  public void clearRunningAttempts() {
-    initRunningAttempts();
-    this.runningAttempts.clear();
-  }
-  @Override
-  public TaskAttemptId getSuccessfulAttempt() {
-    TaskReportProtoOrBuilder p = viaProto ? proto : builder;
-    if (this.successfulAttemptId != null) {
-      return this.successfulAttemptId;
-    }
-    if (!p.hasSuccessfulAttempt()) {
+    if (!p.hasRunningAttempt()) {
       return null;
     }
-    this.successfulAttemptId = convertFromProtoFormat(p.getSuccessfulAttempt());
-    return this.successfulAttemptId;
+    return convertFromProtoFormat(p.getRunningAttempt());
   }
-
+  
   @Override
-  public void setSuccessfulAttempt(TaskAttemptId successfulAttempt) {
+  public void setRunningAttempt(TaskAttemptId taskAttempt) {
     maybeInitBuilder();
-    if (successfulAttempt == null) 
-      builder.clearSuccessfulAttempt();
-    this.successfulAttemptId = successfulAttempt;
+    if (taskAttempt == null) {
+      builder.clearRunningAttempt();
+      return;
+    }
+    builder.setRunningAttempt(convertToProtoFormat(taskAttempt));
+    
   }
   @Override
-  public List<String> getDiagnosticsList() {
-    initDiagnostics();
+  public String getDiagnostics() {
+    TaskReportProtoOrBuilder p = viaProto ? proto : builder;
+    if (this.taskId != null) {
+      return this.diagnostics;
+    }
+    if (!p.hasDiagnostics()) {
+      return null;
+    }
+    this.diagnostics = convertFromProtoFormat(p.getDiagnostics());
     return this.diagnostics;
   }
-  @Override
-  public String getDiagnostics(int index) {
-    initDiagnostics();
-    return this.diagnostics.get(index);
-  }
-  @Override
-  public int getDiagnosticsCount() {
-    initDiagnostics();
-    return this.diagnostics.size();
-  }
-  
-  private void initDiagnostics() {
-    if (this.diagnostics != null) {
-      return;
-    }
-    TaskReportProtoOrBuilder p = viaProto ? proto : builder;
-    List<String> list = p.getDiagnosticsList();
-    this.diagnostics = new ArrayList<String>();
 
-    for (String c : list) {
-      this.diagnostics.add(c);
-    }
-  }
-  
   @Override
-  public void addAllDiagnostics(final List<String> diagnostics) {
-    if (diagnostics == null)
-      return;
-    initDiagnostics();
-    this.diagnostics.addAll(diagnostics);
-  }
-  
-  private void addDiagnosticsToProto() {
+  public void setDiagnostics(String diagnostics) {
     maybeInitBuilder();
-    builder.clearDiagnostics();
     if (diagnostics == null) 
-      return;
-    builder.addAllDiagnostics(diagnostics);
-  }
-  @Override
-  public void addDiagnostics(String diagnostics) {
-    initDiagnostics();
-    this.diagnostics.add(diagnostics);
-  }
-  @Override
-  public void removeDiagnostics(int index) {
-    initDiagnostics();
-    this.diagnostics.remove(index);
-  }
-  @Override
-  public void clearDiagnostics() {
-    initDiagnostics();
-    this.diagnostics.clear();
+      builder.clearDiagnostics();
+    this.diagnostics = diagnostics;
   }
 
   private CountersPBImpl convertFromProtoFormat(CountersProto p) {
@@ -390,7 +251,4 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
   private TaskAttemptIdProto convertToProtoFormat(TaskAttemptId t) {
     return ((TaskAttemptIdPBImpl)t).getProto();
   }
-
-
-
 }  
