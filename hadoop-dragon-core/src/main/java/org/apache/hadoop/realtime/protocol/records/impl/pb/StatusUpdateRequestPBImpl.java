@@ -20,12 +20,12 @@ package org.apache.hadoop.realtime.protocol.records.impl.pb;
 
 import org.apache.hadoop.realtime.protocol.records.StatusUpdateRequest;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.records.TaskReport;
+import org.apache.hadoop.realtime.records.TaskAttemptReport;
 import org.apache.hadoop.realtime.records.impl.pb.TaskAttemptIdPBImpl;
-import org.apache.hadoop.realtime.records.impl.pb.TaskReportPBImpl;
+import org.apache.hadoop.realtime.records.impl.pb.TaskAttemptReportPBImpl;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
 import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptIdProto;
-import org.apache.hadoop.yarn.proto.DragonProtos.TaskReportProto;
+import org.apache.hadoop.yarn.proto.DragonProtos.TaskAttemptReportProto;
 import org.apache.hadoop.yarn.proto.DragonServiceProtos.StatusUpdateRequestProto;
 import org.apache.hadoop.yarn.proto.DragonServiceProtos.StatusUpdateRequestProtoOrBuilder;
 
@@ -37,7 +37,7 @@ public class StatusUpdateRequestPBImpl extends
   boolean viaProto = false;
 
   private TaskAttemptId attemptId = null;
-  private TaskReport report = null;
+  private TaskAttemptReport report = null;
 
   public StatusUpdateRequestPBImpl() {
     builder = StatusUpdateRequestProto.newBuilder();
@@ -61,7 +61,7 @@ public class StatusUpdateRequestPBImpl extends
       builder.setTaskAttemptId(convertToProtoFormat(this.attemptId));
     }
     if (this.report != null) {
-      builder.setTaskReport(convertToProtoFormat(this.report));
+      builder.setTaskAttemptReport(convertToProtoFormat(this.report));
     }
   }
 
@@ -102,24 +102,24 @@ public class StatusUpdateRequestPBImpl extends
   }
 
   @Override
-  public TaskReport getTaskReport() {
+  public TaskAttemptReport getTaskAttemptReport() {
     StatusUpdateRequestProtoOrBuilder p = viaProto ? proto : builder;
     if (this.report != null) {
       return this.report;
     }
-    if (!p.hasTaskReport()) {
+    if (!p.hasTaskAttemptReport()) {
       return null;
     }
-    this.report = convertFromProtoFormat(p.getTaskReport());
+    this.report = convertFromProtoFormat(p.getTaskAttemptReport());
     return this.report;
   }
 
   @Override
-  public void setTaskStatus(TaskReport taskReport) {
+  public void setTaskStatus(TaskAttemptReport TaskAttemptReport) {
     maybeInitBuilder();
     if (report == null) 
-      builder.clearTaskReport();
-    this.report = taskReport;
+      builder.clearTaskAttemptReport();
+    this.report = TaskAttemptReport;
   }
 
   private TaskAttemptIdPBImpl convertFromProtoFormat(TaskAttemptIdProto p) {
@@ -130,12 +130,12 @@ public class StatusUpdateRequestPBImpl extends
     return ((TaskAttemptIdPBImpl) t).getProto();
   }
 
-  private TaskReportPBImpl convertFromProtoFormat(TaskReportProto p) {
-    return new TaskReportPBImpl(p);
+  private TaskAttemptReportPBImpl convertFromProtoFormat(TaskAttemptReportProto p) {
+    return new TaskAttemptReportPBImpl(p);
   }
 
-  private TaskReportProto convertToProtoFormat(TaskReport t) {
-    return ((TaskReportPBImpl) t).getProto();
+  private TaskAttemptReportProto convertToProtoFormat(TaskAttemptReport t) {
+    return ((TaskAttemptReportPBImpl) t).getProto();
   }
 
 }
