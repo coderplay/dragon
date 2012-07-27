@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.serialize;
+package org.apache.hadoop.realtime.records;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
