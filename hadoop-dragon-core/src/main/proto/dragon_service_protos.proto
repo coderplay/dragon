@@ -119,7 +119,7 @@ message PingResponseProto {
 
 message StatusUpdateRequestProto {
   optional TaskAttemptIdProto task_attempt_id = 1;
-  optional TaskReportProto task_report = 2;
+  optional TaskAttemptReportProto task_attempt_report = 2;
 }
 message StatusUpdateResponseProto {
   optional bool result = 1;

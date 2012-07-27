@@ -1,7 +1,7 @@
 package org.apache.hadoop.realtime.protocol.records;
 
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.records.TaskReport;
+import org.apache.hadoop.realtime.records.TaskAttemptReport;
 
 public interface StatusUpdateRequest {
 
@@ -9,8 +9,8 @@ public interface StatusUpdateRequest {
   
   public abstract void setTaskAttemptId(TaskAttemptId taskAttemptId);
   
-  public abstract TaskReport getTaskReport();
+  public abstract TaskAttemptReport getTaskAttemptReport();
   
-  public abstract void setTaskStatus(TaskReport taskReport);
+  public abstract void setTaskStatus(TaskAttemptReport TaskAttemptReport);
   
 }
