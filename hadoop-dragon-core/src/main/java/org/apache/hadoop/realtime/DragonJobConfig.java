@@ -301,4 +301,6 @@ public class DragonJobConfig {
   public static final String MAP_PARALLELISM = "dragon.map.tasks";
 
   public static final String REDUCE_PARALLELISM = "dragon.reduce.tasks";
+
+  public static final String KRYO_SERIALIZATION_REGISTER_CLASSES= "dragon.serialization.kryo.register.classes";
 }
