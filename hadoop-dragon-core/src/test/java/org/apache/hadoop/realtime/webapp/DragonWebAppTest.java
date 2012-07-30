@@ -90,7 +90,7 @@ public class DragonWebAppTest {
     when(containerId.toString()).thenReturn("888876");
 
 
-    WebApps.$for("mapreduce", AppContext.class, appContext)
+    WebApps.$for("dragon", AppContext.class, appContext)
         .inDevMode().at(8888).start(new DragonWebApp()).joinThread();
   }
 
