@@ -19,10 +19,12 @@
 package org.apache.hadoop.realtime.webapp;
 
 import com.google.inject.Inject;
-import org.apache.hadoop.realtime.client.app.AppContext;
-import org.apache.hadoop.realtime.job.Job;
-import org.apache.hadoop.realtime.records.AMInfo;
-import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
@@ -33,15 +35,14 @@ import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 import java.util.Date;
 import java.util.List;
 
-import static org.apache.hadoop.realtime.webapp.DragonParams.JOB_ID;
+import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
+import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
-import org.apache.hadoop.realtime.DragonApps.TaskAttemptStateUI;
 
 public class JobBlock extends HtmlBlock {
   final AppContext appContext;
 
-  @Inject
-  JobBlock(AppContext appctx) {
+  @Inject JobBlock(AppContext appctx) {
     appContext = appctx;
   }
 
@@ -52,7 +53,7 @@ public class JobBlock extends HtmlBlock {
         p()._("Sorry, can't do anything without a JobID.")._();
       return;
     }
-    JobId jobID = JobId.parseJobId(jid);
+    JobId jobID = MRApps.toJobID(jid);
     Job job = appContext.getJob(jobID);
     if (job == null) {
       html.
@@ -75,7 +76,7 @@ public class JobBlock extends HtmlBlock {
       _(InfoBlock.class).
       div(_INFO_WRAP);
 
-    // DragonAppMasters Table
+    // MRAppMasters Table
     TABLE<DIV<Hamlet>> table = div.table("#job");
     table.
       tr().
@@ -106,42 +107,87 @@ public class JobBlock extends HtmlBlock {
 
     html.div(_INFO_WRAP).        
       // Tasks table
-        table("#tasks").
+        table("#job").
           tr().
             th(_TH, "Task Type").
-            th(_TH, "Total")._().
-          tr().
+            th(_TH, "Progress").
+            th(_TH, "Total").
+            th(_TH, "Pending").
+            th(_TH, "Running").
+            th(_TH, "Complete")._().
+          tr(_ODD).
             th().
               a(url("tasks", jid, "m"), "Map")._().
-            td(String.valueOf(jinfo.getTotalTask()))._()
+            td().
+              div(_PROGRESSBAR).
+                $title(join(jinfo.getMapProgressPercent(), '%')). // tooltip
+                div(_PROGRESSBAR_VALUE).
+                  $style(join("width:", jinfo.getMapProgressPercent(), '%'))._()._()._().
+            td(String.valueOf(jinfo.getMapsTotal())).
+            td(String.valueOf(jinfo.getMapsPending())).
+            td(String.valueOf(jinfo.getMapsRunning())).
+            td(String.valueOf(jinfo.getMapsCompleted()))._().
+          tr(_EVEN).
+            th().
+              a(url("tasks", jid, "r"), "Reduce")._().
+            td().
+              div(_PROGRESSBAR).
+                $title(join(jinfo.getReduceProgressPercent(), '%')). // tooltip
+                div(_PROGRESSBAR_VALUE).
+                  $style(join("width:", jinfo.getReduceProgressPercent(), '%'))._()._()._().
+            td(String.valueOf(jinfo.getReducesTotal())).
+            td(String.valueOf(jinfo.getReducesPending())).
+            td(String.valueOf(jinfo.getReducesRunning())).
+            td(String.valueOf(jinfo.getReducesCompleted()))._()
           ._().
 
         // Attempts table
-        table("#attempts").
+        table("#job").
         tr().
           th(_TH, "Attempt Type").
           th(_TH, "New").
           th(_TH, "Running").
           th(_TH, "Failed").
-          th(_TH, "Killed")._().
-        tr().
+          th(_TH, "Killed").
+          th(_TH, "Successful")._().
+        tr(_ODD).
           th("Maps").
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.NEW.toString()),
-              String.valueOf(jinfo.getNewAttempts()))._().
+              String.valueOf(jinfo.getNewMapAttempts()))._().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.RUNNING.toString()),
-              String.valueOf(jinfo.getRunningAttempts()))._().
+              String.valueOf(jinfo.getRunningMapAttempts()))._().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.FAILED.toString()),
-              String.valueOf(jinfo.getFailedAttempts()))._().
+              String.valueOf(jinfo.getFailedMapAttempts()))._().
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.KILLED.toString()),
-              String.valueOf(jinfo.getKilledAttempts()))._().
+              String.valueOf(jinfo.getKilledMapAttempts()))._().
+          td().a(url("attempts", jid, "m",
+              TaskAttemptStateUI.SUCCESSFUL.toString()),
+              String.valueOf(jinfo.getSuccessfulMapAttempts()))._().
         _().
+        tr(_EVEN).
+          th("Reduces").
+          td().a(url("attempts", jid, "r",
+              TaskAttemptStateUI.NEW.toString()),
+              String.valueOf(jinfo.getNewReduceAttempts()))._().
+          td().a(url("attempts", jid, "r",
+              TaskAttemptStateUI.RUNNING.toString()),
+              String.valueOf(jinfo.getRunningReduceAttempts()))._().
+          td().a(url("attempts", jid, "r",
+              TaskAttemptStateUI.FAILED.toString()),
+              String.valueOf(jinfo.getFailedReduceAttempts()))._().
+          td().a(url("attempts", jid, "r",
+              TaskAttemptStateUI.KILLED.toString()),
+              String.valueOf(jinfo.getKilledReduceAttempts()))._().
+          td().a(url("attempts", jid, "r",
+              TaskAttemptStateUI.SUCCESSFUL.toString()),
+              String.valueOf(jinfo.getSuccessfulReduceAttempts()))._().
+         _().
        _().
      _();
-
-    html.div("#dag")._();
   }
+
 }

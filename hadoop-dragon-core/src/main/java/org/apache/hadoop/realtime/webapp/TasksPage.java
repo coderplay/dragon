@@ -20,26 +20,28 @@ package org.apache.hadoop.realtime.webapp;
 
 import org.apache.hadoop.yarn.webapp.SubView;
 
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
-import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
-public class JobPage extends AppView {
+public class TasksPage extends AppView {
 
   @Override protected void preHead(Page.HTML<_> html) {
-    String jobID = $(JOB_ID);
-    set(TITLE, jobID.isEmpty() ? "Bad request: missing job ID"
-               : join("MapReduce Job ", $(JOB_ID)));
     commonPreHead(html);
-
-    // This is a job-summary page. Helps to refresh automatically.
-    html.meta_http("refresh", "10");
-
+    set(DATATABLES_ID, "tasks");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");
+    set(initID(DATATABLES, "tasks"), tasksTableInit());
+    setTableStyles(html, "tasks");
   }
 
   @Override protected Class<? extends SubView> content() {
-    return JobBlock.class;
+    return TasksBlock.class;
+  }
+
+  private String tasksTableInit() {
+    return tableInit().
+        // Sort by id upon page load
+        append(", aaSorting: [[0, 'asc']]").
+        append(",aoColumns:[{sType:'title-numeric'},{sType:'title-numeric',").
+        append("bSearchable:false},null,{sType:'title-numeric'},").
+        append("{sType:'title-numeric'},{sType:'title-numeric'}]}").toString();
   }
 }

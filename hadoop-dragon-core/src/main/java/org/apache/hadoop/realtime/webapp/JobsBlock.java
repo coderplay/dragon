@@ -19,8 +19,8 @@
 package org.apache.hadoop.realtime.webapp;
 
 import com.google.inject.Inject;
-import org.apache.hadoop.realtime.client.app.AppContext;
-import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
+import org.apache.hadoop.mapreduce.v2.app.job.Job;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.TBODY;
@@ -33,8 +33,7 @@ import static org.apache.hadoop.yarn.webapp.view.JQueryUI._PROGRESSBAR_VALUE;
 public class JobsBlock extends HtmlBlock {
   final AppContext appContext;
 
-  @Inject
-  JobsBlock(AppContext appCtx) {
+  @Inject JobsBlock(AppContext appCtx) {
     appContext = appCtx;
   }
 
@@ -46,7 +45,13 @@ public class JobsBlock extends HtmlBlock {
           tr().
             th(".id", "Job ID").
             th(".name", "Name").
-            th(".state", "State")._()._().
+            th(".state", "State").
+            th("Map Progress").
+            th("Maps Total").
+            th("Maps Completed").
+            th("Reduce Progress").
+            th("Reduces Total").
+            th("Reduces Completed")._()._().
         tbody();
     for (Job j : appContext.getAllJobs().values()) {
       JobInfo job = new JobInfo(j, false);
@@ -57,7 +62,22 @@ public class JobsBlock extends HtmlBlock {
             a(url("job", job.getId()), job.getId())._().
           td(job.getName()).
           td(job.getState()).
-          _();
+          td().
+            span().$title(job.getMapProgressPercent())._(). // for sorting
+            div(_PROGRESSBAR).
+              $title(join(job.getMapProgressPercent(), '%')). // tooltip
+              div(_PROGRESSBAR_VALUE).
+                $style(join("width:", job.getMapProgressPercent(), '%'))._()._()._().
+          td(String.valueOf(job.getMapsTotal())).
+          td(String.valueOf(job.getMapsCompleted())).
+          td().
+            span().$title(job.getReduceProgressPercent())._(). // for sorting
+            div(_PROGRESSBAR).
+              $title(join(job.getReduceProgressPercent(), '%')). // tooltip
+              div(_PROGRESSBAR_VALUE).
+                $style(join("width:", job.getReduceProgressPercent(), '%'))._()._()._().
+          td(String.valueOf(job.getReducesTotal())).
+          td(String.valueOf(job.getReducesCompleted()))._();
     }
     tbody._()._();
   }
