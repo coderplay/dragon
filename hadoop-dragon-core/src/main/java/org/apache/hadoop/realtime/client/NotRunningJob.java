@@ -136,7 +136,7 @@ public class NotRunningJob implements DragonClientProtocol {
     TaskReport report = recordFactory.newRecordInstance(TaskReport.class);
     report.setTaskId(request.getTaskId());
     report.setTaskState(TaskState.NEW);
-    report.addAllRunningAttempts(new ArrayList<TaskAttemptId>());
+    resp.setTaskReport(report);
     return resp;
   }
 

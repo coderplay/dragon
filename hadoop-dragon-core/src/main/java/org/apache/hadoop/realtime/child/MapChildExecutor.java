@@ -22,27 +22,37 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.app.counter.TaskCounter;
 import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.event.Event;
 import org.apache.hadoop.realtime.event.EventEmitter;
 import org.apache.hadoop.realtime.event.EventProducer;
 import org.apache.hadoop.realtime.mr.MapContext;
+import org.apache.hadoop.realtime.mr.MapContextImpl;
 import org.apache.hadoop.realtime.mr.Mapper;
 import org.apache.hadoop.realtime.protocol.DragonChildProtocol;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
+import org.apache.hadoop.realtime.records.Counter;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskAttemptReport;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  */
 final class MapChildExecutor extends ChildExecutor {
 
+  public MapChildExecutor(ChildExecutionContext context) {
+    super(context);
+  }
+
   private static class DirectOutputCollector<K, V> implements
       EventEmitter<K, V> {
     private final EventEmitter<K, V> out;
     private final List<Statistics> fsStats;
+
     // counters
 
     @SuppressWarnings("unchecked")
@@ -86,11 +96,10 @@ final class MapChildExecutor extends ChildExecutor {
 
   @Override
   @SuppressWarnings("unchecked")
-  protected <KEYIN, VALUEIN, KEYOUT, VALUEOUT> void execute(
-      final Configuration conf, final DragonChildProtocol proxy,
-      final ChildExecutionContext context) throws IOException,
-      InterruptedException {
-    super.execute(conf, proxy, context);
+  protected <KEYIN, VALUEIN, KEYOUT, VALUEOUT> void execute(Configuration conf,
+      Class<KEYIN> keyInClass, Class<VALUEIN> valueInClass,
+      Class<KEYOUT> keyOutClass, Class<VALUEOUT> valueOutClass,TaskReporter reporter)
+      throws IOException, InterruptedException {
 
     // make a mapper
     Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> mapper =
@@ -99,13 +108,23 @@ final class MapChildExecutor extends ChildExecutor {
     // fetch the input sub-dirs
 
     // make the event producer
-    EventProducer<KEYIN, VALUEIN> input = null;
+    EventProducer<KEYIN, VALUEIN> input =
+        (EventProducer<KEYIN, VALUEIN>) ReflectionUtils.newInstance(conf
+            .getClass(DragonJobConfig.JOB_EVENT_PRODUCER_CLASS,
+                EventProducer.class), conf);
+
+    EventEmitter<KEYOUT, VALUEOUT> output =
+        (EventEmitter<KEYOUT, VALUEOUT>) ReflectionUtils.newInstance(conf
+            .getClass(DragonJobConfig.JOB_EVENT_EMITTER_CLASS,
+                EventEmitter.class), conf);
 
     // if reduce number = 0 , then output = DirectOutputCollector
     // else output = OutputCollector
 
     // make a map context
-    MapContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> mapContext = null;
+    MapContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> mapContext =
+        new MapContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT>(conf, context,
+            reporter, input, output);
 
     // initialize the event producer
     // run the mapper

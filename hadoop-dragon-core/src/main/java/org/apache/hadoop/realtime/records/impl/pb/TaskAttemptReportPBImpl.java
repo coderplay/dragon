@@ -172,17 +172,6 @@ public class TaskAttemptReportPBImpl extends ProtoBase<TaskAttemptReportProto> i
     builder.setTaskAttemptState(convertToProtoFormat(taskAttemptState));
   }
   @Override
-  public float getProgress() {
-    TaskAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
-    return (p.getProgress());
-  }
-
-  @Override
-  public void setProgress(float progress) {
-    maybeInitBuilder();
-    builder.setProgress((progress));
-  }
-  @Override
   public String getDiagnosticInfo() {
     TaskAttemptReportProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasDiagnosticInfo()) {

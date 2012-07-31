@@ -17,16 +17,18 @@
  */
 package org.apache.hadoop.realtime.child;
 
+import org.apache.hadoop.realtime.records.ChildExecutionContext;
 import org.apache.hadoop.realtime.records.TaskType;
 
 /**
  */
 public final class ChildExecutorFactory {
-  public static ChildExecutor newExecutor(TaskType type) {
+  public static ChildExecutor newExecutor(ChildExecutionContext context) {
+    TaskType type = context.getTaskType();
     if (type == TaskType.MAP)
-      return new MapChildExecutor();
+      return new MapChildExecutor(context);
     else if (type == TaskType.MAP)
-      return new ReduceChildExecutor();
+      return new ReduceChildExecutor(context);
     else
       return null; // or throw an exception?
   }

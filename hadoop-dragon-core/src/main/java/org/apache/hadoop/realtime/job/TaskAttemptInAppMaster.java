@@ -449,7 +449,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
     try {
       result.setTaskAttemptId(attemptId);
       result.setTaskAttemptState(getState());
-      result.setProgress(reportedStatus.progress);
       result.setStartTime(launchTime);
       result.setFinishTime(finishTime);
       result.setDiagnosticInfo(StringUtils.join(LINE_SEPARATOR,
@@ -1100,7 +1099,6 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
   }
 
   private void initTaskAttemptStatus(TaskAttemptStatus result) {
-    result.progress = 0.0f;
     result.stateString = "NEW";
     result.taskState = TaskAttemptState.NEW;
     Counters counters = recordFactory.newRecordInstance(Counters.class);

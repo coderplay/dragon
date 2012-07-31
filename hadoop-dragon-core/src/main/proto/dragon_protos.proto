@@ -73,13 +73,11 @@ message CountersProto {
 message TaskReportProto {
   optional TaskIdProto task_id = 1;
   optional TaskStateProto task_state = 2;
-  optional float progress = 3;
-  optional int64 start_time = 4;
-  optional int64 finish_time = 5;
-  optional CountersProto counters = 6;
-  repeated TaskAttemptIdProto running_attempts = 7;
-  optional TaskAttemptIdProto successful_attempt = 8;
-  repeated string diagnostics = 9;
+  optional int64 start_time = 3;
+  optional int64 finish_time = 4;
+  optional CountersProto counters = 5;
+  optional TaskAttemptIdProto running_attempt = 6;
+  optional string diagnostics = 7;
 }
 
 enum TaskAttemptStateProto {
@@ -101,16 +99,15 @@ enum TaskAttemptStateProto {
 message TaskAttemptReportProto {
   optional TaskAttemptIdProto task_attempt_id = 1;
   optional TaskAttemptStateProto task_attempt_state = 2;
-  optional float progress = 3;
-  optional int64 start_time = 4;
-  optional int64 finish_time = 5;
-  optional CountersProto counters = 6;
-  optional string diagnostic_info = 7;
-  optional string state_string = 8;
-  optional string node_manager_host = 9;
-  optional int32 node_manager_port = 10;
-  optional int32 node_manager_http_port = 11;
-  optional ContainerIdProto container_id = 12;
+  optional int64 start_time = 3;
+  optional int64 finish_time = 4;
+  optional CountersProto counters = 5;
+  optional string diagnostic_info = 6;
+  optional string state_string = 7;
+  optional string node_manager_host = 8;
+  optional int32 node_manager_port = 9;
+  optional int32 node_manager_http_port = 10;
+  optional ContainerIdProto container_id = 11;
 }
 
 enum JobStateProto {
