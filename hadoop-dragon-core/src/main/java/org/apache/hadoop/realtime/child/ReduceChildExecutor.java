@@ -21,43 +21,59 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.DragonJobConfig;
+import org.apache.hadoop.realtime.app.counter.TaskCounter;
+import org.apache.hadoop.realtime.event.EventEmitter;
 import org.apache.hadoop.realtime.event.EventProducer;
-import org.apache.hadoop.realtime.mr.MapContext;
-import org.apache.hadoop.realtime.mr.Mapper;
-import org.apache.hadoop.realtime.protocol.DragonChildProtocol;
+import org.apache.hadoop.realtime.mr.ReduceContext;
+import org.apache.hadoop.realtime.mr.ReduceContextImpl;
+import org.apache.hadoop.realtime.mr.Reducer;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
+import org.apache.hadoop.realtime.records.Counter;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  */
 public class ReduceChildExecutor extends ChildExecutor {
 
-  @Override
-  @SuppressWarnings("unchecked")
-  protected <KEYIN, VALUEIN, KEYOUT, VALUEOUT> void execute(
-      final Configuration conf, final DragonChildProtocol proxy,
-      final ChildExecutionContext context) throws IOException,
-      InterruptedException {
-    super.execute(conf, proxy, context);
+  private Counter inputCounter;
+  private Counter outputCounter;
 
-    // make a mapper
-    Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT> mapper =
-        (Mapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>) ReflectionUtils.newInstance(
-            conf.getClass(DragonJobConfig.JOB_MAP_CLASS, Mapper.class), conf);
+  public ReduceChildExecutor(ChildExecutionContext context) {
+    super(context);
+    this.inputCounter = counters.getCounter(TaskCounter.REDUCE_INPUT_RECORDS);
+    this.outputCounter = counters.getCounter(TaskCounter.REDUCE_OUTPUT_RECORDS);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  protected <KEYIN, VALUEIN, KEYOUT, VALUEOUT> void execute(Configuration conf,
+      Class<KEYIN> keyInClass, Class<VALUEIN> valueInClass,
+      Class<KEYOUT> keyOutClass, Class<VALUEOUT> valueOutClass)
+      throws IOException, InterruptedException {
+
+    // make a reducer
+    Reducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT> reducer =
+        (Reducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT>) ReflectionUtils
+            .newInstance(
+                conf.getClass(DragonJobConfig.JOB_REDUCE_CLASS, Reducer.class),
+                conf);
     // fetch the input sub-dirs
 
     // make the event producer
     EventProducer<KEYIN, VALUEIN> input = null;
-
+    EventEmitter<KEYOUT, VALUEOUT> output = null;
+    
     // if reduce number = 0 , then output = DirectOutputCollector
     // else output = OutputCollector
 
     // make a map context
-    MapContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> mapContext = null;
+    ReduceContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> reduceContext =
+        new ReduceContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT>(conf, context,
+            inputCounter, outputCounter, input, output);
 
     // initialize the event producer
     // run the mapper
-    mapper.run(mapContext);
+    reducer.run(reduceContext);
     // close the event producer
 
   }

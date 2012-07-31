@@ -81,4 +81,5 @@ public class DragonConfiguration extends Configuration {
     super();
     addResource(conf);
   }
+
 }

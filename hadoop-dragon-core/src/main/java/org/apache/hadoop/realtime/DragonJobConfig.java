@@ -301,4 +301,21 @@ public class DragonJobConfig {
   public static final String MAP_PARALLELISM = "dragon.map.tasks";
 
   public static final String REDUCE_PARALLELISM = "dragon.reduce.tasks";
+
+  public static final String JOB_REDUCE_INPUT_KEY_CLASS = "dragon.reduce.input.key.class";
+
+  public static final String JOB_REDUCE_INPUT_VALUE_CLASS = "dragon.reduce.input.value.class";
+
+  public static final String JOB_MAP_OUTPUT_KEY_CLASS = "dragon.map.output.key.class";
+  
+  public static final String JOB_MAP_OUTPUT_VALUE_CLASS = "dragon.map.output.value.class";
+  
+  public static final String JOB_REDUCE_OUTPUT_KEY_CLASS = "dragon.reduce.output.key.class";
+
+  public static final String JOB_REDUCE_OUTPUT_VALUE_CLASS = "dragon.reduce.output.value.class";
+
+  public static final String JOB_MAP_INPUT_KEY_CLASS = "dragon.map.input.key.class";
+  
+  public static final String JOB_MAP_INPUT_VALUE_CLASS = "dragon.map.input.value.class";
+  
 }

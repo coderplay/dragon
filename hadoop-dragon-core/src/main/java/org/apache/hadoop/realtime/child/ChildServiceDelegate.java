@@ -87,11 +87,11 @@ public class ChildServiceDelegate {
     return task;
   }
 
-  public boolean statusUpdate(TaskAttemptId jobId, TaskAttemptReport taskReport)
+  public boolean statusUpdate(TaskAttemptId attemptId, TaskAttemptReport taskReport)
       throws YarnRemoteException {
     StatusUpdateRequest request =
         recordFactory.newRecordInstance(StatusUpdateRequest.class);
-    request.setTaskAttemptId(jobId);
+    request.setTaskAttemptId(attemptId);
     request.setTaskStatus(taskReport);
     boolean result =
         ((StatusUpdateResponse) invoke("statusUpdate",

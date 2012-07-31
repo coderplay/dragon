@@ -85,34 +85,23 @@ class DragonChild {
     final String jobIdString = args[2];
     String containerIdString = args[3];
 
+    final ChildServiceDelegate delegate =
+        new ChildServiceDelegate(defaultConf, jobIdString, address);
+
     // initialize metrics
     DefaultMetricsSystem.initialize(StringUtils.camelize("Task"));
 
-    // TODO:Token<JobTokenIdentifier> jt = loadCredentials(defaultConf,
-    // address);
+   Token<JobTokenIdentifier> jt = loadCredentials(defaultConf,
+     address);
 
-    // Create DragonChildProtocol as actual task owner.
     UserGroupInformation taskOwner =
         UserGroupInformation.createRemoteUser(jobIdString);
-    // taskOwner.addToken(jt);
-    final DragonChildProtocol amProxy =
-        taskOwner.doAs(new PrivilegedExceptionAction<DragonChildProtocol>() {
-          @Override
-          public DragonChildProtocol run() throws Exception {
-            return instantiateAMProxy(defaultConf, address);
-          }
-        });
+    taskOwner.addToken(jt);
 
     // report non-pid to application master
-    GetTaskRequest request = Records.newRecord(GetTaskRequest.class);
-    request
-        .setContainerId(DragonBuilderUtils.newContainerId(containerIdString));
-    RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
-    TaskReport report = recordFactory.newRecordInstance(TaskReport.class);
     ChildExecutionContext myContext = null;
     UserGroupInformation childUGI = null;
     try {
-      int idleLoopCount = 0;
       // poll for new task
       for (int idle = 0; null == myContext; ++idle) {
         long sleepTimeMilliSecs = Math.min(idle * 500, 1500);
@@ -120,8 +109,8 @@ class DragonChild {
             + "ms before retrying again. Got null now.");
         MILLISECONDS.sleep(sleepTimeMilliSecs);
         myContext =
-            ((GetTaskResponse) invoke(amProxy, "getTask", GetTaskRequest.class,
-                request)).getTask();
+            delegate.getTask(DragonBuilderUtils
+                .newContainerId(containerIdString));
       }
       DragonChild.taskid = myContext.getTaskAttemptId();
 
@@ -150,15 +139,15 @@ class DragonChild {
             defaultConf.set(DragonJobConfig.WORKING_DIR, workDir);
           }
           Path workPath = new Path(workDir);
-          ChildExecutor executor = ChildExecutorFactory.newExecutor(
-              context.getTaskType());
-          executor.execute(defaultConf, amProxy, context); // run the task
+          ChildExecutor executor =
+              ChildExecutorFactory.newExecutor(context);
+          executor.execute(defaultConf, delegate); // run the task
           return null;
         }
       });
     } catch (FSError e) {
       LOG.fatal("FSError from child", e);
-      // amConnector.fsError(taskid, e.getMessage());
+      delegate.fsError(taskid, e.getMessage());
     } catch (Exception exception) {
       LOG.warn("Exception running child : "
           + StringUtils.stringifyException(exception));
@@ -185,7 +174,7 @@ class DragonChild {
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       exception.printStackTrace(new PrintStream(baos));
       if (taskid != null) {
-        // TODO:umbilical.fatalError(taskid, baos.toString());
+        delegate.fatalError(taskid, baos.toString());
       }
     } catch (Throwable throwable) {
       LOG.fatal("Error running child : "
@@ -195,63 +184,15 @@ class DragonChild {
         String cause =
             tCause == null ? throwable.getMessage() : StringUtils
                 .stringifyException(tCause);
-        // TODO:umbilical.fatalError(taskid, cause);
+        delegate.fatalError(taskid, cause);
       }
     } finally {
-      RPC.stopProxy(amProxy);
+      delegate.stopProxy();
       DefaultMetricsSystem.shutdown();
       // Shutting down log4j of the child-vm...
       // This assumes that on return from Task.run()
       // there is no more logging done.
       LogManager.shutdown();
-    }
-  }
-
-  static DragonChildProtocol instantiateAMProxy(Configuration conf,
-      final InetSocketAddress serviceAddr) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Connecting to ApplicationMaster at: " + serviceAddr);
-    }
-    YarnRPC rpc = YarnRPC.create(conf);
-    DragonChildProtocol proxy =
-        (DragonChildProtocol) rpc.getProxy(DragonChildProtocol.class,
-            serviceAddr, conf);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Connected to ApplicationMaster at: " + serviceAddr);
-    }
-
-    return proxy;
-  }
-
-  private synchronized static Object invoke(DragonChildProtocol realProxy,
-      String method, Class argClass, Object args) throws YarnRemoteException {
-    Method methodOb = null;
-    try {
-      methodOb = DragonChildProtocol.class.getMethod(method, argClass);
-    } catch (SecurityException e) {
-      throw new YarnException(e);
-    } catch (NoSuchMethodException e) {
-      throw new YarnException("Method name mismatch", e);
-    }
-    while (true) {
-      try {
-        return methodOb.invoke(realProxy, args);
-      } catch (InvocationTargetException e) {
-        if (e.getTargetException() instanceof YarnRemoteException) {
-          LOG.warn("Error from remote end: "
-              + e.getTargetException().getLocalizedMessage());
-          if (LOG.isDebugEnabled())
-            LOG.debug("Tracing remote error ", e.getTargetException());
-          throw (YarnRemoteException) e.getTargetException();
-        }
-        if (LOG.isDebugEnabled())
-          LOG.debug("Failed to contact AM for job " + taskid + " retrying..",
-              e.getTargetException());
-      } catch (Exception e) {
-        if (LOG.isDebugEnabled())
-          LOG.debug(
-              "Failed to contact AM for job " + taskid + "  Will retry..", e);
-      }
     }
   }
 
