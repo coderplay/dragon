@@ -21,34 +21,28 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.DragonJobConfig;
-import org.apache.hadoop.realtime.app.counter.TaskCounter;
 import org.apache.hadoop.realtime.event.EventEmitter;
 import org.apache.hadoop.realtime.event.EventProducer;
 import org.apache.hadoop.realtime.mr.ReduceContext;
 import org.apache.hadoop.realtime.mr.ReduceContextImpl;
 import org.apache.hadoop.realtime.mr.Reducer;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
-import org.apache.hadoop.realtime.records.Counter;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  */
 public class ReduceChildExecutor extends ChildExecutor {
 
-  private Counter inputCounter;
-  private Counter outputCounter;
 
   public ReduceChildExecutor(ChildExecutionContext context) {
     super(context);
-    this.inputCounter = counters.getCounter(TaskCounter.REDUCE_INPUT_RECORDS);
-    this.outputCounter = counters.getCounter(TaskCounter.REDUCE_OUTPUT_RECORDS);
   }
 
   @SuppressWarnings("unchecked")
   @Override
   protected <KEYIN, VALUEIN, KEYOUT, VALUEOUT> void execute(Configuration conf,
       Class<KEYIN> keyInClass, Class<VALUEIN> valueInClass,
-      Class<KEYOUT> keyOutClass, Class<VALUEOUT> valueOutClass)
+      Class<KEYOUT> keyOutClass, Class<VALUEOUT> valueOutClass,TaskReporter reporter)
       throws IOException, InterruptedException {
 
     // make a reducer
@@ -69,7 +63,7 @@ public class ReduceChildExecutor extends ChildExecutor {
     // make a map context
     ReduceContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> reduceContext =
         new ReduceContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT>(conf, context,
-            inputCounter, outputCounter, input, output);
+            reporter, input, output);
 
     // initialize the event producer
     // run the mapper

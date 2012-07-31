@@ -55,7 +55,7 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin.ProcResourceValues;
 
 /**
  */
-abstract class ChildExecutor {
+public abstract class ChildExecutor {
 
   private static final Log LOG = LogFactory.getLog(ChildExecutor.class);
   private final static int MAX_RETRIES = 10;
@@ -96,11 +96,12 @@ abstract class ChildExecutor {
     this.taskAttemptId = context.getTaskAttemptId();
     this.taskType = context.getTaskType();
     attemptReport = Records.newRecord(TaskAttemptReport.class);
+    gcUpdater = new GcTimeUpdater();
   }
 
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  protected class TaskReporter implements Runnable {
+  public class TaskReporter implements Runnable {
     private ChildServiceDelegate delegate;
     private Thread pingThread = null;
     private boolean done = true;
@@ -169,6 +170,7 @@ abstract class ChildExecutor {
             resetDoneFlag();
             System.exit(66);
           }
+          sendProgress = resetProgressFlag(); 
           remainingRetries = MAX_RETRIES;
         } catch (Throwable t) {
           LOG.info("Communication exception: "
@@ -184,6 +186,11 @@ abstract class ChildExecutor {
       }
       // Notify that we are done with the work
       resetDoneFlag();
+    }
+    
+    public void incrCounter(Enum<?> key, long amount){
+      counters.incrCounter(key, amount);
+      setProgressFlag();
     }
 
     void resetDoneFlag() {
@@ -221,6 +228,16 @@ abstract class ChildExecutor {
     }
   }
 
+  /**
+   * Create a TaskReporter and start communication thread
+   */
+  TaskReporter startReporter(final ChildServiceDelegate delegate) {  
+    // start thread that will handle communication with parent
+    TaskReporter reporter = new TaskReporter(delegate);
+    reporter.startCommunicationThread();
+    return reporter;
+  }
+  
   /**
    * Update resource information counters
    */
@@ -373,7 +390,6 @@ abstract class ChildExecutor {
       }
       updater.updateCounters();
     }
-
     gcUpdater.incrementGcCounter();
     updateResourceCounters();
   }
@@ -437,12 +453,13 @@ abstract class ChildExecutor {
       outputValue =
           conf.getClass(DragonJobConfig.JOB_REDUCE_OUTPUT_VALUE_CLASS,Object.class);
     }
-    execute(conf, inputKey, inputValue, outputKey, outputValue);
+    TaskReporter reporter = startReporter(delegate);
+    execute(conf, inputKey, inputValue, outputKey, outputValue,reporter);
   }
 
   protected abstract <KEYIN, VALUEIN, KEYOUT, VALUEOUT> void execute(
       Configuration conf, Class<KEYIN> keyInClass, Class<VALUEIN> valueInClass,
-      Class<KEYOUT> keyOutClass, Class<VALUEOUT> valueOutClass)
+      Class<KEYOUT> keyOutClass, Class<VALUEOUT> valueOutClass,TaskReporter reporter)
       throws IOException, InterruptedException;
 
   public void statusUpdate(ChildServiceDelegate delegate) throws IOException {

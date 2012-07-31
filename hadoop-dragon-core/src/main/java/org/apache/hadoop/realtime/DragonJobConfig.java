@@ -319,5 +319,9 @@ public class DragonJobConfig {
   public static final String JOB_MAP_INPUT_KEY_CLASS = "dragon.map.input.key.class";
   
   public static final String JOB_MAP_INPUT_VALUE_CLASS = "dragon.map.input.value.class";
+
+  public static final String JOB_EVENT_PRODUCER_CLASS = "dragon.event.producer.class";
+  
+  public static final String JOB_EVENT_EMITTER_CLASS = "dragon.event.emitter.class";
   
 }

@@ -26,6 +26,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.realtime.app.counter.TaskCounter;
+import org.apache.hadoop.realtime.child.ChildExecutor.TaskReporter;
 import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.event.Event;
 import org.apache.hadoop.realtime.event.EventEmitter;
@@ -55,28 +57,25 @@ public class MapContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT> implements
 
   private final TaskAttemptId attemptId;
 
-  private Counter inputValueCounter;
-  private Counter outputValueCounter;
-
   private KEYIN key; // current key
   private VALUEIN value;
+  
+  private TaskReporter reporter;
 
   private EventProducer<KEYIN, VALUEIN> producer;
   private EventEmitter<KEYOUT, VALUEOUT> emitter;
 
   public MapContextImpl(Configuration conf, ChildExecutionContext context,
-      Counter inputValueCounter, Counter outputValueCounter,
+      TaskReporter reporter,
       EventProducer<KEYIN, VALUEIN> producer,
       EventEmitter<KEYOUT, VALUEOUT> emitter) throws IOException {
     this.context = context;
     this.conf = new DragonConfiguration(conf);
 
-    this.inputValueCounter = inputValueCounter;
-    this.outputValueCounter = outputValueCounter;
-
     this.producer = producer;
     this.emitter = emitter;
 
+    this.reporter = reporter;
     this.attemptId = context.getTaskAttemptId();
   }
 
@@ -108,33 +107,31 @@ public class MapContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT> implements
   @Override
   public Event<KEYIN, VALUEIN> pollEvent() throws IOException,
       InterruptedException {
-    producer.pollEvent();
-    inputValueCounter.increment(1);
-    return null;
+    reporter.incrCounter(TaskCounter.MAP_INPUT_RECORDS, 1);
+    return producer.pollEvent();
   }
 
   @Override
   public Event<KEYIN, VALUEIN> pollEvent(long timeout, TimeUnit unit)
-      throws IOException, InterruptedException {
-    producer.pollEvent(timeout, unit);
-    inputValueCounter.increment(1);
-    return null;
+      throws IOException, InterruptedException { 
+    reporter.incrCounter(TaskCounter.MAP_INPUT_RECORDS, 1);
+    return producer.pollEvent(timeout, unit);
   }
 
   @Override
   public boolean emitEvent(Event<KEYOUT, VALUEOUT> event) throws IOException,
       InterruptedException {
     emitter.emitEvent(event);
-    outputValueCounter.increment(1);
-    return false;
+    reporter.incrCounter(TaskCounter.MAP_OUTPUT_RECORDS, 1);
+    return true;
   }
 
   @Override
   public boolean emitEvent(Event<KEYOUT, VALUEOUT> event, long timeout,
       TimeUnit unit) throws IOException, InterruptedException {
     emitter.emitEvent(event, timeout, unit);
-    outputValueCounter.increment(1);
-    return false;
+    reporter.incrCounter(TaskCounter.MAP_OUTPUT_RECORDS, 1);
+    return true;
   }
 
 }

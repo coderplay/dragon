@@ -75,12 +75,12 @@ public class DragonProtoUtils {
   /*
    * TaskType
    */
-  private static String TASK_TYPE_PREFIX = "TT_";
+  //private static String TASK_TYPE_PREFIX = "TT_";
   public static TaskType convertFromProtoFormat(TaskTypeProto taskTypeProto) {
-    return TaskType.valueOf(taskTypeProto.name().replace(TASK_TYPE_PREFIX, ""));
+    return TaskType.valueOf(taskTypeProto.name().replace("", ""));
   }
   public static TaskTypeProto convertToProtoFormat(TaskType taskType) {
-    return TaskTypeProto.valueOf(TASK_TYPE_PREFIX + taskType.name());
+    return TaskTypeProto.valueOf(taskType.name());
   }
 
 }

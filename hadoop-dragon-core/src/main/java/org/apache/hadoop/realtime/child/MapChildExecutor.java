@@ -44,13 +44,8 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 final class MapChildExecutor extends ChildExecutor {
 
-  private Counter inputCounter;
-  private Counter outputCounter;
-
   public MapChildExecutor(ChildExecutionContext context) {
     super(context);
-    this.inputCounter = counters.getCounter(TaskCounter.MAP_INPUT_RECORDS);
-    this.outputCounter = counters.getCounter(TaskCounter.MAP_OUTPUT_RECORDS);
   }
 
   private static class DirectOutputCollector<K, V> implements
@@ -103,7 +98,7 @@ final class MapChildExecutor extends ChildExecutor {
   @SuppressWarnings("unchecked")
   protected <KEYIN, VALUEIN, KEYOUT, VALUEOUT> void execute(Configuration conf,
       Class<KEYIN> keyInClass, Class<VALUEIN> valueInClass,
-      Class<KEYOUT> keyOutClass, Class<VALUEOUT> valueOutClass)
+      Class<KEYOUT> keyOutClass, Class<VALUEOUT> valueOutClass,TaskReporter reporter)
       throws IOException, InterruptedException {
 
     // make a mapper
@@ -113,15 +108,23 @@ final class MapChildExecutor extends ChildExecutor {
     // fetch the input sub-dirs
 
     // make the event producer
-    EventProducer<KEYIN, VALUEIN> input = null;
-    EventEmitter<KEYOUT, VALUEOUT> output = null;
+    EventProducer<KEYIN, VALUEIN> input =
+        (EventProducer<KEYIN, VALUEIN>) ReflectionUtils.newInstance(conf
+            .getClass(DragonJobConfig.JOB_EVENT_PRODUCER_CLASS,
+                EventProducer.class), conf);
+
+    EventEmitter<KEYOUT, VALUEOUT> output =
+        (EventEmitter<KEYOUT, VALUEOUT>) ReflectionUtils.newInstance(conf
+            .getClass(DragonJobConfig.JOB_EVENT_EMITTER_CLASS,
+                EventEmitter.class), conf);
+
     // if reduce number = 0 , then output = DirectOutputCollector
     // else output = OutputCollector
 
     // make a map context
     MapContext<KEYIN, VALUEIN, KEYOUT, VALUEOUT> mapContext =
         new MapContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT>(conf, context,
-            inputCounter, outputCounter, input, output);
+            reporter, input, output);
 
     // initialize the event producer
     // run the mapper
