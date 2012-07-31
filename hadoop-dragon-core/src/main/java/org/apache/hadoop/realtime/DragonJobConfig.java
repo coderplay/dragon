@@ -302,6 +302,8 @@ public class DragonJobConfig {
 
   public static final String REDUCE_PARALLELISM = "dragon.reduce.tasks";
 
+  public static final String KRYO_SERIALIZATION_REGISTER_CLASSES= "dragon.serialization.kryo.register.classes";
+
   public static final String JOB_REDUCE_INPUT_KEY_CLASS = "dragon.reduce.input.key.class";
 
   public static final String JOB_REDUCE_INPUT_VALUE_CLASS = "dragon.reduce.input.value.class";
