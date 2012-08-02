@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.realtime.webapp.dao;
 
-import org.apache.hadoop.mapreduce.CounterGroup;
-import org.apache.hadoop.mapreduce.Counters;
-import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.realtime.job.TaskAttempt;
+import org.apache.hadoop.realtime.records.CounterGroup;
+import org.apache.hadoop.realtime.records.Counters;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -44,11 +43,11 @@ public class JobTaskAttemptCounterInfo {
 
   public JobTaskAttemptCounterInfo(TaskAttempt taskattempt) {
 
-    this.id = MRApps.toString(taskattempt.getID());
+    this.id = taskattempt.getID().toString();
     total = taskattempt.getCounters();
     taskAttemptCounterGroup = new ArrayList<TaskCounterGroupInfo>();
     if (total != null) {
-      for (CounterGroup g : total) {
+      for (CounterGroup g : total.getAllCounterGroups().values()) {
         if (g != null) {
           TaskCounterGroupInfo cginfo = new TaskCounterGroupInfo(g.getName(), g);
           if (cginfo != null) {

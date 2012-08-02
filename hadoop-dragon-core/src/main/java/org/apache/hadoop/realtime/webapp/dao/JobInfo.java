@@ -17,18 +17,16 @@
  */
 package org.apache.hadoop.realtime.webapp.dao;
 
-import org.apache.hadoop.mapreduce.JobACL;
-import org.apache.hadoop.mapreduce.v2.api.records.JobReport;
-import org.apache.hadoop.mapreduce.v2.api.records.JobState;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
-import org.apache.hadoop.mapreduce.v2.app.job.Job;
-import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
+import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.job.Task;
+import org.apache.hadoop.realtime.job.TaskAttempt;
+import org.apache.hadoop.realtime.records.JobReport;
+import org.apache.hadoop.realtime.records.JobState;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.util.Times;
+import static org.apache.hadoop.realtime.DragonApps.TaskAttemptStateUI;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -53,23 +51,13 @@ public class JobInfo {
   protected String user;
   protected JobState state;
   protected int mapsTotal;
-  protected int mapsCompleted;
   protected int reducesTotal;
-  protected int reducesCompleted;
-  protected float mapProgress;
-  protected float reduceProgress;
-
-  @XmlTransient
-  protected String mapProgressPercent;
-  @XmlTransient
-  protected String reduceProgressPercent;
 
   // these should only be seen if acls allow
   protected int mapsPending;
   protected int mapsRunning;
   protected int reducesPending;
   protected int reducesRunning;
-  protected boolean uberized;
   protected String diagnostics;
   protected int newReduceAttempts = 0;
   protected int runningReduceAttempts = 0;
@@ -87,7 +75,7 @@ public class JobInfo {
   }
 
   public JobInfo(Job job, Boolean hasAccess) {
-    this.id = MRApps.toString(job.getID());
+    this.id = job.getID().toString();
     JobReport report = job.getReport();
     this.startTime = report.getStartTime();
     this.finishTime = report.getFinishTime();
@@ -96,23 +84,15 @@ public class JobInfo {
       this.elapsedTime = 0;
     }
     this.name = job.getName().toString();
-    this.user = job.getUserName();
+    this.user = job.getUser();
     this.state = job.getState();
     this.mapsTotal = job.getTotalMaps();
-    this.mapsCompleted = job.getCompletedMaps();
-    this.mapProgress = report.getMapProgress() * 100;
-    this.mapProgressPercent = percent(report.getMapProgress());
     this.reducesTotal = job.getTotalReduces();
-    this.reducesCompleted = job.getCompletedReduces();
-    this.reduceProgress = report.getReduceProgress() * 100;
-    this.reduceProgressPercent = percent(report.getReduceProgress());
 
     this.acls = new ArrayList<ConfEntryInfo>();
     if (hasAccess) {
       this.diagnostics = "";
       countTasksAndAttempts(job);
-
-      this.uberized = job.isUber();
 
       List<String> diagnostics = job.getDiagnostics();
       if (diagnostics != null && !diagnostics.isEmpty()) {
@@ -123,13 +103,14 @@ public class JobInfo {
         this.diagnostics = b.toString();
       }
 
+      /* unsupported job acl currently
       Map<JobACL, AccessControlList> allacls = job.getJobACLs();
       if (allacls != null) {
         for (Map.Entry<JobACL, AccessControlList> entry : allacls.entrySet()) {
           this.acls.add(new ConfEntryInfo(entry.getKey().getAclName(), entry
               .getValue().getAclString()));
         }
-      }
+      } */
     }
   }
 
@@ -177,10 +158,6 @@ public class JobInfo {
     return this.successfulMapAttempts;
   }
 
-  public int getReducesCompleted() {
-    return this.reducesCompleted;
-  }
-
   public int getReducesTotal() {
     return this.reducesTotal;
   }
@@ -191,10 +168,6 @@ public class JobInfo {
 
   public int getReducesRunning() {
     return this.reducesRunning;
-  }
-
-  public int getMapsCompleted() {
-    return this.mapsCompleted;
   }
 
   public int getMapsTotal() {
@@ -237,28 +210,8 @@ public class JobInfo {
     return this.finishTime;
   }
 
-  public boolean isUberized() {
-    return this.uberized;
-  }
-
   public String getdiagnostics() {
     return this.diagnostics;
-  }
-
-  public float getMapProgress() {
-    return this.mapProgress;
-  }
-
-  public String getMapProgressPercent() {
-    return this.mapProgressPercent;
-  }
-
-  public float getReduceProgress() {
-    return this.reduceProgress;
-  }
-
-  public String getReduceProgressPercent() {
-    return this.reduceProgressPercent;
   }
 
   /**
@@ -274,7 +227,7 @@ public class JobInfo {
       return;
     }
     for (Task task : tasks.values()) {
-      switch (task.getType()) {
+      switch (task.getID().getTaskType()) {
       case MAP:
         // Task counts
         switch (task.getState()) {
@@ -312,16 +265,13 @@ public class JobInfo {
           ++newAttempts;
         } else if (TaskAttemptStateUI.RUNNING.correspondsTo(attempt.getState())) {
           ++running;
-        } else if (TaskAttemptStateUI.SUCCESSFUL.correspondsTo(attempt
-            .getState())) {
-          ++successful;
         } else if (TaskAttemptStateUI.FAILED.correspondsTo(attempt.getState())) {
           ++failed;
         } else if (TaskAttemptStateUI.KILLED.correspondsTo(attempt.getState())) {
           ++killed;
         }
 
-        switch (task.getType()) {
+        switch (task.getID().getTaskType()) {
         case MAP:
           this.newMapAttempts += newAttempts;
           this.runningMapAttempts += running;

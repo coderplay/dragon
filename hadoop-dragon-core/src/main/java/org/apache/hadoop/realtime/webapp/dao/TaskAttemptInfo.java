@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.realtime.webapp.dao;
 
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.realtime.job.TaskAttempt;
+import org.apache.hadoop.realtime.records.TaskAttemptState;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Times;
@@ -36,7 +35,6 @@ public class TaskAttemptInfo {
   protected long startTime;
   protected long finishTime;
   protected long elapsedTime;
-  protected float progress;
   protected String id;
   protected String rack;
   protected TaskAttemptState state;
@@ -57,14 +55,13 @@ public class TaskAttemptInfo {
 
   public TaskAttemptInfo(TaskAttempt ta, TaskType type, Boolean isRunning) {
     this.type = type.toString();
-    this.id = MRApps.toString(ta.getID());
+    this.id = ta.getID().toString();
     this.nodeHttpAddress = ta.getNodeHttpAddress();
     this.startTime = ta.getLaunchTime();
     this.finishTime = ta.getFinishTime();
     this.assignedContainerId = ConverterUtils.toString(ta
         .getAssignedContainerID());
     this.assignedContainer = ta.getAssignedContainerID();
-    this.progress = ta.getProgress() * 100;
     this.state = ta.getState();
     this.elapsedTime = Times
         .elapsed(this.startTime, this.finishTime, isRunning);
@@ -104,10 +101,6 @@ public class TaskAttemptInfo {
 
   public long getFinishTime() {
     return this.finishTime;
-  }
-
-  public float getProgress() {
-    return this.progress;
   }
 
   public long getElapsedTime() {

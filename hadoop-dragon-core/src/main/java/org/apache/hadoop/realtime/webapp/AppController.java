@@ -21,6 +21,10 @@ package org.apache.hadoop.realtime.webapp;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.realtime.webapp.dao.AppInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.StringHelper;
@@ -208,7 +212,7 @@ public class AppController extends Controller implements DragonParams {
     if (app.getJob() != null) {
       try {
         String tt = $(TASK_TYPE);
-        tt = tt.isEmpty() ? "All" : StringUtils.capitalize(MRApps.taskType(tt).
+        tt = tt.isEmpty() ? "All" : StringUtils.capitalize(tt.
             toString().toLowerCase(Locale.US));
         setTitle(join(tt, " Tasks for ", $(JOB_ID)));
       } catch (Exception e) {
@@ -271,7 +275,7 @@ public class AppController extends Controller implements DragonParams {
           throw new RuntimeException("missing attempt-state.");
         }
         setTitle(join(attemptState, " ",
-            MRApps.taskType(taskType).toString(), " attempts in ", $(JOB_ID)));
+            taskType.toString(), " attempts in ", $(JOB_ID)));
 
         render(attemptsPage());
       } catch (Exception e) {
@@ -335,9 +339,10 @@ public class AppController extends Controller implements DragonParams {
    * @return True if the requesting user has permission to view the job
    */
   boolean checkAccess(Job job) {
-    UserGroupInformation callerUgi = UserGroupInformation.createRemoteUser(
+    /*UserGroupInformation callerUgi = UserGroupInformation.createRemoteUser(
         request().getRemoteUser());
-    return job.checkAccess(callerUgi, JobACL.VIEW_JOB);
+    return job.checkAccess(callerUgi, JobACL.VIEW_JOB);      */
+    return true;
   }
 
   /**
@@ -349,7 +354,7 @@ public class AppController extends Controller implements DragonParams {
       throw new RuntimeException("Bad Request: Missing job ID");
     }
 
-    JobId jobID = MRApps.toJobID($(JOB_ID));
+    JobId jobID = JobId.parseJobId($(JOB_ID));
     app.setJob(app.context.getJob(jobID));
     if (app.getJob() == null) {
       notFound($(JOB_ID));
@@ -376,11 +381,11 @@ public class AppController extends Controller implements DragonParams {
       throw new RuntimeException("missing task ID");
     }
 
-    TaskId taskID = MRApps.toTaskID($(TASK_ID));
+    TaskId taskID = TaskId.parseTaskId($(TASK_ID));
     Job job = app.context.getJob(taskID.getJobId());
     app.setJob(job);
     if (app.getJob() == null) {
-      notFound(MRApps.toString(taskID.getJobId()));
+      notFound(taskID.getJobId().toString());
       throw new RuntimeException("Not Found: " + $(JOB_ID));
     } else {
       app.setTask(app.getJob().getTask(taskID));

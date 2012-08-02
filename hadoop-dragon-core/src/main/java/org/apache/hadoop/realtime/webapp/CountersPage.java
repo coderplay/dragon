@@ -20,26 +20,38 @@ package org.apache.hadoop.realtime.webapp;
 
 import org.apache.hadoop.yarn.webapp.SubView;
 
-import static org.apache.hadoop.realtime.webapp.DragonParams.JOB_ID;
-import static org.apache.hadoop.yarn.util.StringHelper.join;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.ACCORDION;
-import static org.apache.hadoop.yarn.webapp.view.JQueryUI.initID;
+import static org.apache.hadoop.realtime.webapp.DragonParams.TASK_ID;
+import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
-public class JobPage extends AppView {
+public class CountersPage extends AppView {
 
   @Override protected void preHead(Page.HTML<_> html) {
-    String jobID = $(JOB_ID);
-    set(TITLE, jobID.isEmpty() ? "Bad request: missing job ID"
-               : join("MapReduce Job ", $(JOB_ID)));
     commonPreHead(html);
 
-    // This is a job-summary page. Helps to refresh automatically.
+    // Counters page is a summary. Helps to refresh automatically.
     html.meta_http("refresh", "10");
 
-    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:2}");
+    String tid = $(TASK_ID);
+    String activeNav = "3";
+    if(tid == null || tid.isEmpty()) {
+      activeNav = "2";
+    }
+    set(initID(ACCORDION, "nav"), "{autoHeight:false, active:"+activeNav+"}");
+    set(DATATABLES_SELECTOR, "#counters .dt-counters");
+    set(initSelector(DATATABLES),
+        "{bJQueryUI:true, sDom:'t', iDisplayLength:-1}");
+  }
+
+  @Override protected void postHead(Page.HTML<_> html) {
+    html.
+      style("#counters, .dt-counters { table-layout: fixed }",
+            "#counters th { overflow: hidden; vertical-align: middle }",
+            "#counters .dataTables_wrapper { min-height: 1em }",
+            "#counters .group { width: 15em }",
+            "#counters .name { width: 30em }");
   }
 
   @Override protected Class<? extends SubView> content() {
-    return JobBlock.class;
+    return CountersBlock.class;
   }
 }

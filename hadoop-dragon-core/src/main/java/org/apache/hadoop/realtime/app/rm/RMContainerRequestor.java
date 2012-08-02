@@ -34,9 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.realtime.DragonJobConfig;
 import org.apache.hadoop.realtime.client.app.AppContext;
 import org.apache.hadoop.realtime.job.Job;
-import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.server.ClientService;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -153,7 +151,8 @@ public abstract class RMContainerRequestor extends RMCommunicator {
         totalContainers+=job.getTasks().size();
       }
     }
-    if(ask.size() >= totalContainers){
+
+    if(readyToAllocate()){
       AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
           applicationAttemptId, lastResponseID, 0.0f,
           new ArrayList<ResourceRequest>(ask), new ArrayList<ContainerId>(
@@ -173,12 +172,28 @@ public abstract class RMContainerRequestor extends RMCommunicator {
             + " resourcelimit=" + availableResources + " knownNMs="
             + clusterNmCount);
       }
-  
-      ask.clear();
+
+      // if allocated success clear request set
+      if (response.getAllocatedContainers().size() > 0) {
+        ask.clear();
+      }
       release.clear();
       return response;
     }
     return null;
+  }
+
+  /**
+   * check if ready to allocate
+   * @return boolean to allocate
+   */
+  private boolean readyToAllocate() {
+    int numContainers = 0;
+    for (ResourceRequest rr : ask) {
+      numContainers += rr.getNumContainers();
+    }
+
+    return numContainers >= totalContainers;
   }
 
   // May be incorrect if there's multiple NodeManagers running on a single host.
@@ -310,6 +325,7 @@ public abstract class RMContainerRequestor extends RMCommunicator {
 
     // Note this down for next interaction with ResourceManager
     ask.add(remoteRequest);
+    LOG.error("ask add " + ask.size());
     if (LOG.isDebugEnabled()) {
       LOG.debug("addResourceRequest:" + " applicationId="
           + applicationId.getId() + " priority=" + priority.getPriority()

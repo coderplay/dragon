@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.realtime.webapp.dao;
 
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptState;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskReport;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskState;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.realtime.job.Task;
+import org.apache.hadoop.realtime.job.TaskAttempt;
+import org.apache.hadoop.realtime.records.TaskReport;
+import org.apache.hadoop.realtime.records.TaskState;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.yarn.util.Times;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -38,11 +36,9 @@ public class TaskInfo {
   protected long startTime;
   protected long finishTime;
   protected long elapsedTime;
-  protected float progress;
   protected String id;
   protected TaskState state;
   protected String type;
-  protected String successfulAttempt;
 
   @XmlTransient
   int taskNum;
@@ -54,7 +50,7 @@ public class TaskInfo {
   }
 
   public TaskInfo(Task task) {
-    TaskType ttype = task.getType();
+    TaskType ttype = task.getID().getTaskType();
     this.type = ttype.toString();
     TaskReport report = task.getReport();
     this.startTime = report.getStartTime();
@@ -64,19 +60,8 @@ public class TaskInfo {
       this.elapsedTime = 0;
     }
     this.state = report.getTaskState();
-    this.progress = report.getProgress() * 100;
-    this.id = MRApps.toString(task.getID());
+    this.id = task.getID().toString();
     this.taskNum = task.getID().getId();
-    this.successful = getSuccessfulAttempt(task);
-    if (successful != null) {
-      this.successfulAttempt = MRApps.toString(successful.getID());
-    } else {
-      this.successfulAttempt = "";
-    }
-  }
-
-  public float getProgress() {
-    return this.progress;
   }
 
   public String getState() {
@@ -103,21 +88,8 @@ public class TaskInfo {
     return this.elapsedTime;
   }
 
-  public String getSuccessfulAttempt() {
-    return this.successfulAttempt;
-  }
-
   public TaskAttempt getSuccessful() {
     return this.successful;
-  }
-
-  private TaskAttempt getSuccessfulAttempt(Task task) {
-    for (TaskAttempt attempt : task.getAttempts().values()) {
-      if (attempt.getState() == TaskAttemptState.SUCCEEDED) {
-        return attempt;
-      }
-    }
-    return null;
   }
 
 }

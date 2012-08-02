@@ -20,11 +20,7 @@ package org.apache.hadoop.realtime.job;
 
 import java.util.Map;
 
-import org.apache.hadoop.realtime.records.Counters;
-import org.apache.hadoop.realtime.records.TaskAttemptId;
-import org.apache.hadoop.realtime.records.TaskId;
-import org.apache.hadoop.realtime.records.TaskReport;
-import org.apache.hadoop.realtime.records.TaskState;
+import org.apache.hadoop.realtime.records.*;
 
 /**
  * Read only view of Task.
@@ -37,4 +33,6 @@ public interface Task {
   String getLabel();
   Map<TaskAttemptId, TaskAttempt> getAttempts();
   TaskAttempt getAttempt(TaskAttemptId attemptID);
+
+
 }

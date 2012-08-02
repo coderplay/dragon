@@ -547,7 +547,7 @@ public class DragonJobRunner implements DragonJobService {
     // filesystem
     List<String> files =
         (List<String>) conf
-            .getStringCollection(DragonJobConfig.JOB_DiST_CACHE_FILES);
+            .getStringCollection(DragonJobConfig.JOB_DIST_CACHE_FILES);
     if (files.size() > 0) {
       Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);
       FileSystem.mkdirs(submitFs, filesDir, sysPerms);

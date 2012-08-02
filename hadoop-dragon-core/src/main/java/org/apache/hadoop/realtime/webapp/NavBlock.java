@@ -19,16 +19,14 @@
 package org.apache.hadoop.realtime.webapp;
 
 import com.google.inject.Inject;
-import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import java.util.List;
 
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.RM_WEB;
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMWebApp.*;
+import static org.apache.hadoop.realtime.webapp.DragonParams.RM_WEB;
 
 public class NavBlock extends HtmlBlock {
   final App app;
@@ -49,7 +47,7 @@ public class NavBlock extends HtmlBlock {
           li().a(url("app/info"), "About")._().
           li().a(url("app"), "Jobs")._()._();
     if (app.getJob() != null) {
-      String jobid = MRApps.toString(app.getJob().getID());
+      String jobid = app.getJob().getID().toString();
       List<AMInfo> amInfos = app.getJob().getAMInfos();
       AMInfo thisAmInfo = amInfos.get(amInfos.size()-1);
       String nodeHttpAddress = thisAmInfo.getNodeManagerHost() + ":" 
@@ -64,10 +62,10 @@ public class NavBlock extends HtmlBlock {
           li().a(url("tasks", jobid, "r"), "Reduce tasks")._().
           li().a(".logslink", url("http://", nodeHttpAddress, "node",
               "containerlogs", thisAmInfo.getContainerId().toString(), 
-              app.getJob().getUserName()), 
+              app.getJob().getUser()),
               "AM Logs")._()._();
       if (app.getTask() != null) {
-        String taskid = MRApps.toString(app.getTask().getID());
+        String taskid = app.getTask().getID().toString();
         nav.
           h3("Task").
           ul().

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.realtime.webapp.dao;
 
-import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.realtime.records.Counter;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

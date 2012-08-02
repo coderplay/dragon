@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.realtime.webapp.dao;
 
-import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.CounterGroup;
+import org.apache.hadoop.realtime.records.Counter;
+import org.apache.hadoop.realtime.records.CounterGroup;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -40,7 +40,7 @@ public class TaskCounterGroupInfo {
     this.counterGroupName = name;
     this.counter = new ArrayList<TaskCounterInfo>();
 
-    for (Counter c : group) {
+    for (Counter c : group.getAllCounters().values()) {
       TaskCounterInfo cinfo = new TaskCounterInfo(c.getName(), c.getValue());
       this.counter.add(cinfo);
     }

@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.job.Task;
 import org.apache.hadoop.realtime.records.AMInfo;
@@ -118,6 +119,21 @@ public class LocalJob implements Job {
   @Override
   public List<AMInfo> getAMInfos() {
     return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public Path getConfFile() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public int getTotalMaps() {
+    return 0;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public int getTotalReduces() {
+    return 0;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
 }

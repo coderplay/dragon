@@ -19,12 +19,11 @@
 package org.apache.hadoop.realtime.webapp;
 
 import com.google.inject.Inject;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
-import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
+import org.apache.hadoop.realtime.DragonApps.TaskAttemptStateUI;
+import org.apache.hadoop.realtime.job.Task;
+import org.apache.hadoop.realtime.job.TaskAttempt;
+import org.apache.hadoop.realtime.records.TaskAttemptId;
+import org.apache.hadoop.realtime.records.TaskType;
 import org.apache.hadoop.yarn.webapp.SubView;
 
 import java.util.ArrayList;
@@ -32,8 +31,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.ATTEMPT_STATE;
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.TASK_TYPE;
+import static org.apache.hadoop.realtime.webapp.DragonParams.ATTEMPT_STATE;
+import static org.apache.hadoop.realtime.webapp.DragonParams.TASK_TYPE;
 
 public class AttemptsPage extends TaskPage {
   static class FewAttemptsBlock extends TaskPage.AttemptsBlock {
@@ -51,11 +50,11 @@ public class AttemptsPage extends TaskPage {
     protected Collection<TaskAttempt> getTaskAttempts() {
       List<TaskAttempt> fewTaskAttemps = new ArrayList<TaskAttempt>();
       String taskTypeStr = $(TASK_TYPE);
-      TaskType taskType = MRApps.taskType(taskTypeStr);
+      TaskType taskType = TaskType.valueOf(taskTypeStr);
       String attemptStateStr = $(ATTEMPT_STATE);
-      TaskAttemptStateUI neededState = MRApps
-          .taskAttemptState(attemptStateStr);
-      for (Task task : super.app.getJob().getTasks(taskType).values()) {
+      TaskAttemptStateUI neededState =
+          TaskAttemptStateUI.valueOf(attemptStateStr);
+      for (Task task : super.app.getJob().getTasks(taskType.name()).values()) {
         Map<TaskAttemptId, TaskAttempt> attempts = task.getAttempts();
         for (TaskAttempt attempt : attempts.values()) {
           if (neededState.correspondsTo(attempt.getState())) {

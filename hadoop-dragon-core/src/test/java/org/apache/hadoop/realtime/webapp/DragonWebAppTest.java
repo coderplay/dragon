@@ -66,6 +66,8 @@ public class DragonWebAppTest {
     });
     when(appContext.getApplicationID()).thenReturn(appId);
     when(appContext.getJob(any(JobId.class))).thenReturn(job);
+    when(appContext.getApplicationName()).thenReturn("app name");
+    when(appContext.getUser()).thenReturn("user");
 
     when(job.getID()).thenReturn(jobId);
     when(job.getName()).thenReturn("test job name");
@@ -76,9 +78,11 @@ public class DragonWebAppTest {
 
     when(jobId.getAppId()).thenReturn(appId);
     when(jobId.getId()).thenReturn(54321);
+    when(jobId.toString()).thenReturn("job_323293_12345_54321");
 
     when(appId.getId()).thenReturn(12345);
     when(appId.getClusterTimestamp()).thenReturn(323293L);
+    when(appId.toString()).thenReturn("application_323293_12345");
 
     when(amInfo.getNodeManagerHost()).thenReturn("node manager host");
     when(amInfo.getNodeManagerHttpPort()).thenReturn(8000);
@@ -86,6 +90,7 @@ public class DragonWebAppTest {
     when(amInfo.getAppAttemptId()).thenReturn(attemptId);
 
     when(attemptId.getAttemptId()).thenReturn(9123);
+    when(attemptId.toString()).thenReturn("attemp_323293_12345_54321_map_9123_0");
 
     when(containerId.toString()).thenReturn("888876");
 

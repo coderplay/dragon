@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.realtime.webapp.dao;
 
-import org.apache.hadoop.mapreduce.CounterGroup;
-import org.apache.hadoop.mapreduce.Counters;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
-import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.mapreduce.v2.app.job.Job;
-import org.apache.hadoop.mapreduce.v2.app.job.Task;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
+import org.apache.hadoop.realtime.client.app.AppContext;
+import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.job.Task;
+import org.apache.hadoop.realtime.records.CounterGroup;
+import org.apache.hadoop.realtime.records.Counters;
+import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.yarn.util.Records;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -52,14 +52,14 @@ public class JobCounterInfo {
   public JobCounterInfo(AppContext ctx, Job job) {
     getCounters(ctx, job);
     counterGroup = new ArrayList<CounterGroupInfo>();
-    this.id = MRApps.toString(job.getID());
+    this.id = job.getID().toString();
 
     if (total != null) {
-      for (CounterGroup g : total) {
+      for (CounterGroup g : total.getAllCounterGroups().values()) {
         if (g != null) {
-          CounterGroup mg = map == null ? null : map.getGroup(g.getName());
+          CounterGroup mg = map == null ? null : map.getCounterGroup(g.getName());
           CounterGroup rg = reduce == null ? null : reduce
-            .getGroup(g.getName());
+            .getCounterGroup(g.getName());
 
           CounterGroupInfo cginfo = new CounterGroupInfo(g.getName(), g,
             mg, rg);
@@ -70,18 +70,18 @@ public class JobCounterInfo {
   }
 
   private void getCounters(AppContext ctx, Job job) {
-    total = new Counters();
+    total = Records.newRecord(Counters.class);
     if (job == null) {
       return;
     }
-    map = new Counters();
-    reduce = new Counters();
+    map = Records.newRecord(Counters.class);
+    reduce = Records.newRecord(Counters.class);
     // Get all types of counters
     Map<TaskId, Task> tasks = job.getTasks();
     for (Task t : tasks.values()) {
       Counters counters = t.getCounters();
       total.incrAllCounters(counters);
-      switch (t.getType()) {
+      switch (t.getID().getTaskType()) {
       case MAP:
         map.incrAllCounters(counters);
         break;

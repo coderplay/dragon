@@ -20,6 +20,7 @@ package org.apache.hadoop.realtime.webapp;
 
 import com.google.inject.Inject;
 import org.apache.hadoop.realtime.job.TaskAttempt;
+import org.apache.hadoop.realtime.webapp.dao.TaskAttemptInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.util.Times;
@@ -33,7 +34,6 @@ import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
 
 import java.util.Collection;
 
-import static org.apache.hadoop.yarn.util.StringHelper.percent;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
 public class TaskPage extends AppView {
@@ -58,7 +58,6 @@ public class TaskPage extends AppView {
         thead().
           tr().
             th(".id", "Attempt").
-            th(".progress", "Progress").
             th(".state", "State").
             th(".node", "node").
             th(".tsh", "Started").
@@ -69,7 +68,6 @@ public class TaskPage extends AppView {
       for (TaskAttempt attempt : getTaskAttempts()) {
         TaskAttemptInfo ta = new TaskAttemptInfo(attempt, true);
         String taid = ta.getId();
-        String progress = percent(ta.getProgress() / 100);
         ContainerId containerId = ta.getAssignedContainerId();
 
         String nodeHttpAddr = ta.getNode();
@@ -80,7 +78,6 @@ public class TaskPage extends AppView {
         TD<TR<TBODY<TABLE<Hamlet>>>> nodeTd = tbody.
           tr().
             td(".id", taid).
-            td(".progress", progress).
             td(".state", ta.getState()).
             td().
               a(".nodelink", url("http://", nodeHttpAddr), nodeHttpAddr);
@@ -88,7 +85,7 @@ public class TaskPage extends AppView {
           String containerIdStr = ta.getAssignedContainerIdStr();
           nodeTd._(" ").
             a(".logslink", url("http://", nodeHttpAddr, "node", "containerlogs",
-              containerIdStr, app.getJob().getUserName()), "logs");
+              containerIdStr, app.getJob().getUser()), "logs");
         }
         nodeTd._().
           td(".ts", Times.format(startTime)).

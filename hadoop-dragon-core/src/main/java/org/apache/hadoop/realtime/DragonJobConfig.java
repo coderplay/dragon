@@ -39,7 +39,7 @@ public class DragonJobConfig {
   // running ApplicationMaster and Task
   public static final String JOB_CONF_FILE = "job.xml";
   
-  public static final String JOB_DiST_CACHE_FILES = "files";
+  public static final String JOB_DIST_CACHE_FILES = "files";
   
   public static final String JOB_DIST_CACHE_ARCHIVES = "archives";
   

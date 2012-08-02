@@ -19,12 +19,12 @@
 package org.apache.hadoop.realtime.webapp;
 
 import com.google.inject.Inject;
-import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
-import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.apache.hadoop.mapreduce.v2.app.AppContext;
-import org.apache.hadoop.mapreduce.v2.app.job.Job;
-import org.apache.hadoop.mapreduce.v2.util.MRApps;
-import org.apache.hadoop.mapreduce.v2.util.MRApps.TaskAttemptStateUI;
+import org.apache.hadoop.realtime.client.app.AppContext;
+import org.apache.hadoop.realtime.job.Job;
+import org.apache.hadoop.realtime.records.AMInfo;
+import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.webapp.dao.AMAttemptInfo;
+import org.apache.hadoop.realtime.webapp.dao.JobInfo;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet.DIV;
@@ -35,8 +35,8 @@ import org.apache.hadoop.yarn.webapp.view.InfoBlock;
 import java.util.Date;
 import java.util.List;
 
-import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
-import static org.apache.hadoop.yarn.util.StringHelper.join;
+import static org.apache.hadoop.realtime.webapp.DragonParams.JOB_ID;
+import static org.apache.hadoop.realtime.DragonApps.TaskAttemptStateUI;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.*;
 
 public class JobBlock extends HtmlBlock {
@@ -53,7 +53,7 @@ public class JobBlock extends HtmlBlock {
         p()._("Sorry, can't do anything without a JobID.")._();
       return;
     }
-    JobId jobID = MRApps.toJobID(jid);
+    JobId jobID = JobId.parseJobId(jid);
     Job job = appContext.getJob(jobID);
     if (job == null) {
       html.
@@ -69,7 +69,6 @@ public class JobBlock extends HtmlBlock {
     info("Job Overview").
         _("Job Name:", jinfo.getName()).
         _("State:", jinfo.getState()).
-        _("Uberized:", jinfo.isUberized()).
         _("Started:", new Date(jinfo.getStartTime())).
         _("Elapsed:", StringUtils.formatTime(jinfo.getElapsedTime()));
     DIV<Hamlet> div = html.
@@ -110,35 +109,24 @@ public class JobBlock extends HtmlBlock {
         table("#job").
           tr().
             th(_TH, "Task Type").
-            th(_TH, "Progress").
             th(_TH, "Total").
             th(_TH, "Pending").
             th(_TH, "Running").
-            th(_TH, "Complete")._().
+            _().
           tr(_ODD).
             th().
               a(url("tasks", jid, "m"), "Map")._().
-            td().
-              div(_PROGRESSBAR).
-                $title(join(jinfo.getMapProgressPercent(), '%')). // tooltip
-                div(_PROGRESSBAR_VALUE).
-                  $style(join("width:", jinfo.getMapProgressPercent(), '%'))._()._()._().
             td(String.valueOf(jinfo.getMapsTotal())).
             td(String.valueOf(jinfo.getMapsPending())).
             td(String.valueOf(jinfo.getMapsRunning())).
-            td(String.valueOf(jinfo.getMapsCompleted()))._().
+            _().
           tr(_EVEN).
             th().
               a(url("tasks", jid, "r"), "Reduce")._().
-            td().
-              div(_PROGRESSBAR).
-                $title(join(jinfo.getReduceProgressPercent(), '%')). // tooltip
-                div(_PROGRESSBAR_VALUE).
-                  $style(join("width:", jinfo.getReduceProgressPercent(), '%'))._()._()._().
             td(String.valueOf(jinfo.getReducesTotal())).
             td(String.valueOf(jinfo.getReducesPending())).
             td(String.valueOf(jinfo.getReducesRunning())).
-            td(String.valueOf(jinfo.getReducesCompleted()))._()
+            _()
           ._().
 
         // Attempts table
@@ -149,7 +137,7 @@ public class JobBlock extends HtmlBlock {
           th(_TH, "Running").
           th(_TH, "Failed").
           th(_TH, "Killed").
-          th(_TH, "Successful")._().
+          _().
         tr(_ODD).
           th("Maps").
           td().a(url("attempts", jid, "m",
@@ -164,9 +152,6 @@ public class JobBlock extends HtmlBlock {
           td().a(url("attempts", jid, "m",
               TaskAttemptStateUI.KILLED.toString()),
               String.valueOf(jinfo.getKilledMapAttempts()))._().
-          td().a(url("attempts", jid, "m",
-              TaskAttemptStateUI.SUCCESSFUL.toString()),
-              String.valueOf(jinfo.getSuccessfulMapAttempts()))._().
         _().
         tr(_EVEN).
           th("Reduces").
@@ -182,9 +167,6 @@ public class JobBlock extends HtmlBlock {
           td().a(url("attempts", jid, "r",
               TaskAttemptStateUI.KILLED.toString()),
               String.valueOf(jinfo.getKilledReduceAttempts()))._().
-          td().a(url("attempts", jid, "r",
-              TaskAttemptStateUI.SUCCESSFUL.toString()),
-              String.valueOf(jinfo.getSuccessfulReduceAttempts()))._().
          _().
        _().
      _();

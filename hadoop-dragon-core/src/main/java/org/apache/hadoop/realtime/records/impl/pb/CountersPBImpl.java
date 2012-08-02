@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.realtime.app.counter.Limits;
 import org.apache.hadoop.realtime.records.Counter;
 import org.apache.hadoop.realtime.records.CounterGroup;
 import org.apache.hadoop.realtime.records.Counters;
@@ -39,6 +40,8 @@ public class CountersPBImpl extends ProtoBase<CountersProto> implements Counters
   CountersProto proto = CountersProto.getDefaultInstance();
   CountersProto.Builder builder = null;
   boolean viaProto = false;
+
+  private final Limits limits = new Limits();
 
   private Map<String, CounterGroup> counterGroups = null;
 
@@ -116,7 +119,25 @@ public class CountersPBImpl extends ProtoBase<CountersProto> implements Counters
     Counter counter = getCounterGroup(groupName).getCounter(key.name());
     counter.setValue(counter.getValue() + amount);
   }
- 
+
+  /**
+   * Increments multiple counters by their amounts in another Counters
+   * instance.
+   * @param other the other Counters instance
+   */
+  public synchronized void incrAllCounters(Counters other) {
+    for(CounterGroup right : other.getAllCounterGroups().values()) {
+      CounterGroup left = getCounterGroup(right.getName());
+      if (left == null) {
+        limits.checkGroups(getAllCounterGroups().size() + 1);
+        //left = groupFactory.newGroup(right.getName(), right.getDisplayName(),
+        //    limits);
+        getAllCounterGroups().put(right.getName(), right);
+      }
+      left.incrAllCounters(right);
+    }
+  }
+
   private void initCounterGroups() {
     if (this.counterGroups != null) {
       return;

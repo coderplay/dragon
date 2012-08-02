@@ -78,4 +78,17 @@ public abstract class AbstractCounterGroup extends CounterGroupPBImpl implements
     Counter counter = getCounter(saveName);
     return counter;
   }
+
+  @Override
+  public void incrAllCounters(CounterGroup rightGroup) {
+    try {
+      for (Counter right : rightGroup.getAllCounters().values()) {
+        Counter left = findCounter(right.getName(), right.getDisplayName());
+        left.increment(right.getValue());
+      }
+    } catch (LimitExceededException e) {
+      getAllCounters().clear();
+      throw e;
+    }
+  }
 }
