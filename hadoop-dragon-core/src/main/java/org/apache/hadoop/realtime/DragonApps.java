@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.job.TaskLog.LogName;
+import org.apache.hadoop.realtime.records.TaskAttemptState;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.ContainerLogAppender;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
@@ -171,4 +172,28 @@ public class DragonApps extends Apps {
         + filter.toString();
   }
 
+  public static enum TaskAttemptStateUI {
+    NEW(
+        new TaskAttemptState[] { TaskAttemptState.NEW,
+            TaskAttemptState.UNASSIGNED, TaskAttemptState.ASSIGNED }),
+    RUNNING(
+        new TaskAttemptState[] { TaskAttemptState.RUNNING,
+            TaskAttemptState.SUCCESS_CONTAINER_CLEANUP,
+            TaskAttemptState.FAIL_CONTAINER_CLEANUP,
+            TaskAttemptState.FAIL_TASK_CLEANUP,
+            TaskAttemptState.KILL_CONTAINER_CLEANUP,
+            TaskAttemptState.KILL_TASK_CLEANUP }),
+    FAILED(new TaskAttemptState[] { TaskAttemptState.FAILED}),
+    KILLED(new TaskAttemptState[] { TaskAttemptState.KILLED});
+
+    private final List<TaskAttemptState> correspondingStates;
+
+    private TaskAttemptStateUI(TaskAttemptState[] correspondingStates) {
+      this.correspondingStates = Arrays.asList(correspondingStates);
+    }
+
+    public boolean correspondsTo(TaskAttemptState state) {
+      return this.correspondingStates.contains(state);
+    }
+  }
 }

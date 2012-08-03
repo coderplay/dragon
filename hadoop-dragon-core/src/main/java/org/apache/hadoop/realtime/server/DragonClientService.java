@@ -148,7 +148,7 @@ public class DragonClientService extends AbstractService
     LOG.info("Instantiated DRAGONClientService at " + this.bindAddress);
     try {
       webApp =
-          WebApps.$for("mapreduce", AppContext.class, appContext, "ws")
+          WebApps.$for("dragon", AppContext.class, appContext, "ws")
               .with(conf).start(new DragonWebApp());
     } catch (Exception e) {
       LOG.error("Webapps failed to start. Ignoring for now:", e);

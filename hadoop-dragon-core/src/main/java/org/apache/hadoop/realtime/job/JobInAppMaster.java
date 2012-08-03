@@ -527,7 +527,17 @@ public class JobInAppMaster implements Job,
   public Path getConfFile() {
     return remoteJobConfFile;
   }
-  
+
+  @Override
+  public int getTotalMaps() {
+    return mapNumTasks;
+  }
+
+  @Override
+  public int getTotalReduces() {
+    return reduceNumTasks;
+  }
+
   public void setMapNumTasks(int num){
     this.mapNumTasks = num;
   }
@@ -881,7 +891,6 @@ public class JobInAppMaster implements Job,
               new TaskEvent(task.getID(), TaskEventType.T_SCHEDULED));
         }
       }
-        
     }
   }
 

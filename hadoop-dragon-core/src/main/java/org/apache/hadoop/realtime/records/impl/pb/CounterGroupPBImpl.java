@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.realtime.app.counter.LimitExceededException;
 import org.apache.hadoop.realtime.records.Counter;
 import org.apache.hadoop.realtime.records.CounterGroup;
 import org.apache.hadoop.yarn.api.records.ProtoBase;
@@ -195,6 +196,11 @@ public class CounterGroupPBImpl extends ProtoBase<CounterGroupProto> implements 
   public void clearCounters() {
     initCounters();
     this.counters.clear();
+  }
+
+  @Override
+  public void incrAllCounters(CounterGroup right) {
+    // TODO it is need here
   }
 
   private CounterPBImpl convertFromProtoFormat(CounterProto p) {

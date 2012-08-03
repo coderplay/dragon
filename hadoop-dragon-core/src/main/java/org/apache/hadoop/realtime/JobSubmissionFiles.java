@@ -68,7 +68,7 @@ public class JobSubmissionFiles {
    * @param jobSubmitDir
    */
   public static Path getJobDistCacheFiles(Path jobSubmitDir) {
-    return new Path(jobSubmitDir, DragonJobConfig.JOB_DiST_CACHE_FILES);
+    return new Path(jobSubmitDir, DragonJobConfig.JOB_DIST_CACHE_FILES);
   }
   /**
    * Get the job distributed cache archives path.

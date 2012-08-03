@@ -731,38 +731,31 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
       LOG.info("The job-conf file on the remote FS is "
           + remoteJobConfPath.toUri().toASCIIString());
       // //////////// End of job config setup
-      
-      // //////////// Set up job graph to be localized properly on the remote NM.
-      Path remoteJobDescPath =
-          new Path(remoteJobSubmitDir, DragonJobConfig.JOB_DESCRIPTION_FILE);
-      localResources.put(
-          DragonJobConfig.JOB_DESCRIPTION_FILE,
-          createLocalResource(remoteFS, remoteJobDescPath,
-              LocalResourceType.FILE, LocalResourceVisibility.APPLICATION));
-      LOG.info("The job graph file on the remote FS is "
-          + remoteJobDescPath.toUri().toASCIIString());
-      // //////////// End of job graph setup      
 
       // files
       Path remoteFileDir =
           JobSubmissionFiles.getJobDistCacheFiles(remoteJobSubmitDir);
-      for (String file : conf.getStringCollection(DragonJobConfig.JOB_DiST_CACHE_FILES)) {
-        Path remoteFilePath = new Path(remoteFileDir, file);
-        localResources.put(
-            file,
-            createLocalResource(remoteFS, remoteFilePath,
-                LocalResourceType.FILE, LocalResourceVisibility.PRIVATE));
+      if (remoteFS.exists(remoteFileDir)) {
+        for (String file : conf.getStringCollection(DragonJobConfig.JOB_DIST_CACHE_FILES)) {
+          Path remoteFilePath = new Path(remoteFileDir, file);
+          localResources.put(
+              file,
+              createLocalResource(remoteFS, remoteFilePath,
+                  LocalResourceType.FILE, LocalResourceVisibility.PRIVATE));
+        }
       }
 
       // archives
       Path remoteArchiveDir =
           JobSubmissionFiles.getJobDistCacheArchives(remoteJobSubmitDir);
-      for (String archive : conf.getStringCollection(DragonJobConfig.JOB_DIST_CACHE_ARCHIVES)) {
-        Path remoteArchivePath = new Path(remoteArchiveDir, archive);
-        localResources.put(
-            archive,
-            createLocalResource(remoteFS, remoteArchivePath,
-                LocalResourceType.FILE, LocalResourceVisibility.PRIVATE));
+      if (remoteFS.exists(remoteArchiveDir)) {
+        for (String archive : conf.getStringCollection(DragonJobConfig.JOB_DIST_CACHE_ARCHIVES)) {
+          Path remoteArchivePath = new Path(remoteArchiveDir, archive);
+          localResources.put(
+              archive,
+              createLocalResource(remoteFS, remoteArchivePath,
+                  LocalResourceType.FILE, LocalResourceVisibility.PRIVATE));
+        }
       }
 
       // Setup up tokens
