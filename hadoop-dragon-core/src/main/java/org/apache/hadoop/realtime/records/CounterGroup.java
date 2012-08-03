@@ -34,4 +34,6 @@ public interface CounterGroup {
   public abstract void setCounter(String key, Counter value);
   public abstract void removeCounter(String key);
   public abstract void clearCounters();
+
+  public abstract void incrAllCounters(CounterGroup right);
 }

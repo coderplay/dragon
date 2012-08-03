@@ -3,6 +3,9 @@
 .classpath
 .settings
 
+# Mac OS System File
+.DS_Store
+
 # IntelliJ IDEA meta-information 
 .idea
 *.iml

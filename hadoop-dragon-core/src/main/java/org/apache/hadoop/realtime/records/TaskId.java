@@ -47,11 +47,6 @@ public abstract class TaskId implements Comparable<TaskId> {
    */
   public abstract JobId getJobId();
 
-
-  /**
-   *
-   * @return
-   */
   public abstract TaskType getTaskType();
 
   /**
@@ -95,6 +90,7 @@ public abstract class TaskId implements Comparable<TaskId> {
     int result = 1;
     result = prime * result + getId();
     result = prime * result + getJobId().hashCode();
+    result = prime * result + getTaskType().hashCode();
     return result;
   }
 
@@ -111,6 +107,8 @@ public abstract class TaskId implements Comparable<TaskId> {
       return false;
     if (!getJobId().equals(other.getJobId()))
       return false;
+    if (!getTaskType().equals(other.getTaskType()))
+      return false;
     return true;
   }
 
@@ -126,7 +124,7 @@ public abstract class TaskId implements Comparable<TaskId> {
   public String toString() {
     return _join(TASK, getJobId().getAppId().getClusterTimestamp(),
         getJobId().getAppId().getId(), getJobId().getId(),
-        getTaskType(), getId());
+        taskSymbol(getTaskType()), getId());
   }
 
   public static TaskId parseTaskId(String str) {
@@ -138,7 +136,7 @@ public abstract class TaskId implements Comparable<TaskId> {
         long clusterTimeStamp = Long.parseLong(parts[1]);
         int appIdInteger = Integer.parseInt(parts[2]);
         int jobIdInteger = Integer.parseInt(parts[3]);
-        TaskType taskType = TaskType.valueOf(parts[4]);
+        TaskType taskType = taskType(parts[4]);
         int taskIdInteger = Integer.parseInt(parts[5]);
         ApplicationId app =
             BuilderUtils.newApplicationId(clusterTimeStamp, appIdInteger);
@@ -152,12 +150,27 @@ public abstract class TaskId implements Comparable<TaskId> {
         + " is not properly formed");
   }
 
-  public static TaskId newTaskId(JobId jobId, int id,TaskType taskType) {
+  public static TaskId newTaskId(JobId jobId, int id, TaskType taskType) {
     TaskId taskId = Records.newRecord(TaskId.class);
     taskId.setJobId(jobId);
     taskId.setId(id);
     taskId.setTaskType(taskType);
     return taskId;
+  }
+
+  public static TaskType taskType(String symbol) {
+    // JDK 7 supports switch on strings
+    if (symbol.equals("m")) return TaskType.MAP;
+    if (symbol.equals("r")) return TaskType.REDUCE;
+    throw new YarnException("Unknown task symbol: "+ symbol);
+  }
+
+  public static String taskSymbol(TaskType type) {
+    switch (type) {
+      case MAP:           return "m";
+      case REDUCE:        return "r";
+    }
+    throw new YarnException("Unknown task type: "+ type.toString());
   }
 
 }

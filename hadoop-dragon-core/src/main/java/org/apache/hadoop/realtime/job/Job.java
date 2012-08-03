@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.Counters;
 import org.apache.hadoop.realtime.records.JobId;
@@ -103,4 +104,13 @@ public interface Job {
    * @return information for Dragon AppMasters (previously failed and current)
    */
   List<AMInfo> getAMInfos();
+
+  /**
+   * @return a path to where the config file for this job is located.
+   */
+  Path getConfFile();
+
+  int getTotalMaps();
+
+  int getTotalReduces();
 }

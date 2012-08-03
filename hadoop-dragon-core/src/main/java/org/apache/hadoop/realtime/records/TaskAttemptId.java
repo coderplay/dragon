@@ -60,8 +60,7 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
     final int prime = 31;
     int result = 1;
     result = prime * result + getId();
-    result =
-        prime * result + ((getTaskId() == null) ? 0 : getTaskId().hashCode());
+    result = prime * result + ((getTaskId() == null) ? 0 : getTaskId().hashCode());
     return result;
   }
 
@@ -97,7 +96,7 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
         getTaskId().getJobId().getAppId().getClusterTimestamp(),
         getTaskId().getJobId().getAppId().getId(),
         getTaskId().getJobId().getId(),
-        getTaskId().getTaskType(),
+        TaskId.taskSymbol(getTaskId().getTaskType()),
         getTaskId().getId(),
         getId());
   }
@@ -119,7 +118,7 @@ public abstract class TaskAttemptId implements Comparable<TaskAttemptId> {
         long clusterTimeStamp = Long.parseLong(parts[1]);
         int appIdInteger = Integer.parseInt(parts[2]);
         int jobIdInteger = Integer.parseInt(parts[3]);
-        TaskType taskType = TaskType.valueOf(parts[4]);
+        TaskType taskType = TaskId.taskType(parts[4]);
         int taskIdInteger = Integer.parseInt(parts[5]);
         int attemptIdInteger = Integer.parseInt(parts[6]);
         ApplicationId appId =

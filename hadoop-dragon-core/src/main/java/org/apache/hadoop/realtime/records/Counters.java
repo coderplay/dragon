@@ -31,4 +31,5 @@ public interface Counters {
   public abstract void clearCounterGroups();
   
   public abstract void incrCounter(Enum<?> key, long amount);
+  public abstract void incrAllCounters(Counters counters);
 }
