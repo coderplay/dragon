@@ -49,6 +49,7 @@ public class TaskIdParseTest {
   public void testJobId() {
     JobId job1 = JobId.newJobId(appId, jobId);
     assertEquals(job1.getId(), jobId);
+    System.out.println(job1);
 
     JobId job2 = JobId.parseJobId(job1.toString());
     assertEquals(job2.getId(), jobId);

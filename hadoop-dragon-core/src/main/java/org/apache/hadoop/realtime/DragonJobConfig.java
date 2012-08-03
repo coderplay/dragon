@@ -303,4 +303,25 @@ public class DragonJobConfig {
   public static final String REDUCE_PARALLELISM = "dragon.reduce.tasks";
 
   public static final String KRYO_SERIALIZATION_REGISTER_CLASSES= "dragon.serialization.kryo.register.classes";
+
+  public static final String JOB_REDUCE_INPUT_KEY_CLASS = "dragon.reduce.input.key.class";
+
+  public static final String JOB_REDUCE_INPUT_VALUE_CLASS = "dragon.reduce.input.value.class";
+
+  public static final String JOB_MAP_OUTPUT_KEY_CLASS = "dragon.map.output.key.class";
+  
+  public static final String JOB_MAP_OUTPUT_VALUE_CLASS = "dragon.map.output.value.class";
+  
+  public static final String JOB_REDUCE_OUTPUT_KEY_CLASS = "dragon.reduce.output.key.class";
+
+  public static final String JOB_REDUCE_OUTPUT_VALUE_CLASS = "dragon.reduce.output.value.class";
+
+  public static final String JOB_MAP_INPUT_KEY_CLASS = "dragon.map.input.key.class";
+  
+  public static final String JOB_MAP_INPUT_VALUE_CLASS = "dragon.map.input.value.class";
+
+  public static final String JOB_EVENT_PRODUCER_CLASS = "dragon.event.producer.class";
+  
+  public static final String JOB_EVENT_EMITTER_CLASS = "dragon.event.emitter.class";
+  
 }
