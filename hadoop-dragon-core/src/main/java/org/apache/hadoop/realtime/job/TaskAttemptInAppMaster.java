@@ -219,9 +219,12 @@ public class TaskAttemptInAppMaster implements TaskAttempt,
           .addTransition(TaskAttemptState.ASSIGNED, TaskAttemptState.ASSIGNED,
               TaskAttemptEventType.TA_LAUNCH,
               new ContainerLaunchTransition())   
-          .addTransition(TaskAttemptState.ASSIGNED, TaskAttemptState.RUNNING,
-              TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
-              new LaunchedContainerTransition())
+          //.addTransition(TaskAttemptState.ASSIGNED, TaskAttemptState.RUNNING,
+          //    TaskAttemptEventType.TA_CONTAINER_LAUNCHED,
+          //    new LaunchedContainerTransition())
+          .addTransition(TaskAttemptState.ASSIGNED, TaskAttemptState.ASSIGNED,
+              TaskAttemptEventType.TA_CONTAINER_LAUNCHED)
+
           .addTransition(TaskAttemptState.ASSIGNED, TaskAttemptState.ASSIGNED,
               TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
               DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)

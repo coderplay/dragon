@@ -246,7 +246,7 @@ public class TaskInAppMaster implements Task, EventHandler<TaskEvent> {
       for (TaskAttempt att : attempts.values()) {
         String prefix = "AttemptID:" + att.getID() + " Info:";
         for (CharSequence cs : att.getDiagnostics()) {
-          report.addDiagnostics(prefix + cs);
+          report.setDiagnostics(prefix + cs);
         }
       }
       // Add a copy of counters as the last step so that their lifetime on heap
