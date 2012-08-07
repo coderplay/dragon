@@ -27,9 +27,10 @@ public final class ChildExecutorFactory {
     TaskType type = context.getTaskType();
     if (type == TaskType.MAP)
       return new MapChildExecutor(context);
-    else if (type == TaskType.MAP)
+    else if (type == TaskType.REDUCE)
       return new ReduceChildExecutor(context);
-    else
-      return null; // or throw an exception?
+
+    throw new IllegalStateException(
+        "new executor exception, unknown task type " + type);
   }
 }
