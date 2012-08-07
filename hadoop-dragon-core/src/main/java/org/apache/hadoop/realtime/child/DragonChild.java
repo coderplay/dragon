@@ -137,8 +137,11 @@ class DragonChild {
             workDir =
                 FileSystem.get(defaultConf).getWorkingDirectory().toString();
             defaultConf.set(DragonJobConfig.WORKING_DIR, workDir);
+          } else {
+            Path workPath = new Path(workDir);
+            FileSystem.get(defaultConf).setWorkingDirectory(workPath);
           }
-          Path workPath = new Path(workDir);
+
           ChildExecutor executor =
               ChildExecutorFactory.newExecutor(context);
           executor.execute(defaultConf, delegate); // run the task

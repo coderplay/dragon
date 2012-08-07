@@ -208,7 +208,7 @@ public class TaskReportPBImpl extends ProtoBase<TaskReportProto> implements Task
     if (!p.hasDiagnostics()) {
       return null;
     }
-    this.diagnostics = convertFromProtoFormat(p.getDiagnostics());
+    this.diagnostics = p.getDiagnostics();
     return this.diagnostics;
   }
 
