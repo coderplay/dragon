@@ -15,7 +15,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
-  
+
   <repositories>
     <repository>
       <id>apache.releases.https</id>
@@ -54,6 +54,16 @@
       <groupId>com.caucho</groupId>
       <artifactId>hessian</artifactId>
       <version>4.0.7</version>
+    </dependency>
+    <dependency>
+      <groupId>com.netflix.curator</groupId>
+      <artifactId>curator-framework</artifactId>
+      <version>1.1.15</version>
+    </dependency>
+    <dependency>
+      <groupId>com.netflix.curator</groupId>
+      <artifactId>curator-recipes</artifactId>
+      <version>1.1.15</version>
     </dependency>
 	<dependency>
 		<groupId>org.mockito</groupId>
@@ -154,7 +164,7 @@
               <goal>build-classpath</goal>
             </goals>
             <configuration>
-              <!-- needed to run the unit test for DS to generate the required classpath 
+              <!-- needed to run the unit test for DS to generate the required classpath
                    that is required in the env of the launch container in the mini yarn cluster -->
               <outputFile>target/classes/yarn-apps-ds-generated-classpath</outputFile>
             </configuration>
@@ -173,7 +183,7 @@
       </plugin>
     </plugins>
   </build>
-  
+
   <profiles>
     <profile>
       <id>visualize</id>
@@ -209,5 +219,5 @@
       </build>
     </profile>
   </profiles>
-  
+
 </project>
