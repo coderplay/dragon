@@ -22,22 +22,24 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 
 import java.util.List;
 
+import static org.apache.hadoop.realtime.zookeeper.DragonZooKeeper.NodeData;
+
 /**
  * class description goes here.
  */
 public class NodesRegisterEvent extends ZKEvent {
 
-  private final List<NodeId> nodeIdList;
+  private final List<NodeData> nodeList;
 
   public NodesRegisterEvent(final JobId jobId,
-                            final List<NodeId> nodeIdList) {
+                            final List<NodeData> nodeList) {
     super(jobId, ZKEventType.NODES_REGISTER);
 
-    this.nodeIdList = nodeIdList;
+    this.nodeList = nodeList;
   }
 
-  public List<NodeId> getNodeIdList() {
-    return nodeIdList;
+  public List<NodeData> getNodeList() {
+    return nodeList;
   }
 
 }

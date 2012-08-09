@@ -20,9 +20,10 @@ package org.apache.hadoop.realtime.zookeeper;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
 import com.netflix.curator.retry.ExponentialBackoffRetry;
-import com.netflix.curator.utils.ZKPaths;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.yarn.api.records.NodeId;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -30,31 +31,25 @@ import java.io.IOException;
 /**
  * class description goes here.
  */
-public class NodeManagerZooKeeper implements Closeable {
+public class NMZooKeeper implements Closeable {
 
-  private final CuratorFramework zkClient;
-  private final String zkRoot;
-  private final String nodeManagersPath;
+  private static Log LOG = LogFactory.getLog(NMZooKeeper.class);
+  private final DragonZooKeeper dragonZK;
 
-  private static Log LOG = LogFactory.getLog(NodeManagerZooKeeper.class);
-
-  public NodeManagerZooKeeper(
-      final String serverList,
-      final String zkRoot) throws IOException {
-    this.zkClient = CuratorFrameworkFactory.newClient(
+  public NMZooKeeper(
+    final String serverList,
+    final String zkRoot) throws IOException {
+    CuratorFramework zkClient = CuratorFrameworkFactory.newClient(
         serverList, new ExponentialBackoffRetry(300, 5));
-
-    this.zkRoot = zkRoot;
-    this.nodeManagersPath = ZKPaths.makePath(zkRoot, "nodemanagers");
+    this.dragonZK = new DragonZooKeeper(zkClient, zkRoot);
   }
 
-  public void register(final String nodeId) throws Exception {
-    final String nodePath = ZKPaths.makePath(this.nodeManagersPath, nodeId);
-    this.zkClient.create().creatingParentsIfNeeded().forPath(nodePath);
+  public void registerSelf(final NodeId nodeId) throws Exception {
+    this.dragonZK.registerNodeManager(nodeId);
   }
 
   @Override
   public void close() throws IOException {
-    this.zkClient.close();
+    IOUtils.cleanup(LOG, this.dragonZK);
   }
 }

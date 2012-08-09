@@ -18,7 +18,9 @@
 package org.apache.hadoop.realtime.zookeeper;
 
 import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import static org.apache.hadoop.realtime.zookeeper.DragonZooKeeper.NodeData;
 
 /**
  * class description goes here.
@@ -26,15 +28,22 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 public class NodeRenewEvent extends ZKEvent {
 
   private final NodeId nodeId;
+  private final TaskId taskId;
 
   public NodeRenewEvent(final JobId jobId,
-                        final NodeId nodeId) {
+                        final NodeId nodeId,
+                        final TaskId taskId) {
     super(jobId, ZKEventType.NODE_RENEW);
 
     this.nodeId = nodeId;
+    this.taskId = taskId;
   }
 
   public NodeId getNodeId() {
     return nodeId;
+  }
+
+  public TaskId getTaskId() {
+    return taskId;
   }
 }

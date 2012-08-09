@@ -22,49 +22,47 @@ import com.netflix.curator.framework.CuratorFrameworkFactory;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.retry.ExponentialBackoffRetry;
 import com.netflix.curator.utils.ZKPaths;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.realtime.records.JobId;
+import org.apache.hadoop.realtime.records.TaskId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.List;
 
 /**
  * class description goes here.
  */
 public class ChildZooKeeper implements Closeable {
 
-  private final CuratorFramework zkClient;
-  private final String zkRoot;
-  private final String jobId;
-  private String shufflePath;
-  private volatile PathChildrenCache shuffleNodeCache;
+  private static final Log LOG = LogFactory.getLog(ChildZooKeeper.class);
+
+  private final DragonZooKeeper dragonZK;
 
   public ChildZooKeeper(final String serverList,
                             final String zkRoot,
-                            final String jobId) throws IOException {
-    this.zkClient = CuratorFrameworkFactory.newClient(
+                            final JobId jobId) throws Exception {
+    CuratorFramework zkClient = CuratorFrameworkFactory.newClient(
         serverList, new ExponentialBackoffRetry(300, 5));
-    this.zkRoot = zkRoot;
-    this.jobId = jobId;
-    this.shufflePath = ZKPaths.makePath(
-        ZKPaths.makePath(this.zkRoot, this.jobId), "shuffle");
+    this.dragonZK = new DragonZooKeeper(zkClient, zkRoot);
+    PathChildrenCache shuffleNodeCache = new PathChildrenCache(
+      zkClient,
+      dragonZK.getShufflePath(jobId),
+      true);
+
+    this.dragonZK.addShuffleNodeCache(jobId, shuffleNodeCache);
   }
 
-  public List<String> getShuffleNodeList() throws Exception {
-    if (shuffleNodeCache == null) {
-      synchronized (this) {
-        if (shuffleNodeCache == null) {
-          shuffleNodeCache = new PathChildrenCache(zkClient, shufflePath, true);
-          shuffleNodeCache.start();
-        }
-      }
-    }
-
-    return null;
+  public NodeId getShuffleNodeByTaskId(final JobId jobId,
+                                       final TaskId taskId) {
+    return this.dragonZK.getShuffleNodeByTaskId(jobId, taskId);
   }
+
 
   @Override
   public void close() throws IOException {
-    this.shuffleNodeCache.close();
-    this.zkClient.close();
+    IOUtils.cleanup(LOG, this.dragonZK);
   }
 }

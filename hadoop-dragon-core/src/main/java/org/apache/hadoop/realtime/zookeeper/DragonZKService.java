@@ -20,10 +20,7 @@ package org.apache.hadoop.realtime.zookeeper;
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
 import com.netflix.curator.retry.ExponentialBackoffRetry;
-import com.netflix.curator.utils.ZKPaths;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -33,33 +30,23 @@ import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.yarn.YarnException;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
 
-import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * class description goes here.
  */
-public class DragonZooKeeperService extends AbstractService
+public class DragonZKService extends AbstractService
     implements EventHandler<ZKEvent> {
-
-  private CuratorFramework zkClient;
-  private String zkRoot;
-  private String nodeManagersPath;
-  private String shufflePath;
-
-  private PathChildrenCache nodeManagersCache;
 
   protected final BlockingQueue<ZKEvent> eventQueue =
       new LinkedBlockingQueue<ZKEvent>();
 
-  private static final Log LOG = LogFactory.getLog(DragonZooKeeperService.class);
+  private static final Log LOG = LogFactory.getLog(DragonZKService.class);
   private Thread eventHandlingThread;
   private volatile boolean stopped;
 
@@ -67,8 +54,10 @@ public class DragonZooKeeperService extends AbstractService
 
   private final AppContext context;
 
-  public DragonZooKeeperService(AppContext context) {
-    super("DragonZooKeeperService");
+  private DragonZooKeeper dragonZK;
+
+  public DragonZKService(AppContext context) {
+    super("DragonZKService");
 
     this.context = context;
   }
@@ -76,33 +65,43 @@ public class DragonZooKeeperService extends AbstractService
   @Override
   public synchronized void init(Configuration config) {
     final String serverList = config.get(DragonConfiguration.ZK_SERVER_LIST);
+    final String zkRoot = config.get(DragonConfiguration.ZK_ROOT);
+
     try {
-      this.zkClient = CuratorFrameworkFactory.newClient(
-          serverList, new ExponentialBackoffRetry(300, 5));
-    } catch (IOException e) {
+      CuratorFramework zkClient = CuratorFrameworkFactory.newClient(
+        serverList,
+        new ExponentialBackoffRetry(300, 5));
+
+      this.dragonZK = new DragonZooKeeper(zkClient, zkRoot);
+
+      PathChildrenCache nodeManagersCache = new PathChildrenCache(
+        dragonZK.getZkClient(),
+        dragonZK.getNodeManagersPath(),
+        false);
+
+      nodeManagersCache.getListenable().addListener(
+        dragonZK.new NMPathChildrenCacheListener(context));
+
+      dragonZK.setNodeManagersCache(nodeManagersCache);
+
+      for (Job job : context.getAllJobs().values()) {
+        final JobId jobId = job.getID();
+        final PathChildrenCache shuffleNodeCache = new PathChildrenCache(
+          zkClient,
+          dragonZK.getShufflePath(jobId),
+          true);
+        dragonZK.addShuffleNodeCache(jobId, shuffleNodeCache);
+      }
+
+    } catch (Exception e) {
       throw new IllegalStateException("init app master zookeeper failure", e);
     }
-
-    this.zkRoot =  config.get(DragonConfiguration.ZK_ROOT);
-    this.nodeManagersPath = ZKPaths.makePath(zkRoot, "nodemanagers");
-
-    this.nodeManagersCache =
-        new PathChildrenCache(zkClient, nodeManagersPath, false);
-
-    this.nodeManagersCache.getListenable().addListener(
-        new NMPathChildrenCacheListener());
 
     super.init(config);
   }
 
   @Override
   public synchronized void start() {
-    try {
-      this.nodeManagersCache.start();
-    } catch (Exception e) {
-      throw new IllegalStateException(
-          "init app master zookeeper start node managers cache failure", e);
-    }
 
     eventHandlingThread = new Thread(new Runnable() {
       @Override
@@ -133,6 +132,7 @@ public class DragonZooKeeperService extends AbstractService
       }
     });
     eventHandlingThread.start();
+
     super.start();
   }
 
@@ -147,7 +147,7 @@ public class DragonZooKeeperService extends AbstractService
 
   @Override
   public synchronized void stop() {
-    LOG.info("Stopping DragonZooKeeperService. "
+    LOG.info("Stopping DragonZKService. "
         + "Size of the outstanding queue size is " + eventQueue.size());
     stopped = true;
     //do not interrupt while event handling is in progress
@@ -171,73 +171,33 @@ public class DragonZooKeeperService extends AbstractService
       handleEvent(ev);
     }
 
-    IOUtils.cleanup(LOG, nodeManagersCache, zkClient);
+    IOUtils.cleanup(LOG, dragonZK);
+
     super.stop();
   }
 
   protected void handleEvent(ZKEvent event) {
     synchronized (lock) {
-      if (event.getType() == ZKEventType.NODES_REGISTER) {
-        final NodesRegisterEvent e = (NodesRegisterEvent) event;
-
-        final JobId jobId = e.getJobId();
-        final List<NodeId> nodeIdList = e.getNodeIdList();
-
-        final String zkPath = ZKPaths.makePath(
-          ZKPaths.makePath(this.zkRoot, jobId.toString()),
-          "shuffle");
-
-        try {
-          for (NodeId nodeId : nodeIdList) {
-            this.zkClient.create().creatingParentsIfNeeded().forPath(
-              ZKPaths.makePath(zkPath, nodeId.toString()));
-          }
-        } catch (Exception ex) {
-          LOG.error("nodes register failure ", ex);
-        }
-
-      } else if (event.getType() == ZKEventType.NODE_RENEW) {
-        final NodeRenewEvent e = (NodeRenewEvent) event;
-
-        final JobId jobId = e.getJobId();
-        final NodeId nodeId = e.getNodeId();
-
-        final String zkPath = ZKPaths.makePath(
-          ZKPaths.makePath(
-            ZKPaths.makePath(this.zkRoot, jobId.toString()),
-            "shuffle"),
-          nodeId.toString());
-
-        try {
-          this.zkClient.create().creatingParentsIfNeeded().forPath(zkPath);
-        } catch (Exception ex) {
-          LOG.error("node renew failure ", ex);
-        }
-      } else {
-        throw new IllegalStateException(
-          "unknown event type " + event.getType());
+      ZKEventType type = event.getType();
+      switch (type) {
+        case NODES_REGISTER:
+          final NodesRegisterEvent registerEvent = (NodesRegisterEvent) event;
+          dragonZK.registerTasks(
+            registerEvent.getJobId(),
+            registerEvent.getNodeList());
+          break;
+        case NODE_RENEW:
+          final NodeRenewEvent renewEvent = (NodeRenewEvent) event;
+          dragonZK.renewNode(renewEvent.getJobId(),
+            renewEvent.getNodeId(), renewEvent.getTaskId());
+          break;
+        default:
+          throw new IllegalStateException(
+            "unknown event type " + event.getType());
       }
+
     }
   }
 
-  private class NMPathChildrenCacheListener
-      implements PathChildrenCacheListener {
-    @Override
-    public void childEvent(
-        CuratorFramework client,
-        PathChildrenCacheEvent event) throws Exception {
-      if (event.getType() == PathChildrenCacheEvent.Type.CHILD_REMOVED) {
-        for (Job job : context.getAllJobs().values()) {
-          final String shufflePath =
-            ZKPaths.makePath(
-              ZKPaths.makePath(
-                ZKPaths.makePath(zkRoot, "shuffle"), job.getID().toString()),
-              ZKPaths.getNodeFromPath(event.getData().getPath()));
-
-          zkClient.delete().guaranteed().forPath(shufflePath);
-        }
-      }
-    }
-  }
 
 }
