@@ -19,10 +19,12 @@ package org.apache.hadoop.realtime.zookeeper;
 
 import com.google.common.base.Splitter;
 import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.api.CuratorWatcher;
 import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCacheListener;
+import com.netflix.curator.utils.ZKPaths;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
@@ -31,20 +33,23 @@ import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.records.TaskId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.collect.Sets.newHashSet;
+import static com.netflix.curator.utils.ZKPaths.getNodeFromPath;
 import static com.netflix.curator.utils.ZKPaths.makePath;
 
 /**
- * class description goes here.
+ * common zookeeper code for dragon
  */
 public class DragonZooKeeper implements Closeable {
   public static final String SHUFFLE_ZK_PATH = "shuffle";
@@ -53,49 +58,34 @@ public class DragonZooKeeper implements Closeable {
   private static final Log LOG = LogFactory.getLog(DragonZKService.class);
   public static final Splitter SPLITTER = Splitter.on(":");
 
-  private CuratorFramework zkClient;
-  private String zkRoot;
-  private String nodeManagersPath;
+  private final CuratorFramework zkClient;
+  private final String zkRoot;
+  private final String nodeManagersPath;
 
-  private PathChildrenCache nodeManagersCache;
-  private Map<JobId, PathChildrenCache> shuffleNodeCacheMap;
+  private PathChildrenCache shuffleNodeCache;
 
-  public DragonZooKeeper(CuratorFramework zkClient, String zkRoot) {
+  public DragonZooKeeper(final CuratorFramework zkClient, final String zkRoot) {
     this.zkClient = zkClient;
     this.zkRoot = zkRoot;
     this.nodeManagersPath = makePath(zkRoot, NODE_MANAGERS_ZK_PATH);
   }
 
-  public CuratorFramework getZkClient() {
-    return this.zkClient;
+  public String getNodeManagerPath(final NodeId nodeId) {
+    return makePath(nodeManagersPath, nodeId.toString());
   }
 
-  public String getNodeManagersPath() {
-    return nodeManagersPath;
-  }
-
-  public String getShufflePath(JobId jobId) {
+  public String getShufflePath(final JobId jobId) {
     return makePath(
       makePath(this.zkRoot, jobId.toString()), SHUFFLE_ZK_PATH);
   }
 
-  public void setNodeManagersCache(
-    final PathChildrenCache nodeManagersCache) throws Exception {
-    this.nodeManagersCache = nodeManagersCache;
-    this.nodeManagersCache.start();
+  public String getTaskPath(final JobId jobId, final TaskId taskId) {
+    return makePath(getShufflePath(jobId), taskId.toString());
   }
 
-  public void addShuffleNodeCache(final JobId jobId,
-                                  final PathChildrenCache shuffleNodeCache)
+  public void setShuffleNodeCache(final PathChildrenCache shuffleNodeCache)
     throws Exception {
-
-    if (this.shuffleNodeCacheMap == null) {
-      this.shuffleNodeCacheMap = new HashMap<JobId, PathChildrenCache>();
-    }
-
-    this.shuffleNodeCacheMap.put(jobId, shuffleNodeCache);
-
-    shuffleNodeCache.start();
+    this.shuffleNodeCache = shuffleNodeCache;
   }
 
   public void registerNodeManager(final NodeId nodeId) throws Exception {
@@ -104,13 +94,86 @@ public class DragonZooKeeper implements Closeable {
       withMode(CreateMode.EPHEMERAL).forPath(nodePath);
   }
 
+  public void createShufflePath(final JobId jobId) throws Exception {
+    final String shufflePath = getShufflePath(jobId);
+    this.zkClient.create().creatingParentsIfNeeded().forPath(shufflePath);
+  }
+
   public NodeId getShuffleNodeByTaskId(final JobId jobId,
                                        final TaskId  taskId) {
-    final String taskPath = makePath(getShufflePath(jobId), taskId.toString());
-    final PathChildrenCache shuffleNodeCache = shuffleNodeCacheMap.get(jobId);
+    final String taskPath = getTaskPath(jobId, taskId);
     final ChildData taskData = shuffleNodeCache.getCurrentData(taskPath);
-    final Iterator<String> nodeIdIt =
-      SPLITTER.split(new String(taskData.getData())).iterator();
+
+    return toNodeID(new String(taskData.getData()));
+  }
+
+  public void createShuffleNode(final JobId jobId,
+                                final List<NodeData> nodeList) {
+    Set<NodeId> nodeIdSet = new HashSet<NodeId>();
+    try {
+      for (NodeData nodeData : nodeList) {
+        final String taskPath = getTaskPath(jobId, nodeData.taskId);
+        this.zkClient.create().forPath(taskPath,
+          nodeData.nodeId.toString().getBytes());
+        nodeIdSet.add(nodeData.nodeId);
+      }
+    } catch (Exception ex) {
+      LOG.error("nodes register failure ", ex);
+    }
+  }
+
+  public void updateShuffleNode(final JobId jobId,
+                                final List<NodeData> nodeList)  {
+    try {
+      for (NodeData nodeData : nodeList) {
+        String taskPath = getTaskPath(jobId, nodeData.taskId);
+        this.zkClient.setData().forPath(taskPath,
+          nodeData.nodeId.toString().getBytes());
+      }
+    } catch (Exception ex) {
+      LOG.error("node renew failure ", ex);
+    }
+  }
+
+  @Override
+  public void close() throws IOException {
+    IOUtils.cleanup(LOG, shuffleNodeCache);
+  }
+
+  public List<NodeId> getAvailableNodes() throws Exception {
+    List<String> children = zkClient.getChildren().forPath(nodeManagersPath);
+
+    List<NodeId> nodeIds = newArrayList();
+    for (String child : children) {
+      nodeIds.add(toNodeID(getNodeFromPath(child)));
+    }
+
+    return nodeIds;
+  }
+
+  public void watchNodeManager(
+    final NodeId nodeId,
+    final DragonZKService.NMWatcher nmWatcher) {
+
+    String nodePath = getNodeManagerPath(nodeId);
+    try {
+      zkClient.
+        checkExists().
+        usingWatcher(nmWatcher).
+        inBackground().
+        forPath(nodePath);
+    } catch (Exception e) {
+      LOG.error("watch node manager failure ", e);
+    }
+  }
+
+  public static class NodeData {
+    public NodeId nodeId;
+    public TaskId taskId;
+  }
+
+  public static NodeId toNodeID(String data) {
+    final Iterator<String> nodeIdIt = SPLITTER.split(data).iterator();
 
     final NodeId nodeId = Records.newRecord(NodeId.class);
     nodeId.setHost(nodeIdIt.next());
@@ -119,99 +182,5 @@ public class DragonZooKeeper implements Closeable {
     return nodeId;
   }
 
-  public void registerTasks(final JobId jobId,
-                            final List<NodeData> nodes) {
-    final String shufflePath = getShufflePath(jobId);
 
-    try {
-      for (NodeData nodeData : nodes) {
-        byte[] nodeBytes = nodeData.nodeId.toString().getBytes();
-
-        for (TaskId taskId : nodeData.taskIds) {
-          final String taskPath = makePath(shufflePath, taskId.toString());
-          this.zkClient.create().
-            creatingParentsIfNeeded().forPath(taskPath, nodeBytes);
-        }
-      }
-    } catch (Exception ex) {
-      LOG.error("nodes register failure ", ex);
-    }
-  }
-
-  public void renewNode(final JobId jobId,
-                        final NodeId nodeId,
-                        final TaskId taskId)  {
-    final String taskPath = makePath(
-      makePath(
-        makePath(this.zkRoot, jobId.toString()),
-        SHUFFLE_ZK_PATH), taskId.toString()
-    );
-
-    try {
-      this.zkClient.setData().forPath(taskPath, nodeId.toString().getBytes());
-    } catch (Exception ex) {
-      LOG.error("node renew failure ", ex);
-    }
-  }
-
-  @Override
-  public void close() throws IOException {
-    IOUtils.cleanup(LOG, nodeManagersCache);
-
-    for (PathChildrenCache shuffleNodeCache : shuffleNodeCacheMap.values()) {
-      IOUtils.cleanup(LOG, shuffleNodeCache);
-    }
-  }
-
-  public static class NodeData {
-    public NodeId nodeId;
-    public List<TaskId> taskIds;
-  }
-
-  public class NMPathChildrenCacheListener
-    implements PathChildrenCacheListener {
-
-    private final AppContext appContext;
-
-    public NMPathChildrenCacheListener(final AppContext appContext) {
-      this.appContext = appContext;
-    }
-
-    @Override
-    public void childEvent(
-      final CuratorFramework client,
-      final PathChildrenCacheEvent event) throws Exception {
-
-      if (event.getType() == PathChildrenCacheEvent.Type.CHILD_REMOVED) {
-        for (Job job : appContext.getAllJobs().values()) {
-
-          final PathChildrenCache shuffleNodeCache =
-            shuffleNodeCacheMap.get(job.getID());
-          final String nodeDied = event.getData().getPath();
-
-          byte[] nextNode = null;
-          for (ChildData taskData : shuffleNodeCache.getCurrentData()) {
-            byte[] node = taskData.getData();
-            if (!nodeDied.equals(new String(node))) {
-              nextNode = node;
-              break;
-            }
-          }
-
-          if (nextNode == null) {
-            final String err =
-              "all node managers are died in the application " + job.getID();
-            LOG.error(err);
-            throw new IllegalStateException(err);
-          }
-
-          for (ChildData taskData : shuffleNodeCache.getCurrentData()) {
-            if (nodeDied.equals(new String(taskData.getData()))) {
-              zkClient.setData().forPath(taskData.getPath(), nextNode);
-            }
-          }
-        }
-      }
-    }
-  }
 }

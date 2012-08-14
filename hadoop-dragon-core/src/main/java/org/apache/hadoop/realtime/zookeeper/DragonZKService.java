@@ -19,7 +19,7 @@ package org.apache.hadoop.realtime.zookeeper;
 
 import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
-import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
+import com.netflix.curator.framework.api.CuratorWatcher;
 import com.netflix.curator.retry.ExponentialBackoffRetry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,15 +30,28 @@ import org.apache.hadoop.realtime.conf.DragonConfiguration;
 import org.apache.hadoop.realtime.job.Job;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
 
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.collect.Maps.newHashMap;
+import static com.google.common.collect.Sets.newHashSet;
+import static org.apache.hadoop.realtime.zookeeper.DragonZooKeeper.NodeData;
+
 /**
- * class description goes here.
+ * zk service in app master, handle ZKEvent
+ * handle CreateNodeEvent, NodeChangeEvent
+ * and fire NodeManagerDiedEvent when node manager died
  */
 public class DragonZKService extends AbstractService
     implements EventHandler<ZKEvent> {
@@ -55,6 +68,10 @@ public class DragonZKService extends AbstractService
   private final AppContext context;
 
   private DragonZooKeeper dragonZK;
+
+  private Map<NodeId, NMWatcher> nodeManagerWatchers = newHashMap();
+
+  private CuratorFramework zkClient;
 
   public DragonZKService(AppContext context) {
     super("DragonZKService");
@@ -73,24 +90,11 @@ public class DragonZKService extends AbstractService
         new ExponentialBackoffRetry(300, 5));
 
       this.dragonZK = new DragonZooKeeper(zkClient, zkRoot);
-
-      PathChildrenCache nodeManagersCache = new PathChildrenCache(
-        dragonZK.getZkClient(),
-        dragonZK.getNodeManagersPath(),
-        false);
-
-      nodeManagersCache.getListenable().addListener(
-        dragonZK.new NMPathChildrenCacheListener(context));
-
-      dragonZK.setNodeManagersCache(nodeManagersCache);
+      this.zkClient = zkClient;
 
       for (Job job : context.getAllJobs().values()) {
         final JobId jobId = job.getID();
-        final PathChildrenCache shuffleNodeCache = new PathChildrenCache(
-          zkClient,
-          dragonZK.getShufflePath(jobId),
-          true);
-        dragonZK.addShuffleNodeCache(jobId, shuffleNodeCache);
+        dragonZK.createShufflePath(jobId);
       }
 
     } catch (Exception e) {
@@ -180,16 +184,24 @@ public class DragonZKService extends AbstractService
     synchronized (lock) {
       ZKEventType type = event.getType();
       switch (type) {
-        case NODES_REGISTER:
-          final NodesRegisterEvent registerEvent = (NodesRegisterEvent) event;
-          dragonZK.registerTasks(
-            registerEvent.getJobId(),
-            registerEvent.getNodeList());
+        case CREATE_NODE:
+          final CreateNodeEvent createNodeEvent = (CreateNodeEvent) event;
+
+          registerNMWatcher(createNodeEvent.getJobId(),
+            createNodeEvent.getNodeList());
+
+          dragonZK.createShuffleNode(createNodeEvent.getJobId(),
+            createNodeEvent.getNodeList());
+
           break;
-        case NODE_RENEW:
-          final NodeRenewEvent renewEvent = (NodeRenewEvent) event;
-          dragonZK.renewNode(renewEvent.getJobId(),
-            renewEvent.getNodeId(), renewEvent.getTaskId());
+        case NODE_CHANGE:
+          final NodeChangeEvent changeEvent = (NodeChangeEvent) event;
+
+          registerNMWatcher(changeEvent.getJobId(), changeEvent.getNodeList());
+
+          dragonZK.updateShuffleNode(
+            changeEvent.getJobId(),
+            changeEvent.getNodeList());
           break;
         default:
           throw new IllegalStateException(
@@ -199,5 +211,49 @@ public class DragonZKService extends AbstractService
     }
   }
 
+  private void registerNMWatcher(JobId jobId, List<NodeData> nodeList) {
+    for (NodeData data : nodeList) {
+      NMWatcher nmWatcher = nodeManagerWatchers.get(data.nodeId);
+      if (nmWatcher == null) {
+        nmWatcher = new NMWatcher(data.nodeId);
+        nodeManagerWatchers.put(data.nodeId, nmWatcher);
+
+        dragonZK.watchNodeManager(data.nodeId, nmWatcher);
+      }
+
+      nmWatcher.addJobId(jobId);
+    }
+  }
+
+  public class NMWatcher implements CuratorWatcher {
+
+    private final NodeId nodeId;
+    private final Set<JobId> jobIds;
+
+    public NMWatcher(final NodeId nodeId) {
+      this.nodeId = nodeId;
+      this.jobIds = newHashSet();
+    }
+
+    public void addJobId(JobId jobId) {
+      this.jobIds.add(jobId);
+    }
+
+    @Override
+    public void process(WatchedEvent event) throws Exception {
+      DragonZKService.this.nodeManagerWatchers.remove(nodeId);
+
+      List<NodeId> availableNodeIds =
+        DragonZKService.this.dragonZK.getAvailableNodes();
+      EventHandler eventHandler =
+        DragonZKService.this.context.getEventHandler();
+
+      for (JobId jobId : jobIds) {
+        NodeManagerDiedEvent diedEvent =
+          new NodeManagerDiedEvent(jobId, nodeId, availableNodeIds);
+        eventHandler.handle(diedEvent);
+      }
+    }
+  }
 
 }

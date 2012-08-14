@@ -1,9 +1,8 @@
 package org.apache.hadoop.realtime.zookeeper;
 
 /**
- * class description goes here.
+ * dragon zookeeper event types
  */
 public enum ZKEventType {
-  NODE_RENEW, NODES_REGISTER
-
+  CREATE_NODE, NODE_CHANGE
 }

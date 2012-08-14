@@ -18,32 +18,34 @@
 package org.apache.hadoop.realtime.zookeeper;
 
 import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.realtime.records.TaskId;
-import org.apache.hadoop.yarn.api.records.NodeId;
+
+import java.util.List;
+
 import static org.apache.hadoop.realtime.zookeeper.DragonZooKeeper.NodeData;
 
 /**
- * class description goes here.
+ * want to shuffle node data, you can fire this event
  */
-public class NodeRenewEvent extends ZKEvent {
+public class NodeChangeEvent extends ZKEvent {
 
-  private final NodeId nodeId;
-  private final TaskId taskId;
+  private final JobId jobId;
 
-  public NodeRenewEvent(final JobId jobId,
-                        final NodeId nodeId,
-                        final TaskId taskId) {
-    super(jobId, ZKEventType.NODE_RENEW);
+  private final List<NodeData> nodeList;
 
-    this.nodeId = nodeId;
-    this.taskId = taskId;
+  public NodeChangeEvent(final JobId jobId,
+                         final List<NodeData> nodeList) {
+    super(ZKEventType.NODE_CHANGE);
+
+    this.jobId = jobId;
+    this.nodeList = nodeList;
   }
 
-  public NodeId getNodeId() {
-    return nodeId;
+  public JobId getJobId() {
+    return jobId;
   }
 
-  public TaskId getTaskId() {
-    return taskId;
+  public List<NodeData> getNodeList() {
+    return nodeList;
   }
+
 }

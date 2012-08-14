@@ -29,7 +29,7 @@ import java.io.Closeable;
 import java.io.IOException;
 
 /**
- * class description goes here.
+ * zookeeper tool for node manager register it self
  */
 public class NMZooKeeper implements Closeable {
 
@@ -44,7 +44,7 @@ public class NMZooKeeper implements Closeable {
     this.dragonZK = new DragonZooKeeper(zkClient, zkRoot);
   }
 
-  public void registerSelf(final NodeId nodeId) throws Exception {
+  public void registerNodeManager(final NodeId nodeId) throws Exception {
     this.dragonZK.registerNodeManager(nodeId);
   }
 

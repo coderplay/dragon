@@ -18,16 +18,33 @@
 package org.apache.hadoop.realtime.zookeeper;
 
 import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.event.AbstractEvent;
+
+import java.util.List;
+
+import static org.apache.hadoop.realtime.zookeeper.DragonZooKeeper.NodeData;
 
 /**
- * base event for dragon zookeeper event
+ * create shuffle node zk info event
  */
-public abstract class ZKEvent extends AbstractEvent<ZKEventType> {
+public class CreateNodeEvent extends ZKEvent {
 
-  public ZKEvent(ZKEventType zkEventType) {
-    super(zkEventType);
+  private final JobId jobId;
+  private final List<NodeData> nodeList;
+
+  public CreateNodeEvent(final JobId jobId,
+                         final List<NodeData> nodeList) {
+    super(ZKEventType.CREATE_NODE);
+
+    this.jobId = jobId;
+    this.nodeList = nodeList;
+  }
+
+  public JobId getJobId() {
+    return jobId;
+  }
+
+  public List<NodeData> getNodeList() {
+    return nodeList;
   }
 
 }

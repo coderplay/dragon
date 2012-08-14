@@ -33,7 +33,7 @@ import java.io.Closeable;
 import java.io.IOException;
 
 /**
- * class description goes here.
+ * zookeeper tools for child
  */
 public class ChildZooKeeper implements Closeable {
 
@@ -52,7 +52,7 @@ public class ChildZooKeeper implements Closeable {
       dragonZK.getShufflePath(jobId),
       true);
 
-    this.dragonZK.addShuffleNodeCache(jobId, shuffleNodeCache);
+    this.dragonZK.setShuffleNodeCache(shuffleNodeCache);
   }
 
   public NodeId getShuffleNodeByTaskId(final JobId jobId,

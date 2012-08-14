@@ -17,29 +17,34 @@
  */
 package org.apache.hadoop.realtime.zookeeper;
 
+import org.apache.hadoop.realtime.job.app.event.JobEvent;
+import org.apache.hadoop.realtime.job.app.event.JobEventType;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 
 import java.util.List;
 
-import static org.apache.hadoop.realtime.zookeeper.DragonZooKeeper.NodeData;
-
 /**
- * class description goes here.
+ * when node manager is died, DragonZKService will fire this event
  */
-public class NodesRegisterEvent extends ZKEvent {
+public class NodeManagerDiedEvent extends JobEvent {
+  private final NodeId diedNode;
+  private final List<NodeId> availableNodes;
 
-  private final List<NodeData> nodeList;
+  public NodeManagerDiedEvent(final JobId jobId,
+                              final NodeId diedNode,
+                              final List<NodeId> availableNodes) {
+    super(jobId, JobEventType.NODE_MANAGER_DIED);
 
-  public NodesRegisterEvent(final JobId jobId,
-                            final List<NodeData> nodeList) {
-    super(jobId, ZKEventType.NODES_REGISTER);
-
-    this.nodeList = nodeList;
+    this.diedNode = diedNode;
+    this.availableNodes = availableNodes;
   }
 
-  public List<NodeData> getNodeList() {
-    return nodeList;
+  public NodeId getDiedNode() {
+    return diedNode;
   }
 
+  public List<NodeId> getAvailableNodes() {
+    return availableNodes;
+  }
 }
