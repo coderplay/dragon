@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.realtime.zookeeper;
 
-import org.apache.hadoop.realtime.records.JobId;
-import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.AbstractEvent;
 
 /**

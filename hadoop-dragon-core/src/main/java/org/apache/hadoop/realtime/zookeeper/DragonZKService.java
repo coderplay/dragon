@@ -42,7 +42,6 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Maps.newHashMap;
 import static com.google.common.collect.Sets.newHashSet;
 import static org.apache.hadoop.realtime.zookeeper.DragonZooKeeper.NodeData;
@@ -186,21 +185,33 @@ public class DragonZKService extends AbstractService
         case CREATE_NODE:
           final CreateNodeEvent createNodeEvent = (CreateNodeEvent) event;
 
-          registerNMWatcher(createNodeEvent.getJobId(),
-            createNodeEvent.getNodeList());
+          try {
+            registerNMWatcher(
+              createNodeEvent.getJobId(),
+              createNodeEvent.getNodeList());
 
-          dragonZK.createShuffleNode(createNodeEvent.getJobId(),
-            createNodeEvent.getNodeList());
+            dragonZK.createShuffleNode(
+              createNodeEvent.getJobId(),
+              createNodeEvent.getNodeList());
+          } catch (Exception e) {
+            LOG.error("create shuffle node failure", e);
+          }
 
           break;
         case NODE_CHANGE:
           final NodeChangeEvent changeEvent = (NodeChangeEvent) event;
 
-          registerNMWatcher(changeEvent.getJobId(), changeEvent.getNodeList());
+          try {
+            registerNMWatcher(
+              changeEvent.getJobId(),
+              changeEvent.getNodeList());
 
-          dragonZK.updateShuffleNode(
-            changeEvent.getJobId(),
-            changeEvent.getNodeList());
+            dragonZK.updateShuffleNode(
+              changeEvent.getJobId(),
+              changeEvent.getNodeList());
+          } catch (Exception e) {
+            LOG.error("update shuffle node failure", e);
+          }
           break;
         default:
           throw new IllegalStateException(
@@ -210,7 +221,7 @@ public class DragonZKService extends AbstractService
     }
   }
 
-  private void registerNMWatcher(JobId jobId, List<NodeData> nodeList) {
+  private void registerNMWatcher(JobId jobId, List<NodeData> nodeList) throws Exception {
     for (NodeData data : nodeList) {
       NMWatcher nmWatcher = nodeManagerWatchers.get(data.nodeId);
       if (nmWatcher == null) {

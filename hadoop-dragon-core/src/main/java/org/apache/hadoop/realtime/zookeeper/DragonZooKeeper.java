@@ -19,6 +19,7 @@ package org.apache.hadoop.realtime.zookeeper;
 
 import com.google.common.base.Splitter;
 import com.netflix.curator.framework.CuratorFramework;
+import com.netflix.curator.framework.api.CuratorWatcher;
 import com.netflix.curator.framework.recipes.cache.ChildData;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.commons.logging.Log;
@@ -61,6 +62,7 @@ public class DragonZooKeeper implements Closeable {
     this.zkClient = zkClient;
     this.zkRoot = zkRoot;
     this.nodeManagersPath = makePath(zkRoot, NODE_MANAGERS_ZK_PATH);
+    zkClient.start();
   }
 
   public String getNodeManagerPath(final NodeId nodeId) {
@@ -79,10 +81,11 @@ public class DragonZooKeeper implements Closeable {
   public void setShuffleNodeCache(final PathChildrenCache shuffleNodeCache)
     throws Exception {
     this.shuffleNodeCache = shuffleNodeCache;
+    this.shuffleNodeCache.start();
   }
 
   public void registerNodeManager(final NodeId nodeId) throws Exception {
-    final String nodePath = makePath(this.nodeManagersPath, nodeId.toString());
+    final String nodePath = getNodeManagerPath(nodeId);
     this.zkClient.create().creatingParentsIfNeeded().
       withMode(CreateMode.EPHEMERAL).forPath(nodePath);
   }
@@ -96,41 +99,35 @@ public class DragonZooKeeper implements Closeable {
                                        final TaskId  taskId) {
     final String taskPath = getTaskPath(jobId, taskId);
     final ChildData taskData = shuffleNodeCache.getCurrentData(taskPath);
+    if (taskData == null) {
+      return null;
+    }
 
     return toNodeID(new String(taskData.getData()));
   }
 
   public void createShuffleNode(final JobId jobId,
-                                final List<NodeData> nodeList) {
-    Set<NodeId> nodeIdSet = new HashSet<NodeId>();
-    try {
-      for (NodeData nodeData : nodeList) {
-        final String taskPath = getTaskPath(jobId, nodeData.taskId);
-        this.zkClient.create().forPath(taskPath,
-          nodeData.nodeId.toString().getBytes());
-        nodeIdSet.add(nodeData.nodeId);
-      }
-    } catch (Exception ex) {
-      LOG.error("nodes register failure ", ex);
+                                final List<NodeData> nodeList)
+    throws Exception {
+
+    for (NodeData nodeData : nodeList) {
+      final String taskPath = getTaskPath(jobId, nodeData.taskId);
+      zkClient.
+        create().
+        forPath(taskPath, nodeData.nodeId.toString().getBytes());
     }
+
   }
 
   public void updateShuffleNode(final JobId jobId,
-                                final List<NodeData> nodeList)  {
-    try {
-      for (NodeData nodeData : nodeList) {
-        String taskPath = getTaskPath(jobId, nodeData.taskId);
-        this.zkClient.setData().forPath(taskPath,
-          nodeData.nodeId.toString().getBytes());
-      }
-    } catch (Exception ex) {
-      LOG.error("node renew failure ", ex);
-    }
-  }
+                                final List<NodeData> nodeList)
+    throws Exception {
 
-  @Override
-  public void close() throws IOException {
-    IOUtils.cleanup(LOG, shuffleNodeCache);
+    for (NodeData nodeData : nodeList) {
+      String taskPath = getTaskPath(jobId, nodeData.taskId);
+      this.zkClient.setData().forPath(taskPath,
+        nodeData.nodeId.toString().getBytes());
+    }
   }
 
   public List<NodeId> getAvailableNodes() throws Exception {
@@ -138,7 +135,7 @@ public class DragonZooKeeper implements Closeable {
 
     List<NodeId> nodeIds = newArrayList();
     for (String child : children) {
-      nodeIds.add(toNodeID(getNodeFromPath(child)));
+      nodeIds.add(toNodeID(child));
     }
 
     return nodeIds;
@@ -146,18 +143,19 @@ public class DragonZooKeeper implements Closeable {
 
   public void watchNodeManager(
     final NodeId nodeId,
-    final DragonZKService.NMWatcher nmWatcher) {
+    final CuratorWatcher nmWatcher) throws Exception {
 
     String nodePath = getNodeManagerPath(nodeId);
-    try {
-      zkClient.
-        checkExists().
-        usingWatcher(nmWatcher).
-        inBackground().
-        forPath(nodePath);
-    } catch (Exception e) {
-      LOG.error("watch node manager failure ", e);
-    }
+    zkClient.
+      checkExists().
+      usingWatcher(nmWatcher).
+      inBackground().
+      forPath(nodePath);
+  }
+
+  @Override
+  public void close() throws IOException {
+    IOUtils.cleanup(LOG, shuffleNodeCache);
   }
 
   public static class NodeData {

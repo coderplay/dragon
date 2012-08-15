@@ -21,7 +21,6 @@ import com.netflix.curator.framework.CuratorFramework;
 import com.netflix.curator.framework.CuratorFrameworkFactory;
 import com.netflix.curator.framework.recipes.cache.PathChildrenCache;
 import com.netflix.curator.retry.ExponentialBackoffRetry;
-import com.netflix.curator.utils.ZKPaths;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.IOUtils;
