@@ -78,8 +78,12 @@ public class DragonZKService extends AbstractService
 
   @Override
   public synchronized void init(Configuration config) {
-    final String serverList = config.get(DragonConfiguration.ZK_SERVER_LIST);
-    final String zkRoot = config.get(DragonConfiguration.ZK_ROOT);
+    final String serverList = config.get(
+      DragonConfiguration.ZK_SERVER_LIST,
+      DragonConfiguration.DEFAULT_ZK_SERVER_LIST);
+    final String zkRoot = config.get(
+      DragonConfiguration.ZK_ROOT,
+      DragonConfiguration.DEFAULT_ZK_ROOT);
 
     try {
       CuratorFramework zkClient = CuratorFrameworkFactory.newClient(
