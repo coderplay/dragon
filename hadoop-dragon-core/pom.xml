@@ -65,7 +65,7 @@
       <artifactId>curator-recipes</artifactId>
       <version>1.1.15</version>
     </dependency>
-	<dependency>
+    <dependency>
 		<groupId>org.mockito</groupId>
 		<artifactId>mockito-all</artifactId>
 		<version>1.8.5</version>

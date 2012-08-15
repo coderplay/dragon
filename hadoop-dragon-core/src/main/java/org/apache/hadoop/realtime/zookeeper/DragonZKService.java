@@ -34,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.service.AbstractService;
 import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
 
 import java.util.Iterator;
 import java.util.List;
@@ -71,8 +70,6 @@ public class DragonZKService extends AbstractService
 
   private Map<NodeId, NMWatcher> nodeManagerWatchers = newHashMap();
 
-  private CuratorFramework zkClient;
-
   public DragonZKService(AppContext context) {
     super("DragonZKService");
 
@@ -90,11 +87,9 @@ public class DragonZKService extends AbstractService
         new ExponentialBackoffRetry(300, 5));
 
       this.dragonZK = new DragonZooKeeper(zkClient, zkRoot);
-      this.zkClient = zkClient;
 
       for (Job job : context.getAllJobs().values()) {
-        final JobId jobId = job.getID();
-        dragonZK.createShufflePath(jobId);
+        dragonZK.createShufflePath(job.getID());
       }
 
     } catch (Exception e) {
@@ -241,12 +236,10 @@ public class DragonZKService extends AbstractService
 
     @Override
     public void process(WatchedEvent event) throws Exception {
-      DragonZKService.this.nodeManagerWatchers.remove(nodeId);
+      nodeManagerWatchers.remove(nodeId);
 
-      List<NodeId> availableNodeIds =
-        DragonZKService.this.dragonZK.getAvailableNodes();
-      EventHandler eventHandler =
-        DragonZKService.this.context.getEventHandler();
+      List<NodeId> availableNodeIds = dragonZK.getAvailableNodes();
+      EventHandler eventHandler = context.getEventHandler();
 
       for (JobId jobId : jobIds) {
         NodeManagerDiedEvent diedEvent =
