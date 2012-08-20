@@ -15,35 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.realtime.io.serialize;
+package org.apache.hadoop.realtime.shuffle;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.realtime.event.Event;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.jboss.netty.buffer.ChannelBuffer;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.handler.codec.frame.FrameDecoder;
 
 /**
  */
-public class KryoSerializationTest {
+class RequestDecoder extends FrameDecoder {
 
-  private static Configuration conf;
+  public RequestDecoder(Configuration conf) {
 
-  @Before
-  public void setUp() {
-    conf = new Configuration();
-    conf.setStrings("io.serializations",
-        "org.apache.hadoop.realtime.io.serializer.KryoSerialization");
   }
 
-  @Test
-  public void testSerialization() throws Exception {
-    Event<String, String> before = new Event<String, String>("hello", "world");
-    before.offset(0L);
-    Event<String, String> after =
-        SerializationTestUtil.testSerialization(conf, before);
-    Assert.assertEquals(before.key(), after.key());
-    Assert.assertEquals(before.value(), after.value());
-    Assert.assertEquals(before.offset(), after.offset());
+  @Override
+  protected Object decode(ChannelHandlerContext ctx, Channel channel,
+      ChannelBuffer buffer) throws Exception {
+    return null;
   }
+
 }

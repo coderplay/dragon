@@ -37,32 +37,6 @@ import java.util.StringTokenizer;
  */
 public class WordCount {
 
-  public static class MapReduceEvent implements Event<Text, IntWritable> {
-
-    private Text key;
-    private IntWritable value;
-
-    public MapReduceEvent(Text word, IntWritable one) {
-      this.key = word;
-      this.value = one;
-    }
-
-    @Override
-    public long offset() {
-      return 0;
-    }
-
-    @Override
-    public Text key() {
-      return key;
-    }
-
-    @Override
-    public IntWritable value() {
-      return value;
-    }
-  }
-
   public static class TokenizerMapper
       extends Mapper<Object, Text, Text, IntWritable> {
 
@@ -76,7 +50,7 @@ public class WordCount {
       StringTokenizer itr = new StringTokenizer(event.value().toString());
       while (itr.hasMoreTokens()) {
         word.set(itr.nextToken());
-        context.emitEvent(new MapReduceEvent(word, one));
+        context.emitEvent(new Event<Text, IntWritable>(word, one));
       }
 
     }
@@ -89,17 +63,18 @@ public class WordCount {
         new LRUMap<Text, IntWritable>(1024 * 1024 * 20);
 
     @Override
-    protected void reduce(Event<Text, IntWritable> event, ReduceContext<Text, IntWritable, Text, IntWritable> reduceContext) throws IOException, InterruptedException {
+    protected void reduce(Event<Text, IntWritable> event,
+        ReduceContext<Text, IntWritable, Text, IntWritable> reduceContext)
+        throws IOException, InterruptedException {
       Text word = event.key();
       IntWritable wordCount = countMap.get(word);
-      if  (wordCount == null) {
+      if (wordCount == null) {
         countMap.put(word, event.value());
-      }
-      else {
+      } else {
         wordCount.set(wordCount.get() + event.value().get());
       }
 
-      reduceContext.emitEvent(new MapReduceEvent(word, wordCount));
+      reduceContext.emitEvent(new Event<Text, IntWritable>(word, wordCount));
     }
   }
 

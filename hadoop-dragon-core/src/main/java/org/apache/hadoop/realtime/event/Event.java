@@ -17,30 +17,55 @@
  */
 package org.apache.hadoop.realtime.event;
 
-import java.io.Serializable;
-
 /**
  * Event is the basic processing unit of dragon. 
  */
-public interface Event<KEY, VALUE> extends Serializable {
+public class Event<KEY, VALUE> {
+
+  private long offset;  
+  private KEY key;
+  private VALUE value;
+
+  public Event(KEY key, VALUE value) {
+    this.key = key;
+    this.value = value;
+  }
 
   /**
    * Every {@link Event} should provide a <code>offset</code> 
    * for helping checkpointing.
    * @return the offset of this {@link Event}
    */
-  public long offset();
+  public long offset() {
+    return offset;
+  }
+  
 
+  public void offset(long offset) {
+    this.offset = offset;
+  }
+  
   /**
    * The key of this {@link Event} 
    * @return the key of this {@link Event} 
    */
-  public KEY key();
+  public KEY key() {
+    return key;
+  }
+
+  public void key(KEY key) {
+    this.key = key;
+  }
   
   /**
    * The value of this {@link Event} 
    * @return the value of this {@link Event} 
    */
-  public VALUE value();
+  public VALUE value() {
+    return value;
+  }
 
+  public void value(VALUE value) {
+    this.value = value;
+  }
 }
