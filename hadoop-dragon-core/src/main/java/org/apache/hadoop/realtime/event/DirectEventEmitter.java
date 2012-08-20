@@ -20,13 +20,47 @@ package org.apache.hadoop.realtime.event;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.io.serializer.Serializer;
+
 /**
  */
-public class DirectEventEmitter<KEY, VALUE> implements EventEmitter<KEY, VALUE> {
+public class DirectEventEmitter<KEY, VALUE> implements
+    EventEmitter<KEY, VALUE> {
+  Configuration conf;
+  FSDataOutputStream out;
+  protected Serializer<? extends Event<KEY, VALUE>> serializer;
+
+  public DirectEventEmitter(final FileSystem fs, final Configuration conf,
+      final Path name, final Class<? extends Event<KEY, VALUE>> eventClass)
+      throws IOException {
+    this(fs, conf, name, eventClass, fs.getConf().getInt("io.file.buffer.size",
+        4096), fs.getDefaultReplication(), fs.getDefaultBlockSize());
+  }
+
+  public DirectEventEmitter(final FileSystem fs, final Configuration conf,
+      final Path name, final Class<? extends Event<KEY, VALUE>> eventClass,
+      final int bufferSize, final short replication, final long blockSize)
+      throws IOException {
+    init(name, conf, fs.create(name, true, bufferSize, replication, blockSize),
+        eventClass);
+  }
+
+  void init(final Path name, final Configuration conf,
+      final FSDataOutputStream out,
+      final Class<? extends Event<KEY, VALUE>> eventClass) {
+    SerializationFactory sf = new SerializationFactory(conf);
+    this.serializer = sf.getSerializer(eventClass);
+  }
 
   @Override
   public boolean emitEvent(Event<KEY, VALUE> event) throws IOException,
       InterruptedException {
+    
     return false;
   }
 
