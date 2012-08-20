@@ -9,7 +9,6 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.realtime.event.Event;
 import org.apache.hadoop.realtime.event.EventProducer;
-import org.apache.hadoop.realtime.examples.WordCount.MapReduceEvent;
 import org.apache.hadoop.realtime.records.ChildExecutionContext;
 
 public class MockEventProducer<KEY, VALUE> implements EventProducer<KEY, VALUE> {
@@ -25,7 +24,8 @@ public class MockEventProducer<KEY, VALUE> implements EventProducer<KEY, VALUE> 
   @Override
   public Event<KEY, VALUE> pollEvent() throws IOException, InterruptedException {
     LOG.debug("poll event called.");
-    return (Event<KEY, VALUE>) new MapReduceEvent(new Text(), new IntWritable(1));
+    return (Event<KEY, VALUE>) new Event<Text, IntWritable>(new Text(),
+        new IntWritable(1));
   }
 
   @Override
@@ -37,8 +37,6 @@ public class MockEventProducer<KEY, VALUE> implements EventProducer<KEY, VALUE> 
 
   @Override
   public void close() throws IOException {
-    // TODO Auto-generated method stub
-    
   }
 
 }
