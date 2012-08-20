@@ -62,6 +62,11 @@ public class DragonConfiguration extends Configuration {
 
   public static final String DEFAULT_AM_WORKING_DIR = "hadoop-yarn/working";
 
+  public static final String ZK_SERVER_LIST = AM_PREFIX + "zk.server-list";
+  public static final String ZK_ROOT = "zk.root";
+  public static final String DEFAULT_ZK_SERVER_LIST = "10.232.98.97:2222";
+  public static final String DEFAULT_ZK_ROOT = "/dragon";
+
   public DragonConfiguration() {
     super();
   }

@@ -60,6 +60,8 @@ import org.apache.hadoop.realtime.records.AMInfo;
 import org.apache.hadoop.realtime.records.JobId;
 import org.apache.hadoop.realtime.security.token.JobTokenSecretManager;
 import org.apache.hadoop.realtime.util.DragonBuilderUtils;
+import org.apache.hadoop.realtime.zookeeper.DragonZKService;
+import org.apache.hadoop.realtime.zookeeper.ZKEventType;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -111,6 +113,7 @@ public class DragonAppMaster extends CompositeService {
   private Dispatcher dispatcher;
   protected UserGroupInformation currentUser;
   private Credentials fsTokens = new Credentials();
+  private DragonZKService zkService;
 
   public DragonAppMaster(ApplicationAttemptId applicationAttemptId,
       ContainerId containerId, String nmHost, int nmPort, int nmHttpPort,
@@ -189,6 +192,11 @@ public class DragonAppMaster extends CompositeService {
     addIfService(containerLauncher);
     dispatcher.register(ContainerLauncher.EventType.class, containerLauncher);
 
+    // dragon zookeeper service
+    zkService = new DragonZKService(context);
+    addIfService(zkService);
+    dispatcher.register(ZKEventType.class, zkService);
+
     // Add the JobHistoryEventHandler last so that it is properly stopped first.
     // This will guarantee that all history-events are flushed before AM goes
     // ahead with shutdown.
@@ -212,7 +220,7 @@ public class DragonAppMaster extends CompositeService {
     amInfos.add(amInfo);
 
     job = createJob(getConfig());
-    
+
     // metrics system init is really init & start.
     // It's more test friendly to put it here.
     DefaultMetricsSystem.initialize("DragonAppMaster");
